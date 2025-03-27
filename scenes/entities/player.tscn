@@ -1,0 +1,54 @@
+[gd_scene load_steps=9 format=3 uid="uid://b72cmuhsp6dty"]
+
+[ext_resource type="Script" uid="uid://dpky2iqpmdacq" path="res://scenes/entities/player.gd" id="1_08t41"]
+[ext_resource type="Texture2D" uid="uid://cc5i1nwn5kj05" path="res://assets/sprites/player1-placeholder.png" id="1_ucweq"]
+[ext_resource type="AudioStream" uid="uid://bue6cgvu2wq0d" path="res://assets/sounds/sfx/flapsound.wav" id="3_5u6hq"]
+[ext_resource type="AudioStream" uid="uid://ctmd2on11oc70" path="res://assets/sounds/sfx/collision_sound.wav" id="4_d4qa6"]
+[ext_resource type="AudioStream" uid="uid://bfqp85rr2ou5m" path="res://assets/sounds/sfx/death_sound.wav" id="5_ss7kx"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_08t41"]
+radius = 21.0
+height = 42.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_5u6hq"]
+size = Vector2(45, 5)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_5u6hq"]
+radius = 18.0
+
+[node name="Player" type="Node2D"]
+
+[node name="PlayerBody" type="CharacterBody2D" parent="."]
+collision_mask = 6
+script = ExtResource("1_08t41")
+
+[node name="Sprite2D" type="Sprite2D" parent="PlayerBody"]
+texture = ExtResource("1_ucweq")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerBody"]
+position = Vector2(4, 9)
+shape = SubResource("CapsuleShape2D_08t41")
+
+[node name="CombatArea" type="Area2D" parent="PlayerBody"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerBody/CombatArea"]
+position = Vector2(3, 33)
+shape = SubResource("RectangleShape2D_5u6hq")
+debug_color = Color(0.70389, 0.380383, 0.792011, 0.42)
+
+[node name="FlapSound" type="AudioStreamPlayer2D" parent="PlayerBody"]
+stream = ExtResource("3_5u6hq")
+
+[node name="CollisionSound" type="AudioStreamPlayer2D" parent="PlayerBody"]
+stream = ExtResource("4_d4qa6")
+
+[node name="DeathSound" type="AudioStreamPlayer2D" parent="PlayerBody"]
+stream = ExtResource("5_ss7kx")
+
+[node name="Collection Area" type="Area2D" parent="PlayerBody"]
+collision_mask = 16
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerBody/Collection Area"]
+position = Vector2(0, 13)
+shape = SubResource("CircleShape2D_5u6hq")
+debug_color = Color(0.587041, 0.54364, 0.220657, 0.42)

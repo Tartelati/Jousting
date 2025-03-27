@@ -1,0 +1,66 @@
+[gd_scene load_steps=10 format=3 uid="uid://cba2m06mfhdpm"]
+
+[ext_resource type="Texture2D" uid="uid://bykqipbvrg607" path="res://assets/sprites/player2-placeholder.png" id="1_1rga0"]
+[ext_resource type="Script" uid="uid://v56hqa6big8u" path="res://scripts/entities/enemy_base.gd" id="1_ltmif"]
+[ext_resource type="AudioStream" uid="uid://d1sd8lcae1tjg" path="res://assets/sounds/sfx/enemy_flap.wav" id="3_1odx1"]
+[ext_resource type="Texture2D" uid="uid://cvd3kcrwla4om" path="res://assets/sprites/egg.png" id="3_qag7e"]
+[ext_resource type="AudioStream" uid="uid://ctmd2on11oc70" path="res://assets/sounds/sfx/collision_sound.wav" id="4_xadvl"]
+[ext_resource type="AudioStream" uid="uid://dq2rorxstisr8" path="res://assets/sounds/sfx/enemy_death.wav" id="5_m6p80"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ltmif"]
+radius = 24.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1odx1"]
+size = Vector2(55, 8)
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_dtjhs"]
+height = 22.0
+
+[node name="EnemyBase" type="Node2D"]
+
+[node name="EnemyBody" type="CharacterBody2D" parent="."]
+collision_layer = 4
+collision_mask = 7
+script = ExtResource("1_ltmif")
+
+[node name="EnemySprite" type="Sprite2D" parent="EnemyBody"]
+texture = ExtResource("1_1rga0")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody"]
+position = Vector2(4, 6)
+shape = SubResource("CircleShape2D_ltmif")
+
+[node name="CombatArea" type="Area2D" parent="EnemyBody"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/CombatArea"]
+position = Vector2(3, -22)
+shape = SubResource("RectangleShape2D_1odx1")
+debug_color = Color(0.785444, 0.325868, 0.726191, 0.42)
+
+[node name="HatchTimer" type="Timer" parent="EnemyBody"]
+wait_time = 5.0
+one_shot = true
+
+[node name="FlapSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+stream = ExtResource("3_1odx1")
+
+[node name="CollisionSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+stream = ExtResource("4_xadvl")
+
+[node name="DeathSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+stream = ExtResource("5_m6p80")
+
+[node name="EggArea" type="Area2D" parent="EnemyBody"]
+collision_layer = 16
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/EggArea"]
+position = Vector2(1, 21)
+shape = SubResource("CapsuleShape2D_dtjhs")
+debug_color = Color(0.631305, 0.516451, 0.327184, 0.42)
+
+[node name="EggSprite" type="Sprite2D" parent="EnemyBody"]
+visible = false
+position = Vector2(1, 22)
+texture = ExtResource("3_qag7e")
+
+[connection signal="body_entered" from="EnemyBody/EggArea" to="EnemyBody" method="_on_egg_area_body_entered"]

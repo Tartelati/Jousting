@@ -1,0 +1,39 @@
+[gd_scene load_steps=5 format=3 uid="uid://60tchdiscoo0"]
+
+[ext_resource type="Script" uid="uid://ducdlluljkdd0" path="res://scripts/entities/enemy_hunter.gd" id="1_w2pmv"]
+[ext_resource type="Texture2D" uid="uid://bykqipbvrg607" path="res://assets/sprites/player2-placeholder.png" id="2_ukxwl"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ltmif"]
+radius = 27.0185
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_qag7e"]
+radius = 32.0
+height = 64.0
+
+[node name="EnemyBase" type="Node2D"]
+
+[node name="EnemyBody" type="CharacterBody2D" parent="."]
+script = ExtResource("1_w2pmv")
+
+[node name="Sprite2D" type="Sprite2D" parent="EnemyBody"]
+texture = ExtResource("2_ukxwl")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody"]
+position = Vector2(4, 6)
+shape = SubResource("CircleShape2D_ltmif")
+
+[node name="CombatArea" type="Area2D" parent="EnemyBody"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/CombatArea"]
+position = Vector2(4, 5)
+shape = SubResource("CapsuleShape2D_qag7e")
+
+[node name="HatchTimer" type="Timer" parent="EnemyBody"]
+wait_time = 5.0
+one_shot = true
+
+[node name="FlapSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+
+[node name="CollisionSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+
+[node name="DeathSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
