@@ -3,12 +3,18 @@ extends CharacterBody2D
 #movement parameters
 var gravity = 800
 var flap_force = -300
-var move_speed = 150
+var base_move_speed = 150
 var max_fall_speed = 400
+var max_speed_multiplier = 3.0  # Maximum speed multiplier (3x base speed)
+var speed_increase_per_input = 0.5  # How much to increase speed per input (0.5x)
 
 #state tracking
 var is_flapping = false
 var is_alive = true
+var current_direction = 0  # Current movement direction (-1, 0, or 1)
+var current_speed_multiplier = 1.0  # Current speed multiplier
+var input_count = 0  # Number of inputs in current direction
+var last_input_time = 0.0  # Time of last input for resetting speed
 
 #references
 @onready var sprite = $Sprite2D
@@ -47,15 +53,35 @@ func _physics_process(delta):
 		is_flapping = false
 	
 	# Handle horizontal movement
-	var direction = 0
+	var new_direction = 0
 	if Input.is_action_pressed("move_left"):
-		direction = -1
+		new_direction = -1
 		sprite.flip_h = true
 	elif Input.is_action_pressed("move_right"):
-		direction = 1
+		new_direction = 1
 		sprite.flip_h = false
 	
-	velocity.x = direction * move_speed
+	# Handle speed increase based on repeated inputs
+	if new_direction != 0:
+		if new_direction == current_direction:
+			# Same direction - increase speed if not at max
+			if current_speed_multiplier < max_speed_multiplier:
+				current_speed_multiplier += speed_increase_per_input
+				current_speed_multiplier = min(current_speed_multiplier, max_speed_multiplier)
+		else:
+			# Different direction - reset speed and update direction
+			current_direction = new_direction
+			current_speed_multiplier = 1.0
+		last_input_time = Time.get_ticks_msec()
+	else:
+		# No input - maintain current speed and direction
+		# Reset speed after 1 second of no input
+		if Time.get_ticks_msec() - last_input_time > 1000:
+			current_speed_multiplier = 1.0
+			current_direction = 0
+	
+	# Apply movement with current speed multiplier
+	velocity.x = current_direction * base_move_speed * current_speed_multiplier
 	
 	# Handle screen wrapping
 	screen_wrapping()
