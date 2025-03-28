@@ -16,6 +16,8 @@ var is_alive = true
 @onready var collision_sound = $CollisionSound
 @onready var death_sound = $DeathSound
 @onready var combat_area = $CombatArea
+@onready var collection_area = $CollectionArea
+
 
 func _ready():
 	# Add to player group for easy access
@@ -23,6 +25,9 @@ func _ready():
 	
 	# Connect combat area signal
 	combat_area.connect("area_entered", _on_combat_area_area_entered)
+	# Connect collection_area signal
+	
+	collection_area.connect("area_entered", _on_collection_area_area_entered)
 
 func _physics_process(delta):
 	if not is_alive:
@@ -53,23 +58,31 @@ func _physics_process(delta):
 	velocity.x = direction * move_speed
 	
 	# Handle screen wrapping
-	var viewport_size = get_viewport_rect().size
-	# Horizontal wrapping (left/right)
-	if position.x < -sprite.texture.get_width():
-		position.x = viewport_size.x + sprite.texture.get_width()
-	elif position.x > viewport_size.x + sprite.texture.get_width():
-		position.x = -sprite.texture.get_width()
-	
-	# Prevent falling out of the bottom of the screen
-	if position.y > viewport_size.y:
-		position.y = viewport_size.y
-		velocity.y = 0
+	screen_wrapping()
 	
 	# Update animation based on movement
 	update_animation()
 	
 	# Move the character
 	move_and_slide()
+
+func screen_wrapping():
+	var viewport_rect = get_viewport_rect().size
+	
+	# Create a larger buffer for wrapping
+	var buffer = 10  # Increased buffer size
+	
+	# Check if player is about to go off the left edge
+	if global_position.x < buffer:
+		# Immediately teleport to right side with same velocity
+		global_position.x = viewport_rect.x - buffer
+		# No need to change velocity, keep momentum
+	
+	# Check if player is about to go off the right edge
+	elif global_position.x > viewport_rect.x - buffer:
+	# Immediately teleport to left side with same velocity
+		global_position.x = buffer
+	# No need to change velocity, keep momentum
 
 func update_animation():
 	# This would be replaced with proper animation states
@@ -157,3 +170,20 @@ func respawn():
 	position = Vector2(get_viewport_rect().size.x / 2, get_viewport_rect().size.y / 2)
 	velocity = Vector2.ZERO
 	sprite.modulate = Color(1, 1, 1)  # Reset color
+
+func _on_collection_area_area_entered(area):
+	#Debug print to check if this function is being called
+	print("Collection area detected: ", area.name)
+	
+	# Check if the area is an EggArea from an enemy
+	if area.name == "EggArea" and area.get_parent().is_in_group("enemies"):
+		var enemy = area.get_parent()
+		
+		#Print more debug info to understand the state
+		print("Enemy current_state: ", enemy.current_state if "current_state" in enemy else "unknown")
+		print("Enemy State.EGG value: ", enemy.State.EGG if "State" in enemy else "unknown")
+		
+		# Check if enemy is in EGG state
+		if "current_state" in enemy and (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
+			print("Egg Collected by player via collection area!")
+			enemy.collect_egg()

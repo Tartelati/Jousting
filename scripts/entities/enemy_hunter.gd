@@ -8,10 +8,12 @@ func _ready():
 	move_speed = 100
 	
 	# Set sprite color to distinguish enemy type
-	enemy_sprite.modulate = Color(0.5, 0.5, 1)  # Blue tint
+	enemy_sprite = "res://assets/sprites/enemy_hunter-placeholder.png"
 
 # Override the flying process for this specific enemy type
 func process_flying(delta):
+	screen_wrapping()
+	
 	# Hunter actively seeks the player
 	# Find target if none
 	if target == null:
@@ -34,8 +36,7 @@ func process_flying(delta):
 			direction = -1
 		elif target.position.x > position.x + 20:
 			direction = 1
-		
-		enemy_sprite.flip_h = (direction < 0)
+			enemy_sprite.flip_h = (direction < 0)
 	else:
 		# Random flapping if no target
 		if randf() < 0.03:
@@ -48,12 +49,6 @@ func process_flying(delta):
 	
 	# Horizontal movement
 	velocity.x = direction * move_speed
-	
-	# Screen wrapping
-	var viewport_size = get_viewport_rect().size
-	if position.x < 0:
-		position.x = viewport_size.x
-	elif position.x > viewport_size.x:
-		position.x = 0
+
 	
 	move_and_slide()

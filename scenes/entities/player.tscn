@@ -45,10 +45,10 @@ stream = ExtResource("4_d4qa6")
 [node name="DeathSound" type="AudioStreamPlayer2D" parent="PlayerBody"]
 stream = ExtResource("5_ss7kx")
 
-[node name="Collection Area" type="Area2D" parent="PlayerBody"]
+[node name="CollectionArea" type="Area2D" parent="PlayerBody"]
 collision_mask = 16
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerBody/Collection Area"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerBody/CollectionArea"]
 position = Vector2(0, 13)
 shape = SubResource("CircleShape2D_5u6hq")
 debug_color = Color(0.587041, 0.54364, 0.220657, 0.42)

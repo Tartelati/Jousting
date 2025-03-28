@@ -6,10 +6,12 @@ func _ready():
 	move_speed = 80
 	
 	# Set sprite color to distinguish enemy type
-	enemy_sprite.modulate = Color(1, 0.5, 0.5)  # Red tint
+	enemy_sprite = "res://assets/sprites/enemy_bounder-placeholder.png"
 
 # Override the flying process for this specific enemy type
 func process_flying(delta):
+	screen_wrapping()
+	
 	# Bounder just bounces around randomly
 	# Apply gravity
 	velocity.y += gravity * delta
@@ -20,13 +22,6 @@ func process_flying(delta):
 	
 	# Horizontal movement
 	velocity.x = direction * move_speed
-	
-	# Screen wrapping
-	var viewport_size = get_viewport_rect().size
-	if position.x < 0:
-		position.x = viewport_size.x
-	elif position.x > viewport_size.x:
-		position.x = 0
 	
 	# Change direction occasionally
 	if randf() < 0.01:  # 1% chance per frame

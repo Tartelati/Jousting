@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://b6fl4hgk3xwjd"]
 
 [ext_resource type="Script" uid="uid://boud7skxqmx1f" path="res://scripts/entities/enemy_bounder.gd" id="1_66jom"]
-[ext_resource type="Texture2D" uid="uid://bykqipbvrg607" path="res://assets/sprites/player2-placeholder.png" id="2_1cvw5"]
+[ext_resource type="Texture2D" uid="uid://75doebxc70lg" path="res://assets/sprites/enemy_base-placeholder.png" id="2_66jom"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ltmif"]
 radius = 27.0185
@@ -15,8 +15,8 @@ height = 64.0
 [node name="EnemyBody" type="CharacterBody2D" parent="."]
 script = ExtResource("1_66jom")
 
-[node name="Sprite2D" type="Sprite2D" parent="EnemyBody"]
-texture = ExtResource("2_1cvw5")
+[node name="EnemySprite" type="Sprite2D" parent="EnemyBody"]
+texture = ExtResource("2_66jom")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody"]
 position = Vector2(4, 6)
