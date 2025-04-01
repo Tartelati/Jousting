@@ -14,6 +14,8 @@ func _ready():
 	get_node("/root/SoundManager").play_music("menu")
 
 func _on_start_game_pressed():
+	# Stop the music when starting the game
+	get_node("/root/SoundManager").stop_music()
 	emit_signal("start_game")
 
 func _on_options_pressed():

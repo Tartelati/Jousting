@@ -1,13 +1,15 @@
 extends "res://scripts/entities/enemy_base.gd"
 
+var sprite_path = "res://assets/sprites/enemy_bounder-placeholder.png"
+
 func _ready():
 	super._ready()
 	points_value = 100
 	move_speed = 80
 	
 	# Set sprite color to distinguish enemy type
-	enemy_sprite = "res://assets/sprites/enemy_bounder-placeholder.png"
-
+	enemy_sprite.texture = load(sprite_path)  # Use the loaded texture on the existing sprite
+	
 # Override the flying process for this specific enemy type
 func process_flying(delta):
 	screen_wrapping()

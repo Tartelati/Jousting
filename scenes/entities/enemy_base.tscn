@@ -11,7 +11,7 @@
 radius = 24.0
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1odx1"]
-size = Vector2(55, 8)
+size = Vector2(40.75, 12)
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_dtjhs"]
 height = 22.0
@@ -33,7 +33,7 @@ shape = SubResource("CircleShape2D_ltmif")
 [node name="CombatArea" type="Area2D" parent="EnemyBody"]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/CombatArea"]
-position = Vector2(3, -22)
+position = Vector2(0.625, -6)
 shape = SubResource("RectangleShape2D_1odx1")
 debug_color = Color(0.785444, 0.325868, 0.726191, 0.42)
 
