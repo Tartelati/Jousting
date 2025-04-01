@@ -73,8 +73,6 @@ func _physics_process(delta):
 	if current_state == State.FLYING and is_on_floor():
 		current_state = State.WALKING
 		walk_time = 0
-		# Update animation to walking (would use proper animation in full implementation)
-		enemy_sprite.modulate = Color(0.8, 1, 0.8)  # Slight green tint when walking
 	
 
 
@@ -124,14 +122,6 @@ func process_walking(delta):
 
 	# Horizontal movement
 	velocity.x = direction * walk_speed
-
-	# Screen wrapping
-	var viewport_size = get_viewport_rect().size
-
-	# Change direction if at edge of platform or randomly
-	if !check_ground_ahead() || randf() < 0.01:  # 1% chance per frame to change direction
-		direction *= -1
-		enemy_sprite.flip_h = (direction < 0)
 
 	# After walking for some time, try to fly again
 	if walk_time > max_walk_time || randf() < 0.01:  # Random chance to start flying

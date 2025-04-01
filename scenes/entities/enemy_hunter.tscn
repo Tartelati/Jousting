@@ -1,22 +1,25 @@
-[gd_scene load_steps=5 format=3 uid="uid://60tchdiscoo0"]
+[gd_scene load_steps=7 format=3 uid="uid://60tchdiscoo0"]
 
 [ext_resource type="Script" uid="uid://ducdlluljkdd0" path="res://scripts/entities/enemy_hunter.gd" id="1_w2pmv"]
-[ext_resource type="Texture2D" uid="uid://bykqipbvrg607" path="res://assets/sprites/player2-placeholder.png" id="2_ukxwl"]
+[ext_resource type="Texture2D" uid="uid://do5muu1wcybte" path="res://assets/sprites/enemy_shadow-lord-placeholder.png" id="2_w2pmv"]
+[ext_resource type="Texture2D" uid="uid://cvd3kcrwla4om" path="res://assets/sprites/egg.png" id="3_ukxwl"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ltmif"]
 radius = 27.0185
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_qag7e"]
-radius = 32.0
-height = 64.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ukxwl"]
+size = Vector2(46, 11)
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_s3v6w"]
+height = 22.0
 
 [node name="EnemyBase" type="Node2D"]
 
 [node name="EnemyBody" type="CharacterBody2D" parent="."]
 script = ExtResource("1_w2pmv")
 
-[node name="Sprite2D" type="Sprite2D" parent="EnemyBody"]
-texture = ExtResource("2_ukxwl")
+[node name="EnemySprite" type="Sprite2D" parent="EnemyBody"]
+texture = ExtResource("2_w2pmv")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody"]
 position = Vector2(4, 6)
@@ -25,8 +28,9 @@ shape = SubResource("CircleShape2D_ltmif")
 [node name="CombatArea" type="Area2D" parent="EnemyBody"]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/CombatArea"]
-position = Vector2(4, 5)
-shape = SubResource("CapsuleShape2D_qag7e")
+position = Vector2(0, -6.5)
+shape = SubResource("RectangleShape2D_ukxwl")
+debug_color = Color(0.83233, 0.176248, 0.849744, 0.42)
 
 [node name="HatchTimer" type="Timer" parent="EnemyBody"]
 wait_time = 5.0
@@ -37,3 +41,16 @@ one_shot = true
 [node name="CollisionSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
 
 [node name="DeathSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+
+[node name="EggArea" type="Area2D" parent="EnemyBody"]
+collision_layer = 16
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/EggArea"]
+position = Vector2(1, 21)
+shape = SubResource("CapsuleShape2D_s3v6w")
+debug_color = Color(0.631305, 0.516451, 0.327184, 0.42)
+
+[node name="EggSprite" type="Sprite2D" parent="EnemyBody"]
+visible = false
+position = Vector2(1, 22)
+texture = ExtResource("3_ukxwl")

@@ -1,6 +1,8 @@
 extends "res://scripts/entities/enemy_base.gd"
 
 var target = null
+var sprite_path = "res://assets/sprites/enemy_hunter-placeholder.png"  # Renamed to sprite_path
+
 
 func _ready():
 	super._ready()
@@ -8,7 +10,7 @@ func _ready():
 	move_speed = 100
 	
 	# Set sprite color to distinguish enemy type
-	enemy_sprite = "res://assets/sprites/enemy_hunter-placeholder.png"
+	enemy_sprite.texture = load(sprite_path)  # Use the loaded texture on the existing sprite
 
 # Override the flying process for this specific enemy type
 func process_flying(delta):
@@ -41,7 +43,6 @@ func process_flying(delta):
 		# Random flapping if no target
 		if randf() < 0.03:
 			velocity.y = flap_force
-		
 		# Random direction changes
 		if randf() < 0.01:
 			direction *= -1
@@ -49,6 +50,11 @@ func process_flying(delta):
 	
 	# Horizontal movement
 	velocity.x = direction * move_speed
+	
+	# Check if landed on a platform while flying
+	if current_state == State.FLYING and is_on_floor():
+		current_state = State.WALKING
+		walk_time = 0
 
 	
 	move_and_slide()

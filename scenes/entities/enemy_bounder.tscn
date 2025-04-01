@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://b6fl4hgk3xwjd"]
+[gd_scene load_steps=7 format=3 uid="uid://b6fl4hgk3xwjd"]
 
 [ext_resource type="Script" uid="uid://boud7skxqmx1f" path="res://scripts/entities/enemy_bounder.gd" id="1_66jom"]
 [ext_resource type="Texture2D" uid="uid://75doebxc70lg" path="res://assets/sprites/enemy_base-placeholder.png" id="2_66jom"]
+[ext_resource type="Texture2D" uid="uid://cvd3kcrwla4om" path="res://assets/sprites/egg.png" id="3_1cvw5"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ltmif"]
 radius = 27.0185
@@ -9,6 +10,9 @@ radius = 27.0185
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_qag7e"]
 radius = 32.0
 height = 64.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_0gr2f"]
+height = 22.0
 
 [node name="EnemyBase" type="Node2D"]
 
@@ -37,3 +41,16 @@ one_shot = true
 [node name="CollisionSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
 
 [node name="DeathSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+
+[node name="EggArea" type="Area2D" parent="EnemyBody"]
+collision_layer = 16
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/EggArea"]
+position = Vector2(1, 21)
+shape = SubResource("CapsuleShape2D_0gr2f")
+debug_color = Color(0.631305, 0.516451, 0.327184, 0.42)
+
+[node name="EggSprite" type="Sprite2D" parent="EnemyBody"]
+visible = false
+position = Vector2(1, 22)
+texture = ExtResource("3_1cvw5")
