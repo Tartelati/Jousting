@@ -16,7 +16,7 @@ size = Vector2(40.75, 12)
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_dtjhs"]
 height = 22.0
 
-[node name="EnemyBase" type="Node2D"]
+[node name="EnemyBase2" type="Node2D"]
 
 [node name="EnemyBody" type="CharacterBody2D" parent="."]
 collision_layer = 4

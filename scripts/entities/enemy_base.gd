@@ -2,17 +2,34 @@ extends CharacterBody2D
 
 enum State {FLYING, WALKING, EGG, HATCHING, DEAD}
 
-# Properties
+@export_group("Movement")
+@export var gravity: float = 600.0
+@export var flap_force: float = -250.0
+@export var move_speed: float = 100.0
+@export var walk_speed: float = 70.0
+@export var max_walk_time: float = 3.0  # Max time walking before trying to fly
+@export var egg_fall_speed: float = 200.0
+
+@export_group("AI Behavior")
+@export var random_flap_chance: float = 0.02 # Chance per physics frame (flying)
+@export var random_dir_change_chance_flying: float = 0.005 # Chance per physics frame
+@export var random_dir_change_chance_walking: float = 0.01 # Chance per physics frame
+@export var random_fly_chance_walking: float = 0.01 # Chance per physics frame
+
+@export_group("Collision & Interaction")
+@export var points_value: int = 100
+@export var collision_y_threshold: float = 10.0 # Threshold for player joust check
+@export var enemy_bounce_velocity_x: float = 100.0
+@export var enemy_bounce_velocity_y: float = -50.0
+
+@export_group("Ground Check (Walking)")
+@export var ground_check_distance_ahead: float = 20.0
+@export var ground_check_distance_down: float = 30.0
+
+# Internal State
 var current_state = State.FLYING
-var gravity = 600
-var flap_force = -250
-var move_speed = 100
-var walk_speed = 70  # Walking is typically slower than flying
 var direction = 1
-var egg_fall_speed = 200
-var points_value = 100
-var walk_time = 0
-var max_walk_time = 3.0  # Maximum time to walk before trying to fly again
+var walk_time = 0.0
 
 # References
 @onready var enemy_sprite = $EnemySprite
@@ -73,6 +90,8 @@ func _physics_process(delta):
 	if current_state == State.FLYING and is_on_floor():
 		current_state = State.WALKING
 		walk_time = 0
+		# Update animation to walking (would use proper animation in full implementation)
+		enemy_sprite.modulate = Color(0.8, 1, 0.8)  # Slight green tint when walking
 	
 
 
@@ -100,14 +119,14 @@ func process_flying(delta):
 	velocity.y += gravity * delta
 
 	# Random flapping
-	if randf() < 0.02:  # 2% chance per frame to flap
+	if randf() < random_flap_chance:
 		velocity.y = flap_force
 
 	# Horizontal movement
 	velocity.x = direction * move_speed
 
 	# Change direction occasionally
-	if randf() < 0.05:  # 0.5% chance per frame
+	if randf() < random_dir_change_chance_flying:
 		direction *= -1
 		enemy_sprite.flip_h = (direction < 0)
 
@@ -121,10 +140,17 @@ func process_walking(delta):
 	velocity.y = 5  # Small downward force to stay on platform
 
 	# Horizontal movement
+	if direction < 0:
+		enemy_sprite.flip_h = true
+		
 	velocity.x = direction * walk_speed
+	
+	
+	# Handle screen wrapping
+	screen_wrapping()
 
 	# After walking for some time, try to fly again
-	if walk_time > max_walk_time || randf() < 0.01:  # Random chance to start flying
+	if walk_time > max_walk_time || randf() < random_fly_chance_walking:
 		current_state = State.FLYING
 		velocity.y = flap_force  # Initial flap to get airborne
 		# Update animation to flying (would use proper animation in full implementation)
@@ -140,13 +166,15 @@ func process_walking(delta):
 
 func check_ground_ahead():
 	# Cast a ray downward from slightly ahead of the enemy to check if there's ground
+	# NOTE: Creating/destroying RayCast2D every frame is inefficient.
+	# Consider adding a RayCast2D node in the editor or creating it once in _ready().
 	var ray_cast = RayCast2D.new()
 	add_child(ray_cast)
-	ray_cast.position = Vector2(direction * 20, 0)  # Check 20 pixels ahead
-	ray_cast.target_position = Vector2(0, 30)  # Check 30 pixels down
-	ray_cast.force_raycast_update()
+	ray_cast.position = Vector2(direction * ground_check_distance_ahead, 0)
+	ray_cast.target_position = Vector2(0, ground_check_distance_down)
+	ray_cast.force_raycast_update() # Force update for immediate result
 	var has_ground = ray_cast.is_colliding()
-	ray_cast.queue_free()
+	ray_cast.queue_free() # Remove the temporary node
 	return has_ground
 
 func _on_combat_area_area_entered(area):
@@ -171,19 +199,29 @@ func _on_combat_area_area_entered(area):
 		var player_bottom = player.global_position.y + player.get_node("CollisionShape2D").shape.height/2
 
 		# Compare Y positions to determine winner
-		if player_bottom < enemy_top +10: # Add small threshold
+		if player_bottom < enemy_top + collision_y_threshold: # Add small threshold
 			#player wins
 			defeat()
 		else:
+			# For walking state, just change direction instead of defeating
+			if current_state == State.WALKING and player.is_on_floor():
+				direction *= -1
+				enemy_sprite.flip_h = (direction < 0)
+				velocity.x = direction * walk_speed
 			#enemy wins or bounce handled by player script
 			pass
 	elif area.get_parent().is_in_group("enemies"):
 		# Enemy-enemy collision
 		var other_enemy = area.get_parent()
-		# simple bounce behaviour for enemy-enemy collisions
-		var direction = sign(global_position.x - other_enemy.global_position.x)
-		velocity.x = direction * 100
-		velocity.y = -50
+		# If both enemies are walking, just change directions
+		if current_state == State.WALKING and "current_state" in other_enemy and other_enemy.current_state == State.WALKING:
+			direction *= -1
+			enemy_sprite.flip_h = (direction < 0)
+		else:
+			# For flying enemies, use the bounce behavior
+			var bounce_direction = sign(global_position.x - other_enemy.global_position.x)
+			velocity.x = bounce_direction * enemy_bounce_velocity_x
+			velocity.y = enemy_bounce_velocity_y
 
 func process_egg(delta):
 	velocity.y = egg_fall_speed

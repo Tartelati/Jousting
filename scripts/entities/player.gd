@@ -1,20 +1,34 @@
 extends CharacterBody2D
 
-#movement parameters
-var gravity = 800
-var flap_force = -300
-var base_speed = 100
+@export_group("Movement")
+@export var gravity: float = 800.0
+@export var flap_force: float = -300.0
+@export var base_speed: float = 100.0
+@export var max_speed_level: int = 3
+@export var speed_multipliers: Array[float] = [0.0, 1.0, 2.0, 3.0] # Multipliers for each level
+@export var level_deceleration_time: float = 0.3  # Time to decrease one speed level
+@export var max_fall_speed: float = 400.0
+
+@export_group("Collision")
+@export var joust_bounce_velocity: float = -150.0
+@export var side_collision_bounce_x: float = 200.0
+@export var side_collision_bounce_y: float = -100.0
+@export var collision_y_threshold: float = 10.0 # Threshold for determining win/loss/bounce
+
+@export_group("Screen Wrap")
+@export var screen_wrap_buffer: float = 10.0
+
+@export_group("Respawn")
+@export var respawn_delay: float = 2.0
+
+# Internal state variables (not exported)
 var current_speed_level = 0  # 0=stopped, 1=base, 2=2x, 3=3x
-var max_speed_level = 3
-var speed_multipliers = [0, 1, 2, 3]  # Multipliers for each level
 var current_direction = 0  # -1=left, 0=none, 1=right
 var target_direction = 0   # Direction player is trying to move
 var deceleration_timer = 0
-var level_deceleration_time = 0.3  # Time to decrease one speed level
 var is_changing_direction = false
 var current_speed_value: float = 0.0  # Actual speed value (not just level)
 var target_speed_value: float = 0.0   # Target speed during deceleration
-var max_fall_speed = 400
 
 #state tracking
 var is_flapping = false
@@ -80,19 +94,16 @@ func _physics_process(delta):
 func screen_wrapping():
 	var viewport_rect = get_viewport_rect().size
 	
-	# Create a larger buffer for wrapping
-	var buffer = 10  # Increased buffer size
-	
 	# Check if player is about to go off the left edge
-	if global_position.x < buffer:
+	if global_position.x < screen_wrap_buffer:
 		# Immediately teleport to right side with same velocity
-		global_position.x = viewport_rect.x - buffer
+		global_position.x = viewport_rect.x - screen_wrap_buffer
 		# No need to change velocity, keep momentum
 	
 	# Check if player is about to go off the right edge
-	elif global_position.x > viewport_rect.x - buffer:
+	elif global_position.x > viewport_rect.x - screen_wrap_buffer:
 	# Immediately teleport to left side with same velocity
-		global_position.x = buffer
+		global_position.x = screen_wrap_buffer
 	# No need to change velocity, keep momentum
 
 func process_horizontal_movement(delta):
@@ -208,15 +219,15 @@ func _on_combat_area_area_entered(area):
 			enemy_bottom = enemy.global_position.y + enemy.get_node("CollisionShape2D").shape.height/2
 		#failsafe with default value
 		else:
-			enemy_bottom = enemy.global_position.y + 10
+			enemy_bottom = enemy.global_position.y + 10 # Failsafe value
 
 	# Compare Y positions to determine winner
-	if player_bottom < enemy_top + 10: # Add a small threshold for better gameplay feel
+	if player_bottom < enemy_top + collision_y_threshold: # Add a small threshold for better gameplay feel
 		# Player wins - jousted from above
 		enemy.defeat()
 		
 		# Add a small upward bounce
-		velocity.y = -150
+		velocity.y = joust_bounce_velocity
 		
 		# Play victory sound
 		if has_node("VictorySound"):
@@ -224,17 +235,17 @@ func _on_combat_area_area_entered(area):
 		
 	else :
 		# Enemy wins or bounce
-		if global_position.y > enemy_bottom - 10: # Add a small threshold
+		if global_position.y > enemy_bottom - collision_y_threshold: # Add a small threshold
 			die()
 		else:
 			# Side collision - bounce off each other
-			var direction = sign(global_position.x - enemy.global_position.x)
-			velocity.x = direction * 200
-			velocity.y = -100
+			var direction_to_enemy = sign(global_position.x - enemy.global_position.x)
+			velocity.x = direction_to_enemy * side_collision_bounce_x
+			velocity.y = side_collision_bounce_y
 			
 			if "velocity" in enemy:
-				enemy.velocity.x = -direction * 200
-				enemy.velocity.y = -100
+				enemy.velocity.x = -direction_to_enemy * side_collision_bounce_x
+				enemy.velocity.y = side_collision_bounce_y
 			
 			collision_sound.play()
 
@@ -247,7 +258,7 @@ func die():
 	get_node("/root/ScoreManager").lose_life()
 	
 	# Wait and respawn
-	await get_tree().create_timer(2.0).timeout
+	await get_tree().create_timer(respawn_delay).timeout
 	respawn()
 
 func respawn():

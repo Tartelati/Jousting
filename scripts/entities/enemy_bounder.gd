@@ -24,10 +24,6 @@ func process_flying(delta):
 	
 	# Horizontal movement
 	velocity.x = direction * move_speed
-	
-	# Change direction occasionally
-	if randf() < 0.01:  # 1% chance per frame
-		direction *= -1
-		enemy_sprite.flip_h = (direction < 0)
+
 	
 	move_and_slide()

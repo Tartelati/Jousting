@@ -14,7 +14,7 @@ height = 64.0
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_0gr2f"]
 height = 22.0
 
-[node name="EnemyBase" type="Node2D"]
+[node name="EnemyBase2" type="Node2D"]
 
 [node name="EnemyBody" type="CharacterBody2D" parent="."]
 script = ExtResource("1_66jom")
