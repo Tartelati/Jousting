@@ -3,7 +3,17 @@ extends CharacterBody2D
 #movement parameters
 var gravity = 800
 var flap_force = -300
-var move_speed = 150
+var base_speed = 100
+var current_speed_level = 0  # 0=stopped, 1=base, 2=2x, 3=3x
+var max_speed_level = 3
+var speed_multipliers = [0, 1, 2, 3]  # Multipliers for each level
+var current_direction = 0  # -1=left, 0=none, 1=right
+var target_direction = 0   # Direction player is trying to move
+var deceleration_timer = 0
+var level_deceleration_time = 0.3  # Time to decrease one speed level
+var is_changing_direction = false
+var current_speed_value: float = 0.0  # Actual speed value (not just level)
+var target_speed_value: float = 0.0   # Target speed during deceleration
 var max_fall_speed = 400
 
 #state tracking
@@ -55,7 +65,8 @@ func _physics_process(delta):
 		direction = 1
 		sprite.flip_h = false
 	
-	velocity.x = direction * move_speed
+	# Handle horizontal movement with speed levels
+	process_horizontal_movement(delta)
 	
 	# Handle screen wrapping
 	screen_wrapping()
@@ -83,6 +94,80 @@ func screen_wrapping():
 	# Immediately teleport to left side with same velocity
 		global_position.x = buffer
 	# No need to change velocity, keep momentum
+
+func process_horizontal_movement(delta):
+	# Determine target direction from input
+	var previous_target = target_direction
+	target_direction = 0
+	
+	if Input.is_action_pressed("move_left"):
+		target_direction = -1
+	elif Input.is_action_pressed("move_right"):
+		target_direction = 1
+	
+	# Handle direction changes and speed levels
+	if target_direction != 0:
+		# Player is pressing a direction key
+		if current_direction == 0:
+			# Starting from stopped position
+			current_direction = target_direction
+			current_speed_level = 1
+			current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
+			is_changing_direction = false
+		elif current_direction == target_direction:
+			# Same direction - accelerate if key was just pressed
+			if previous_target != target_direction:
+				current_speed_level = min(current_speed_level + 1, max_speed_level)
+				current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
+			is_changing_direction = false
+		elif current_direction != target_direction && !is_changing_direction:
+			# Opposite direction - start deceleration
+			is_changing_direction = true
+			deceleration_timer = 0
+			
+			# Set starting and target speeds for smooth interpolation
+			var start_speed = current_speed_value
+			var next_level = max(0, current_speed_level - 1) #Ensure valid index
+			target_speed_value = base_speed * speed_multipliers[next_level] * current_direction
+
+	
+	# Handle deceleration when changing direction
+	if is_changing_direction:
+		deceleration_timer += delta
+		
+		# Decrease speed level every 0.5 seconds
+		if deceleration_timer >= level_deceleration_time:
+			current_speed_level -= 1
+			deceleration_timer = 0
+			
+			# If reached speed 0, change direction
+			if current_speed_level <= 0:
+				current_direction = target_direction
+				current_speed_level = 1
+				current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
+				is_changing_direction = false
+				
+			else:
+				# Set new target speed for next level
+				var start_speed = current_speed_value
+				var next_level = current_speed_level - 1
+				target_speed_value = base_speed * speed_multipliers[next_level] * current_direction
+		else:
+			# Smoothly interpolate between current and target speed
+			var t = deceleration_timer / level_deceleration_time
+			current_speed_value = lerp(current_speed_value, target_speed_value, t)
+	
+# If not changing direction, ensure speed matches the current level
+	if !is_changing_direction:
+		current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
+	# Update velocity and sprite direction
+	velocity.x = current_speed_value
+	
+	# Update sprite direction
+	if current_direction < 0:
+		sprite.flip_h = true
+	elif current_direction > 0:
+		sprite.flip_h = false
 
 func update_animation():
 	# This would be replaced with proper animation states

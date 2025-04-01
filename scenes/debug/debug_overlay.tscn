@@ -1,0 +1,42 @@
+[gd_scene load_steps=2 format=3 uid="uid://fpuowca5qitv"]
+
+[ext_resource type="Script" uid="uid://bi7sgp22221o6" path="res://scripts/debug/debug_overlay.gd" id="1_debug"]
+
+[node name="DebugOverlay" type="CanvasLayer"]
+layer = 100
+script = ExtResource("1_debug")
+
+[node name="DebugPanel" type="Panel" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -160.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 130.0
+grow_horizontal = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="DebugPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="DebugPanel/VBoxContainer"]
+layout_mode = 2
+text = "DEBUG TOOLS"
+horizontal_alignment = 1
+
+[node name="DefeatAll" type="Button" parent="DebugPanel/VBoxContainer"]
+layout_mode = 2
+text = "Defeat All Enemies"
+
+[node name="NextWave" type="Button" parent="DebugPanel/VBoxContainer"]
+layout_mode = 2
+text = "Next Wave"
+
+[connection signal="pressed" from="DebugPanel/VBoxContainer/DefeatAll" to="." method="_on_defeat_all_pressed"]
+[connection signal="pressed" from="DebugPanel/VBoxContainer/NextWave" to="." method="_on_next_wave_pressed"]

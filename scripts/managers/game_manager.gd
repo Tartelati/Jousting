@@ -8,6 +8,7 @@ var main_menu_scene = preload("res://scenes/ui/main_menu.tscn")
 var game_over_scene = preload("res://scenes/ui/game_over.tscn")
 var level_scene = preload("res://scenes/levels/level_base.tscn")
 var hud_scene = preload("res://scenes/ui/hud.tscn")
+var debug_overlay_scene = preload("res://scenes/debug/debug_overlay.tscn")
 
 # References to active scenes
 var active_ui = null
@@ -19,6 +20,10 @@ func _ready():
 	
 	# Connect to input events for pause
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ensure this node processes even when game is paused
+	# Add debug overlay if we're in development mode
+	if OS.has_feature("editor") or OS.is_debug_build():
+		var debug_overlay = debug_overlay_scene.instantiate()
+		add_child(debug_overlay)
 
 func _input(event):
 	if event.is_action_pressed("pause") and current_state == GameState.PLAYING:
