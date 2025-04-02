@@ -77,3 +77,5 @@ pause={
 2d_physics/layer_3="enemy"
 2d_physics/layer_4="egg"
 2d_physics/layer_5="pickup (egg collection)"
+2d_physics/layer_6="StompLayer"
+2d_physics/layer_7="VulnerableArea Layer"

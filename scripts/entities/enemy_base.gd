@@ -34,29 +34,52 @@ var walk_time = 0.0
 # References
 @onready var enemy_sprite = $EnemySprite
 @onready var hatch_timer = $HatchTimer
-@onready var combat_area = $CombatArea
-@onready var egg_area = $EggArea
+@onready var combat_area = $CombatArea # Main body collision
+@onready var egg_area = $EggArea # For player collecting egg
 @onready var egg_sprite = $EggSprite
+@onready var vulnerable_area = $VulnerableArea # For player stomping enemy
+var ground_raycast: RayCast2D # Declare variable for the raycast
 
 
 func _ready():
 	add_to_group("enemies")
+	
+	# Create and configure the ground check raycast once
+	ground_raycast = RayCast2D.new()
+	add_child(ground_raycast) # Add it as a child node
+	ground_raycast.target_position = Vector2(0, ground_check_distance_down)
+	ground_raycast.enabled = true # Ensure it's enabled
+	
 	if hatch_timer:
 		hatch_timer.connect("timeout", _on_hatch_timer_timeout)
 
 	# Initialize with random direction
 	direction = 1 if randf() > 0.5 else -1
 	
-	# Connect the combat area signal
+	# Add areas to groups and connect signals
 	if combat_area:
+		combat_area.add_to_group("enemy_combat_areas") # Add area to group
 		combat_area.connect("area_entered", _on_combat_area_area_entered)
+		
+	if vulnerable_area:
+		vulnerable_area.add_to_group("enemy_vulnerable_areas") # Add area to group
+		# IMPORTANT: Ensure this signal is connected in the Godot Editor as well,
+		# or uncomment the line below if you prefer connecting via code.
+		vulnerable_area.connect("area_entered", _on_vulnerable_area_area_entered)
 	
-	# Connect egg area signal - changed from body_entered to area_entered
+	# Connect egg area signal and add it to group
 	if egg_area:
+		egg_area.add_to_group("egg_collection_zones") # Add area to group
 		egg_area.connect("area_entered", _on_egg_area_area_entered)
 		egg_area.monitoring = false  # Start disabled
 
 func _physics_process(delta):
+	 # Debug keyboard input
+	if Input.is_action_just_pressed("ui_right"):
+		print("Right pressed")
+	if Input.is_action_just_pressed("ui_left"):
+		print("Left pressed")
+	
 	# Handle screen wrapping
 	screen_wrapping()
 	
@@ -165,54 +188,26 @@ func process_walking(delta):
 		enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
 
 func check_ground_ahead():
-	# Cast a ray downward from slightly ahead of the enemy to check if there's ground
-	# NOTE: Creating/destroying RayCast2D every frame is inefficient.
-	# Consider adding a RayCast2D node in the editor or creating it once in _ready().
-	var ray_cast = RayCast2D.new()
-	add_child(ray_cast)
-	ray_cast.position = Vector2(direction * ground_check_distance_ahead, 0)
-	ray_cast.target_position = Vector2(0, ground_check_distance_down)
-	ray_cast.force_raycast_update() # Force update for immediate result
-	var has_ground = ray_cast.is_colliding()
-	ray_cast.queue_free() # Remove the temporary node
-	return has_ground
+	# Use the pre-configured raycast
+	ground_raycast.position.x = direction * ground_check_distance_ahead # Update position based on direction
+	ground_raycast.force_raycast_update() # Force update for immediate result
+	return ground_raycast.is_colliding()
 
 func _on_combat_area_area_entered(area):
-	if current_state != State.FLYING and current_state != State.WALKING:
-		return
+	# This function now primarily handles enemy-vs-enemy collisions.
+	# Player interactions (stomp, side collision, player death) are mostly handled
+	# by the player script (_on_combat_area_area_entered, _on_stomp_area_area_entered)
+	# and this enemy's _on_vulnerable_area_area_entered.
 	
-	if area.get_parent().is_in_group("players"):
-		var player = area.get_parent()
+	if current_state != State.FLYING and current_state != State.WALKING:
+		return # Only handle collisions when active
 		
-		# Get the collision shapes for more precise position comparison
-		var enemy_top = 0
-		var collision_shape = get_node("CollisionShape2D")
-		if collision_shape and collision_shape.shape:
-			if collision_shape.shape is CircleShape2D:
-				enemy_top = global_position.y - collision_shape.shape.radius
-			elif collision_shape.shape is CapsuleShape2D or collision_shape.shape is RectangleShape2D:
-				enemy_top = global_position.y - collision_shape.shape.height/2
-			else:
-				#fallback for other shape types
-				enemy_top = global_position.y - 10 #use of default value here
-				
-		var player_bottom = player.global_position.y + player.get_node("CollisionShape2D").shape.height/2
-
-		# Compare Y positions to determine winner
-		if player_bottom < enemy_top + collision_y_threshold: # Add small threshold
-			#player wins
-			defeat()
-		else:
-			# For walking state, just change direction instead of defeating
-			if current_state == State.WALKING and player.is_on_floor():
-				direction *= -1
-				enemy_sprite.flip_h = (direction < 0)
-				velocity.x = direction * walk_speed
-			#enemy wins or bounce handled by player script
-			pass
-	elif area.get_parent().is_in_group("enemies"):
-		# Enemy-enemy collision
+	# Check if colliding with another enemy's combat area
+	if area.is_in_group("enemy_combat_areas"):
 		var other_enemy = area.get_parent()
+		if not other_enemy or other_enemy == self or not other_enemy.is_in_group("enemies"):
+			return # Ignore self-collision or non-enemy parents
+			
 		# If both enemies are walking, just change directions
 		if current_state == State.WALKING and "current_state" in other_enemy and other_enemy.current_state == State.WALKING:
 			direction *= -1
@@ -249,8 +244,8 @@ func _on_egg_area_area_entered(area):
 	# Add debug print to see if this function is being called
 	print("Area entered egg area: ", area.name)
 	
-	# Check if the area is the player's Collection Area
-	if (current_state == State.EGG or current_state == State.HATCHING) and area.get_parent().is_in_group("players"):
+	# Check if the entering area is the player's Collection Area (which should be in the "player_collectors" group)
+	if (current_state == State.EGG or current_state == State.HATCHING) and area.is_in_group("player_collectors"):
 		print("Egg collected by player's collection area!")
 		collect_egg()
 
@@ -300,6 +295,15 @@ func collect_egg():
 	   
 	queue_free()
 
+func _on_vulnerable_area_area_entered(area):
+	"""Handles being stomped by the player."""
+	# Check if the entering area is the player's stomp area
+	if area.is_in_group("player_stomp_areas"):
+		# Check if the parent is actually the player
+		var player = area.get_parent()
+		if player and player.is_in_group("players"):
+			# Player successfully stomped this enemy
+			defeat() # Call the existing defeat logic
 
 func _on_hatch_timer_timeout():
 	current_state = State.FLYING

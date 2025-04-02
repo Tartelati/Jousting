@@ -21,14 +21,20 @@ extends CharacterBody2D
 @export_group("Respawn")
 @export var respawn_delay: float = 2.0
 
+# --- Movement State Machine ---
+enum MoveState { IDLE, MOVING, DECELERATING }
+var move_state = MoveState.IDLE
+# --- End Movement State Machine ---
+
 # Internal state variables (not exported)
 var current_speed_level = 0  # 0=stopped, 1=base, 2=2x, 3=3x
 var current_direction = 0  # -1=left, 0=none, 1=right
-var target_direction = 0   # Direction player is trying to move
-var deceleration_timer = 0
-var is_changing_direction = false
+# var target_direction = 0   # Replaced by input_direction within state logic
+var deceleration_timer = 0.0
+# var is_changing_direction = false # Replaced by DECELERATING state
 var current_speed_value: float = 0.0  # Actual speed value (not just level)
 var target_speed_value: float = 0.0   # Target speed during deceleration
+# var _just_stomped = false # Removed - relying on separate signal handling
 
 #state tracking
 var is_flapping = false
@@ -39,8 +45,9 @@ var is_alive = true
 @onready var flap_sound = $FlapSound
 @onready var collision_sound = $CollisionSound
 @onready var death_sound = $DeathSound
-@onready var combat_area = $CombatArea
-@onready var collection_area = $CollectionArea
+@onready var combat_area = $CombatArea # Main body collision
+@onready var collection_area = $CollectionArea # For collecting eggs
+@onready var stomp_area = $StompArea # For stomping enemies
 
 
 func _ready():
@@ -48,10 +55,21 @@ func _ready():
 	add_to_group("players")
 	
 	# Connect combat area signal
-	combat_area.connect("area_entered", _on_combat_area_area_entered)
-	# Connect collection_area signal
+	if combat_area:
+		combat_area.connect("area_entered", _on_combat_area_area_entered)
 	
-	collection_area.connect("area_entered", _on_collection_area_area_entered)
+	# Connect collection_area signal and add it to group
+	if collection_area:
+		collection_area.add_to_group("player_collectors") # Add area to group
+		collection_area.connect("area_entered", _on_collection_area_area_entered)
+		
+	# Connect stomp_area signal and add it to group
+	if stomp_area:
+		stomp_area.add_to_group("player_stomp_areas") # Add area to group
+		# Connect the signal from the StompArea node to this script's function
+		# IMPORTANT: Ensure this signal is connected in the Godot Editor as well, 
+		# or uncomment the line below if you prefer connecting via code.
+		stomp_area.connect("area_entered", _on_stomp_area_area_entered) 
 
 func _physics_process(delta):
 	if not is_alive:
@@ -78,9 +96,19 @@ func _physics_process(delta):
 	elif Input.is_action_pressed("move_right"):
 		direction = 1
 		sprite.flip_h = false
-	
-	# Handle horizontal movement with speed levels
-	process_horizontal_movement(delta)
+		
+	# --- State Machine Based Horizontal Movement ---
+	var input_direction = _get_input_direction()
+	match move_state:
+		MoveState.IDLE:
+			_state_idle(input_direction)
+		MoveState.MOVING:
+			_state_moving(input_direction, delta)
+		MoveState.DECELERATING:
+			_state_decelerating(input_direction, delta)
+			
+	_apply_horizontal_velocity() # Apply calculated velocity
+	# --- End State Machine Based Horizontal Movement ---
 	
 	# Handle screen wrapping
 	screen_wrapping()
@@ -106,79 +134,102 @@ func screen_wrapping():
 		global_position.x = screen_wrap_buffer
 	# No need to change velocity, keep momentum
 
-func process_horizontal_movement(delta):
-	# Determine target direction from input
-	var previous_target = target_direction
-	target_direction = 0
-	
-	if Input.is_action_pressed("move_left"):
-		target_direction = -1
-	elif Input.is_action_pressed("move_right"):
-		target_direction = 1
-	
-	# Handle direction changes and speed levels
-	if target_direction != 0:
-		# Player is pressing a direction key
-		if current_direction == 0:
-			# Starting from stopped position
-			current_direction = target_direction
-			current_speed_level = 1
-			current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
-			is_changing_direction = false
-		elif current_direction == target_direction:
-			# Same direction - accelerate if key was just pressed
-			if previous_target != target_direction:
-				current_speed_level = min(current_speed_level + 1, max_speed_level)
-				current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
-			is_changing_direction = false
-		elif current_direction != target_direction && !is_changing_direction:
-			# Opposite direction - start deceleration
-			is_changing_direction = true
-			deceleration_timer = 0
-			
-			# Set starting and target speeds for smooth interpolation
-			var start_speed = current_speed_value
-			var next_level = max(0, current_speed_level - 1) #Ensure valid index
-			target_speed_value = base_speed * speed_multipliers[next_level] * current_direction
 
-	
-	# Handle deceleration when changing direction
-	if is_changing_direction:
-		deceleration_timer += delta
-		
-		# Decrease speed level every 0.5 seconds
-		if deceleration_timer >= level_deceleration_time:
-			current_speed_level -= 1
-			deceleration_timer = 0
-			
-			# If reached speed 0, change direction
-			if current_speed_level <= 0:
-				current_direction = target_direction
-				current_speed_level = 1
-				current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
-				is_changing_direction = false
-				
-			else:
-				# Set new target speed for next level
-				var start_speed = current_speed_value
-				var next_level = current_speed_level - 1
-				target_speed_value = base_speed * speed_multipliers[next_level] * current_direction
-		else:
-			# Smoothly interpolate between current and target speed
-			var t = deceleration_timer / level_deceleration_time
-			current_speed_value = lerp(current_speed_value, target_speed_value, t)
-	
-# If not changing direction, ensure speed matches the current level
-	if !is_changing_direction:
+# --- Horizontal Movement State Functions ---
+
+func _get_input_direction() -> int:
+	"""Gets the horizontal input direction (-1 for left, 1 for right, 0 for none)."""
+	if Input.is_action_pressed("move_left"):
+		return -1
+	elif Input.is_action_pressed("move_right"):
+		return 1
+	else:
+		return 0
+
+func _state_idle(input_direction: int):
+	"""Handles logic when the player is not moving horizontally."""
+	current_speed_level = 0
+	current_speed_value = 0
+	current_direction = 0 # Explicitly set direction to 0 when idle
+	if input_direction != 0:
+		# Start moving
+		current_direction = input_direction
+		current_speed_level = 1
+		# Update speed value immediately for responsiveness
 		current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
-	# Update velocity and sprite direction
-	velocity.x = current_speed_value
+		move_state = MoveState.MOVING
+
+func _state_moving(input_direction: int, delta: float):
+	"""Handles logic when the player is actively moving."""
+	if input_direction == 0:
+		# Player released keys. Keep moving with current momentum.
+		# State remains MOVING. Speed is maintained unless opposite key is pressed.
+		pass 
+	elif input_direction == current_direction:
+		# Pressing same direction - accelerate on *just pressed*
+		# Check if the action was *just* pressed to avoid continuous acceleration
+		if Input.is_action_just_pressed("move_left") or Input.is_action_just_pressed("move_right"):
+			current_speed_level = min(current_speed_level + 1, max_speed_level)
+	elif input_direction != current_direction:
+		# Pressed opposite direction - start decelerating
+			_enter_decelerating_state(input_direction) # Pass the new target direction
+		
+	# Always update speed based on the current level while in this state
+	current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
+
+func _state_decelerating(input_direction: int, delta: float):
+	"""Handles logic when the player is decelerating to change direction."""
+	# Note: input_direction here is the direction the player is *currently holding*,
+	# which initiated the deceleration. current_direction is the direction they *were* moving.
 	
-	# Update sprite direction
+	deceleration_timer += delta
+
+	if deceleration_timer >= level_deceleration_time:
+		# Time to decrease a speed level
+		current_speed_level -= 1
+		deceleration_timer = 0 # Reset timer for next level
+
+		if current_speed_level <= 0:
+			# Reached speed 0, now change direction and start moving
+			current_direction = input_direction # Use the direction held during deceleration
+			current_speed_level = 1
+			# Update speed value immediately
+			current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
+			move_state = MoveState.MOVING # Transition back to MOVING
+		else:
+			# Still decelerating, calculate new target speed for the next lower level
+			var next_lower_level = max(0, current_speed_level - 1)
+			# Target speed is based on the original direction of movement during deceleration
+			target_speed_value = base_speed * speed_multipliers[next_lower_level] * current_direction 
+	else:
+		# Smoothly interpolate speed during this level's deceleration
+		var t = deceleration_timer / level_deceleration_time
+		# Speed at the start of *this* deceleration level (based on original direction)
+		var speed_at_this_level = base_speed * speed_multipliers[current_speed_level] * current_direction
+		current_speed_value = lerp(speed_at_this_level, target_speed_value, t)
+
+func _enter_decelerating_state(new_target_direction: int):
+	"""Sets up variables needed when entering the DECELERATING state."""
+	# new_target_direction is the direction the player just pressed
+	move_state = MoveState.DECELERATING
+	deceleration_timer = 0.0
+	# Calculate the speed target for the *next lower* level (relative to current level)
+	var next_lower_level = max(0, current_speed_level - 1)
+	# Target speed is based on the original direction of movement during deceleration
+	target_speed_value = base_speed * speed_multipliers[next_lower_level] * current_direction 
+
+func _apply_horizontal_velocity():
+	"""Applies the calculated horizontal speed to the velocity and updates sprite flip."""
+	velocity.x = current_speed_value
+	# Update sprite direction based on the actual movement direction
 	if current_direction < 0:
 		sprite.flip_h = true
 	elif current_direction > 0:
 		sprite.flip_h = false
+	# If current_direction is 0 (e.g., after full stop), sprite retains last flip
+
+# --- End Refactored Horizontal Movement Functions ---
+
 
 func update_animation():
 	# This would be replaced with proper animation states
@@ -188,66 +239,75 @@ func update_animation():
 	else:
 		sprite.modulate = Color(1, 1, 1)  # Normal color otherwise
 
-func _on_combat_area_area_entered(area):
-	if not is_alive or not area.get_parent().is_in_group("enemies"):
-		return
-		
-	var enemy = area.get_parent()
-	
-	# Skip if enemy is in egg or hatching state
-	if "current_state" in enemy and (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
-		return
-			
-	# Get the collision shapes for more precise position comparison
-	var player_bottom = global_position.y + $CollisionShape2D.shape.height/2
-	var enemy_top = 0
-	var collision_shape = enemy.get_node("CollisionShape2D")
-	if collision_shape and collision_shape.shape:
-		if collision_shape.shape is CircleShape2D:
-			enemy_top = enemy.global_position.y - enemy.get_node("CollisionShape2D").shape.radius
-		elif collision_shape.shape is CapsuleShape2D or collision_shape.shape is RectangleShape2D:
-			enemy_top = enemy.global_position.y - enemy.get_node("CollisionShape2D").shape.height/2
-		#failsafe with default value
-		else:
-			enemy_top = enemy.global_position.y - 10
-		
-	var enemy_bottom = 0
-	if collision_shape and collision_shape.shape:
-		if collision_shape.shape is CircleShape2D:
-			enemy_bottom = enemy.global_position.y + enemy.get_node("CollisionShape2D").shape.radius
-		elif collision_shape.shape is CapsuleShape2D or collision_shape.shape is RectangleShape2D:
-			enemy_bottom = enemy.global_position.y + enemy.get_node("CollisionShape2D").shape.height/2
-		#failsafe with default value
-		else:
-			enemy_bottom = enemy.global_position.y + 10 # Failsafe value
+# --- Collision Handling ---
 
-	# Compare Y positions to determine winner
-	if player_bottom < enemy_top + collision_y_threshold: # Add a small threshold for better gameplay feel
-		# Player wins - jousted from above
-		enemy.defeat()
+func _on_combat_area_area_entered(area):
+	"""Handles collisions with the main player body (e.g., side collisions, getting hit)."""
+	# This function assumes a stomp was NOT successful (that's handled by _on_stomp_area_area_entered 
+	# triggering the enemy's _on_vulnerable_area_area_entered which calls defeat()).
+	if not is_alive: return
 		
-		# Add a small upward bounce
-		velocity.y = joust_bounce_velocity
+	# Check if colliding with an enemy's main combat area
+	# Assuming enemy combat areas are in a group like "enemy_combat_areas"
+	# (This group needs to be added to the enemy's CombatArea node in the editor)
+	if area.is_in_group("enemy_combat_areas"): 
+		var enemy = area.get_parent()
+		if not enemy or not enemy.is_in_group("enemies"): return # Ensure parent is valid enemy
 		
-		# Play victory sound
-		if has_node("VictorySound"):
-			$VictorySound.play()
+		# Skip if enemy is in egg or hatching state
+		if "current_state" in enemy and (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
+			return
+
+		# Player didn't stomp successfully (handled by StompArea signal)
+		# Determine if it's a side collision or player death
 		
-	else :
-		# Enemy wins or bounce
-		if global_position.y > enemy_bottom - collision_y_threshold: # Add a small threshold
+		# Simple approach: If player is moving downwards significantly, assume they lost.
+		# A more robust check might involve comparing relative positions slightly, 
+		# but this requires careful tuning. Let's stick to velocity for now.
+		if velocity.y > 50: # Threshold for downward velocity indicating player lost joust
 			die()
 		else:
-			# Side collision - bounce off each other
+			# Assume side collision - bounce off each other
 			var direction_to_enemy = sign(global_position.x - enemy.global_position.x)
-			velocity.x = direction_to_enemy * side_collision_bounce_x
-			velocity.y = side_collision_bounce_y
+			# Ensure direction is not zero if perfectly aligned
+			if direction_to_enemy == 0: direction_to_enemy = 1 
 			
+			velocity.x = direction_to_enemy * side_collision_bounce_x
+			velocity.y = side_collision_bounce_y # Small upward bounce for player
+			
+			# Apply bounce to enemy as well (if enemy has velocity)
 			if "velocity" in enemy:
 				enemy.velocity.x = -direction_to_enemy * side_collision_bounce_x
-				enemy.velocity.y = side_collision_bounce_y
+				enemy.velocity.y = side_collision_bounce_y # Small upward bounce for enemy
 			
 			collision_sound.play()
+
+func _on_stomp_area_area_entered(area):
+	"""Handles the PLAYER'S reaction to successfully stomping an enemy."""
+	# The enemy handles its own defeat via its _on_vulnerable_area_area_entered signal.
+	if not is_alive: return
+
+	# Check if the area entered is an enemy's vulnerable spot
+	# Assuming enemy vulnerable areas are in a group like "enemy_vulnerable_areas"
+	# (This group needs to be added to the enemy's VulnerableArea node in the editor)
+	if area.is_in_group("enemy_vulnerable_areas"):
+		var enemy = area.get_parent()
+		if not enemy or not enemy.is_in_group("enemies"): return # Ensure parent is valid enemy
+
+		# Skip if enemy is already in egg or hatching state (shouldn't happen if layers/masks correct)
+		if "current_state" in enemy and (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
+			return
+			
+		# Player wins - Stomped successfully!
+		# We don't call enemy.defeat() here. The enemy does that itself.
+		# We just handle the player's bounce.
+		
+		# Add a small upward bounce for the player
+		velocity.y = joust_bounce_velocity
+		
+		# Play victory sound (optional)
+		if has_node("VictorySound"):
+			$VictorySound.play()
 
 func die():
 	is_alive = false
@@ -269,13 +329,13 @@ func respawn():
 
 func _on_collection_area_area_entered(area):
 	#Debug print to check if this function is being called
-	print("Collection area detected: ", area.name)
+	print("Player collection area detected collision with: ", area.name)
 	
-	# Check if the area is an EggArea from an enemy
-	if area.name == "EggArea" and area.get_parent().is_in_group("enemies"):
+	# Check if the area entered is an enemy's egg collection zone
+	if area.is_in_group("egg_collection_zones") and area.get_parent().is_in_group("enemies"):
 		var enemy = area.get_parent()
 		
-		#Print more debug info to understand the state
+		# Print more debug info to understand the state
 		print("Enemy current_state: ", enemy.current_state if "current_state" in enemy else "unknown")
 		print("Enemy State.EGG value: ", enemy.State.EGG if "State" in enemy else "unknown")
 		

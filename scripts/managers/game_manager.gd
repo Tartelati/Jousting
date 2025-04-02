@@ -41,7 +41,8 @@ func show_main_menu():
 	
 	# Show main menu
 	active_ui = main_menu_scene.instantiate()
-	get_node("/root/Main/UI").add_child(active_ui)
+	# Assuming 'Main' is the root of the loaded game scene under /root
+	get_node("/root/Main").get_node("UI").add_child(active_ui) 
 	
 	# Connect signals
 	active_ui.connect("start_game", start_game)
@@ -59,11 +60,13 @@ func start_game():
 	
 	# Create level
 	active_level = level_scene.instantiate()
-	get_node("/root/Main/CurrentScene").add_child(active_level)
+	# Assuming 'Main' is the root of the loaded game scene under /root
+	get_node("/root/Main").get_node("CurrentScene").add_child(active_level) 
 	
 	# Create HUD
 	active_ui = hud_scene.instantiate()
-	get_node("/root/Main/UI").add_child(active_ui)
+	# Assuming 'Main' is the root of the loaded game scene under /root
+	get_node("/root/Main").get_node("UI").add_child(active_ui) 
 	
 	# Start first wave
 	active_level.get_node("WaveManager").start_wave(1)
@@ -80,7 +83,8 @@ func pause_game():
 		
 		# Show pause menu
 		var pause_menu = load("res://scenes/ui/pause_menu.tscn").instantiate()
-		get_node("/root/Main/UI").add_child(pause_menu)
+		# Assuming 'Main' is the root of the loaded game scene under /root
+		get_node("/root/Main").get_node("UI").add_child(pause_menu) 
 		pause_menu.connect("resume", resume_game)
 		pause_menu.connect("quit", show_main_menu)
 	elif current_state == GameState.PAUSED:
@@ -89,7 +93,8 @@ func pause_game():
 func resume_game():
 	if current_state == GameState.PAUSED:
 		# Remove pause menu
-		var pause_menu = get_node("/root/Main/UI").get_node("PauseMenu")
+		# Assuming 'Main' is the root of the loaded game scene under /root
+		var pause_menu = get_node("/root/Main").get_node("UI/PauseMenu") 
 		if pause_menu:
 			pause_menu.queue_free()
 		
@@ -110,7 +115,8 @@ func game_over():
 		active_ui.queue_free()
 	
 	active_ui = game_over_scene.instantiate()
-	get_node("/root/Main/UI").add_child(active_ui)
+	# Assuming 'Main' is the root of the loaded game scene under /root
+	get_node("/root/Main").get_node("UI").add_child(active_ui) 
 	
 	# Connect signals
 	active_ui.connect("restart", start_game)

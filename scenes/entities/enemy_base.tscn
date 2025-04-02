@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cba2m06mfhdpm"]
+[gd_scene load_steps=11 format=3 uid="uid://cba2m06mfhdpm"]
 
 [ext_resource type="Script" uid="uid://v56hqa6big8u" path="res://scripts/entities/enemy_base.gd" id="1_ltmif"]
 [ext_resource type="Texture2D" uid="uid://75doebxc70lg" path="res://assets/sprites/enemy_base-placeholder.png" id="2_1odx1"]
@@ -8,15 +8,18 @@
 [ext_resource type="AudioStream" uid="uid://dq2rorxstisr8" path="res://assets/sounds/sfx/enemy_death.wav" id="5_m6p80"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ltmif"]
-radius = 24.0
+radius = 20.0
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1odx1"]
-size = Vector2(40.75, 12)
+size = Vector2(48.375, 18)
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_dtjhs"]
 height = 22.0
 
-[node name="EnemyBase2" type="Node2D"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_xadvl"]
+size = Vector2(34, 13)
+
+[node name="EnemyBase3" type="Node2D"]
 
 [node name="EnemyBody" type="CharacterBody2D" parent="."]
 collision_layer = 4
@@ -27,13 +30,13 @@ script = ExtResource("1_ltmif")
 texture = ExtResource("2_1odx1")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody"]
-position = Vector2(4, 6)
+position = Vector2(0, 11)
 shape = SubResource("CircleShape2D_ltmif")
 
 [node name="CombatArea" type="Area2D" parent="EnemyBody"]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/CombatArea"]
-position = Vector2(0.625, -6)
+position = Vector2(3.8125, 9)
 shape = SubResource("RectangleShape2D_1odx1")
 debug_color = Color(0.785444, 0.325868, 0.726191, 0.42)
 
@@ -63,4 +66,14 @@ visible = false
 position = Vector2(1, 22)
 texture = ExtResource("3_qag7e")
 
+[node name="VulnerableArea" type="Area2D" parent="EnemyBody"]
+collision_layer = 64
+collision_mask = 32
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/VulnerableArea"]
+position = Vector2(1, -7.5)
+shape = SubResource("RectangleShape2D_xadvl")
+
+[connection signal="area_entered" from="EnemyBody/CombatArea" to="EnemyBody" method="_on_combat_area_area_entered"]
 [connection signal="body_entered" from="EnemyBody/EggArea" to="EnemyBody" method="_on_egg_area_body_entered"]
+[connection signal="area_entered" from="EnemyBody/VulnerableArea" to="EnemyBody" method="_on_vulnerable_area_area_entered"]
