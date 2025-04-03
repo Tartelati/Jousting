@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="JoustRemake"
-run/main_scene="uid://dy86ivxfgflf8"
+run/main_scene="uid://cb2h5vol4uunl"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
 

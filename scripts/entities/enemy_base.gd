@@ -74,12 +74,6 @@ func _ready():
 		egg_area.monitoring = false  # Start disabled
 
 func _physics_process(delta):
-	 # Debug keyboard input
-	if Input.is_action_just_pressed("ui_right"):
-		print("Right pressed")
-	if Input.is_action_just_pressed("ui_left"):
-		print("Left pressed")
-	
 	# Handle screen wrapping
 	screen_wrapping()
 	

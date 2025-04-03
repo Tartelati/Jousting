@@ -16,7 +16,9 @@ func _ready():
 func _on_start_game_pressed():
 	# Stop the music when starting the game
 	get_node("/root/SoundManager").stop_music()
-	emit_signal("start_game")
+	# Call GameManager directly instead of emitting a signal
+	GameManager.start_game() 
+	# emit_signal("start_game") # No longer needed
 
 func _on_options_pressed():
 	emit_signal("show_options")
