@@ -29,12 +29,16 @@ var move_state = MoveState.IDLE
 # Internal state variables (not exported)
 var current_speed_level = 0  # 0=stopped, 1=base, 2=2x, 3=3x
 var current_direction = 0  # -1=left, 0=none, 1=right
-# var target_direction = 0   # Replaced by input_direction within state logic
+var target_direction_during_decel = 0 # Direction player intends to move after decelerating
 var deceleration_timer = 0.0
 # var is_changing_direction = false # Replaced by DECELERATING state
-var current_speed_value: float = 0.0  # Actual speed value (not just level)
-var target_speed_value: float = 0.0   # Target speed during deceleration
+# var current_speed_value: float = 0.0  # No longer needed, set velocity.x directly
+# var target_speed_value: float = 0.0   # Target speed during deceleration - Removed for level-step deceleration
 # var _just_stomped = false # Removed - relying on separate signal handling
+
+# Input Cooldown
+var horizontal_input_cooldown: float = 0.15 # Seconds (adjust as needed)
+var last_horizontal_input_processed_time: float = 0.0 
 
 #state tracking
 var is_flapping = false
@@ -88,17 +92,16 @@ func _physics_process(delta):
 	else:
 		is_flapping = false
 	
-	# Handle horizontal movement
-	var direction = 0
-	if Input.is_action_pressed("move_left"):
-		direction = -1
-		sprite.flip_h = true
-	elif Input.is_action_pressed("move_right"):
-		direction = 1
-		sprite.flip_h = false
-		
 	# --- State Machine Based Horizontal Movement ---
-	var input_direction = _get_input_direction()
+	var input_direction = _get_input_direction() # Get input for state logic AND sprite flip
+	
+	# Handle sprite flipping based on input or current direction, but NOT during deceleration
+	if move_state != MoveState.DECELERATING:
+		if input_direction != 0:
+			sprite.flip_h = (input_direction < 0)
+		elif current_direction != 0: # Keep facing last direction if stopping (and not decelerating)
+			sprite.flip_h = (current_direction < 0)
+
 	match move_state:
 		MoveState.IDLE:
 			_state_idle(input_direction)
@@ -107,7 +110,7 @@ func _physics_process(delta):
 		MoveState.DECELERATING:
 			_state_decelerating(input_direction, delta)
 			
-	_apply_horizontal_velocity() # Apply calculated velocity
+	# _apply_horizontal_velocity() # Removed - velocity.x is set within state functions
 	# --- End State Machine Based Horizontal Movement ---
 	
 	# Handle screen wrapping
@@ -149,86 +152,150 @@ func _get_input_direction() -> int:
 func _state_idle(input_direction: int):
 	"""Handles logic when the player is not moving horizontally."""
 	current_speed_level = 0
-	current_speed_value = 0
-	current_direction = 0 # Explicitly set direction to 0 when idle
+	velocity.x = 0 # Ensure velocity is zero when idle
+	current_direction = 0 
 	if input_direction != 0:
 		# Start moving
 		current_direction = input_direction
 		current_speed_level = 1
-		# Update speed value immediately for responsiveness
-		current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
+		# Set velocity directly
+		velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
 		move_state = MoveState.MOVING
 
 func _state_moving(input_direction: int, delta: float):
 	"""Handles logic when the player is actively moving."""
-	if input_direction == 0:
-		# Player released keys. Keep moving with current momentum.
-		# State remains MOVING. Speed is maintained unless opposite key is pressed.
-		pass 
-	elif input_direction == current_direction:
-		# Pressing same direction - accelerate on *just pressed*
-		# Check if the action was *just* pressed to avoid continuous acceleration
-		if Input.is_action_just_pressed("move_left") or Input.is_action_just_pressed("move_right"):
+	# Player continues moving even if input_direction is 0
+	
+	var current_time = Time.get_ticks_msec() / 1000.0 # Get current time in seconds
+	
+	if input_direction == current_direction:
+		# Pressing same direction - accelerate on *just pressed* with cooldown
+		if (Input.is_action_just_pressed("move_left") or Input.is_action_just_pressed("move_right")) \
+		and (current_time > last_horizontal_input_processed_time + horizontal_input_cooldown):
 			current_speed_level = min(current_speed_level + 1, max_speed_level)
-	elif input_direction != current_direction:
-		# Pressed opposite direction - start decelerating
-			_enter_decelerating_state(input_direction) # Pass the new target direction
+			last_horizontal_input_processed_time = current_time # Update timestamp
+	elif input_direction != 0 and input_direction != current_direction:
+		# Pressed opposite direction - start decelerating (cooldown applied in _enter_decelerating_state)
+		target_direction_during_decel = input_direction # Store intended direction
+		_enter_decelerating_state() 
+		# Velocity for this frame remains as it was, deceleration starts next frame
+		return # Exit early to avoid applying normal moving velocity this frame
 		
-	# Always update speed based on the current level while in this state
-	current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
+	# Update velocity based on the current level and direction
+	velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
 
 func _state_decelerating(input_direction: int, delta: float):
-	"""Handles logic when the player is decelerating to change direction."""
-	# Note: input_direction here is the direction the player is *currently holding*,
-	# which initiated the deceleration. current_direction is the direction they *were* moving.
+	"""Handles logic when the player is decelerating by pressing the opposite direction."""
 	
-	deceleration_timer += delta
+	# --- Handle Input During Deceleration ---
+	if input_direction == current_direction: 
+		# Pressed original direction again - cancel deceleration
+		move_state = MoveState.MOVING
+		# Keep current (potentially reduced) speed level and direction
+		# Velocity will be updated correctly in MOVING state next frame
+		return 
+	var current_time = Time.get_ticks_msec() / 1000.0 # Get current time in seconds
+	
+	# --- Handle Input During Deceleration ---
+	if input_direction == current_direction: 
+		# Pressed original direction again - cancel deceleration
+		move_state = MoveState.MOVING
+		# Keep current (potentially reduced) speed level and direction
+		# Velocity will be updated correctly in MOVING state next frame
+		return 
+	elif input_direction == target_direction_during_decel:
+		# Pressing the target direction (accelerating the brake) with cooldown
+		if (Input.is_action_just_pressed("move_left") or Input.is_action_just_pressed("move_right")) \
+		and (current_time > last_horizontal_input_processed_time + horizontal_input_cooldown):
+			# Decrease speed level immediately if possible
+			if current_speed_level > 0:
+				current_speed_level -= 1
+				last_horizontal_input_processed_time = current_time # Update timestamp
+				deceleration_timer = 0.0 # Reset timer for the new level drop
+				# Update velocity immediately for the new lower level
+				if current_speed_level > 0:
+					velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
+				else: # Reached level 0
+					velocity.x = 0
+					current_direction = 0
+					move_state = MoveState.IDLE
+					return # Exit early, now idle
+	# If input_direction is 0 (keys released), continue decelerating based on timer.
 
-	if deceleration_timer >= level_deceleration_time:
-		# Time to decrease a speed level
-		current_speed_level -= 1
-		deceleration_timer = 0 # Reset timer for next level
+	# --- Timer-Based Deceleration ---
+	# Only proceed with timer logic if not already transitioned to IDLE
+	if move_state == MoveState.DECELERATING:
+		deceleration_timer += delta
+		
+		if deceleration_timer >= level_deceleration_time:
+			# Time to decrease a speed level
+			current_speed_level -= 1
+			deceleration_timer = 0.0 # Reset timer for next level drop
+			
+			if current_speed_level <= 0:
+				# Reached speed 0, stop completely
+				current_speed_level = 0
+				velocity.x = 0
+				current_direction = 0
+				move_state = MoveState.IDLE
+			else:
+				# Still moving, update velocity for the new lower level
+				velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
+		# else: 
+			# Velocity remains at the speed of the current level until timer completes
+			# No interpolation needed for this stepped deceleration approach
 
-		if current_speed_level <= 0:
-			# Reached speed 0, now change direction and start moving
-			current_direction = input_direction # Use the direction held during deceleration
-			current_speed_level = 1
-			# Update speed value immediately
-			current_speed_value = base_speed * speed_multipliers[current_speed_level] * current_direction
-			move_state = MoveState.MOVING # Transition back to MOVING
-		else:
-			# Still decelerating, calculate new target speed for the next lower level
-			var next_lower_level = max(0, current_speed_level - 1)
-			# Target speed is based on the original direction of movement during deceleration
-			target_speed_value = base_speed * speed_multipliers[next_lower_level] * current_direction 
-	else:
-		# Smoothly interpolate speed during this level's deceleration
-		var t = deceleration_timer / level_deceleration_time
-		# Speed at the start of *this* deceleration level (based on original direction)
-		var speed_at_this_level = base_speed * speed_multipliers[current_speed_level] * current_direction
-		current_speed_value = lerp(speed_at_this_level, target_speed_value, t)
-
-func _enter_decelerating_state(new_target_direction: int):
+func _enter_decelerating_state():
 	"""Sets up variables needed when entering the DECELERATING state."""
-	# new_target_direction is the direction the player just pressed
+	if current_speed_level <= 0: return # Cannot decelerate if already stopped
+	
+	var current_time = Time.get_ticks_msec() / 1000.0 # Get current time in seconds
+	# Check cooldown before allowing deceleration to start
+	if current_time <= last_horizontal_input_processed_time + horizontal_input_cooldown:
+		return # Ignore input if still within cooldown
+		
 	move_state = MoveState.DECELERATING
 	deceleration_timer = 0.0
-	# Calculate the speed target for the *next lower* level (relative to current level)
-	var next_lower_level = max(0, current_speed_level - 1)
-	# Target speed is based on the original direction of movement during deceleration
-	target_speed_value = base_speed * speed_multipliers[next_lower_level] * current_direction 
+	
+	# Immediately decrease speed level by 1
+	current_speed_level -= 1
+	last_horizontal_input_processed_time = current_time # Update timestamp as deceleration input was processed
+	
+	# Update velocity to the new lower speed level (still in original direction)
+	if current_speed_level > 0:
+		velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
+	else: # If dropping to level 0 immediately
+		velocity.x = 0
+		current_direction = 0
+		move_state = MoveState.IDLE # Go straight to IDLE if starting deceleration from level 1
 
-func _apply_horizontal_velocity():
-	"""Applies the calculated horizontal speed to the velocity and updates sprite flip."""
-	velocity.x = current_speed_value
-	# Update sprite direction based on the actual movement direction
-	if current_direction < 0:
-		sprite.flip_h = true
-	elif current_direction > 0:
-		sprite.flip_h = false
-	# If current_direction is 0 (e.g., after full stop), sprite retains last flip
+# Removed _apply_horizontal_velocity function
 
 # --- End Refactored Horizontal Movement Functions ---
+
+func bounce_from_wall(new_velocity):
+	"""Handles bouncing from a wall by directly modifying player state"""
+	# Apply the new velocity
+	velocity = new_velocity
+	
+	# Update direction based on new velocity
+	current_direction = sign(velocity.x)
+	
+	# Force the character into MOVING state
+	move_state = MoveState.MOVING
+	
+	# Set speed level based on velocity
+	var speed_value = abs(velocity.x) / base_speed
+	for i in range(speed_multipliers.size() - 1, -1, -1):
+		if speed_value >= speed_multipliers[i] * 0.9:  # 90% threshold
+			current_speed_level = i
+			break
+	
+	# Flip sprite based on new direction
+	sprite.flip_h = (current_direction < 0)
+	
+	# Play collision sound
+	collision_sound.play()
 
 
 func update_animation():

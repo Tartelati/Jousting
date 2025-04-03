@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://bft1fic6j0ucw"]
+[gd_scene load_steps=17 format=3 uid="uid://bft1fic6j0ucw"]
 
 [ext_resource type="Texture2D" uid="uid://b0thjvuaj1cc" path="res://assets/sprites/black_background.png" id="1_0y8gg"]
 [ext_resource type="Texture2D" uid="uid://bj0ijo66dkhlf" path="res://assets/sprites/platform1.png" id="2_vvcwp"]
@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://bd1d55gbc8bun" path="res://assets/sprites/lava.png" id="8_ynct0"]
 [ext_resource type="PackedScene" uid="uid://b72cmuhsp6dty" path="res://scenes/entities/player.tscn" id="11_dq8h5"]
 [ext_resource type="Script" uid="uid://cb8uooe1yjyuj" path="res://scripts/managers/wave_manager.gd" id="12_imdmy"]
+[ext_resource type="Script" uid="uid://8kf6chx1ys8p" path="res://scenes/levels/bouncing_collision.gd" id="12_morta"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_imdmy"]
 size = Vector2(960, 6)
@@ -20,6 +21,9 @@ size = Vector2(979, 5)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ioey5"]
 size = Vector2(800, 108)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p7rbk"]
+size = Vector2(10, 22)
 
 [node name="Level" type="Node2D"]
 
@@ -147,3 +151,11 @@ position = Vector2(398, 426)
 
 [node name="WaveManager" type="Node" parent="."]
 script = ExtResource("12_imdmy")
+
+[node name="BouncingCollision" type="Area2D" parent="."]
+collision_layer = 2
+script = ExtResource("12_morta")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BouncingCollision"]
+position = Vector2(732, 298)
+shape = SubResource("RectangleShape2D_p7rbk")

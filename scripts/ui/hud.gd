@@ -11,14 +11,14 @@ func _ready():
 	# Connect to score manager signals
 	get_node("/root/ScoreManager").connect("score_changed", _on_score_changed)
 	get_node("/root/ScoreManager").connect("lives_changed", _on_lives_changed)
+	# ScoreManager is an autoload, so we can access it directly: ScoreManager.connect(...)
+	# ScoreManager.connect("score_changed", _on_score_changed)
+	# ScoreManager.connect("lives_changed", _on_lives_changed)
 	
-	# Connect to wave manager signals
-	var wave_manager = get_node("/root/Main/CurrentScene").get_child(0).get_node("WaveManager")
-	if wave_manager:
-		wave_manager.connect("wave_started", _on_wave_started)
+	# Don't connect to WaveManager here. GameManager will provide the reference.
 	
-	# Update initial values
-	_on_score_changed(get_node("/root/ScoreManager").score)
+	# Update initial values using direct access to autoload
+	_on_score_changed(ScoreManager.score)
 	_on_lives_changed(get_node("/root/ScoreManager").lives)
 	
 	# Find all life indicators
@@ -28,6 +28,15 @@ func _ready():
 	
 	# Sort them by name to ensure correct order
 	life_indicators.sort_custom(func(a, b): return a.name < b.name)
+
+func setup_wave_manager_connection(wave_manager_node):
+	if wave_manager_node and wave_manager_node.has_signal("wave_started"):
+		if not wave_manager_node.is_connected("wave_started", _on_wave_started):
+			wave_manager_node.connect("wave_started", _on_wave_started)
+		# Optionally update initial wave display if needed, assuming wave_manager has current wave info
+		# _on_wave_started(wave_manager_node.current_wave_number) 
+	else:
+		printerr("HUD: Invalid WaveManager node provided or signal missing.")
 
 func _on_score_changed(new_score):
 	score_label.text = "Score: " + str(new_score)

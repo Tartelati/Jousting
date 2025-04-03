@@ -6,17 +6,18 @@ var current_state = GameState.MAIN_MENU
 var current_level = null
 var main_menu_scene = preload("res://scenes/ui/main_menu.tscn")
 var game_over_scene = preload("res://scenes/ui/game_over.tscn")
+var main_game_scene = preload("res://scenes/main_game.tscn") # Added
 var level_scene = preload("res://scenes/levels/level_base.tscn")
 var hud_scene = preload("res://scenes/ui/hud.tscn")
 var debug_overlay_scene = preload("res://scenes/debug/debug_overlay.tscn")
 
-# References to active scenes
-var active_ui = null
+# References to active scenes/nodes
+var active_ui = null # Can likely be removed if UI is always child of current scene
 var active_level = null
 
 func _ready():
-	# Start with main menu
-	show_main_menu()
+	# Don't show main menu automatically here. 
+	# The scene defined in project settings (opening_cinematic.tscn) will load first.
 	
 	# Connect to input events for pause
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ensure this node processes even when game is paused
@@ -39,64 +40,108 @@ func show_main_menu():
 		active_level.queue_free()
 		active_level = null
 	
-	# Show main menu
-	active_ui = main_menu_scene.instantiate()
-	# Assuming 'Main' is the root of the loaded game scene under /root
-	get_node("/root/Main").get_node("UI").add_child(active_ui) 
+	# Change the entire scene to the main menu scene
+	var error = get_tree().change_scene_to_packed(main_menu_scene)
+	if error != OK:
+		printerr("Failed to change scene to Main Menu: ", error)
+		return # Stop if changing scene failed
 	
-	# Connect signals
-	active_ui.connect("start_game", start_game)
+	# Note: Connecting signals like "start_game" needs to happen *in the main menu script itself* 
+	# now, as this GameManager instance doesn't directly hold the instantiated menu UI anymore 
+	# after the scene change. We assume the main_menu.tscn's script handles its own button connections.
+	# If the main menu script relied on the GameManager connecting its signals, that logic needs adjustment.
+	# For now, we just handle the scene change.
 	
 	current_state = GameState.MAIN_MENU
 
 func start_game():
-	# Clear main menu
-	if active_ui != null:
-		active_ui.queue_free()
+	# Initiate the scene change to the main gameplay scene.
+	# The main_game scene's script will call back to setup_new_gameplay_scene once it's ready.
+	var error = get_tree().change_scene_to_packed(main_game_scene)
+	if error != OK:
+		printerr("Failed to initiate change scene to Main Game Scene: ", error)
+		# Optionally handle the error, e.g., go back to main menu
+		# show_main_menu() 
+		return
+
+func setup_new_gameplay_scene(main_game_node):
+	# This function is called by the main_game scene itself once it's ready.
 	
+	if not main_game_node:
+		printerr("setup_new_gameplay_scene called with null node!")
+		return
+
+	print("Main Game Scene reported ready, proceeding with setup.")
+
 	# Reset score and lives
-	get_node("/root/ScoreManager").reset_score()
-	get_node("/root/ScoreManager").reset_lives()
+	ScoreManager.reset_score()
+	ScoreManager.reset_lives()
+
+	# Find the containers within the provided main_game_node
+	var current_scene_container = main_game_node.get_node_or_null("%CurrentScene")
+	var ui_container = main_game_node.get_node_or_null("%UI")
 	
-	# Create level
+	if not current_scene_container or not ui_container:
+		printerr("Setup: Could not find CurrentScene or UI container nodes in MainGame scene!")
+		return
+
+	# Create and add level
 	active_level = level_scene.instantiate()
-	# Assuming 'Main' is the root of the loaded game scene under /root
-	get_node("/root/Main").get_node("CurrentScene").add_child(active_level) 
+	current_scene_container.add_child(active_level)
 	
-	# Create HUD
-	active_ui = hud_scene.instantiate()
-	# Assuming 'Main' is the root of the loaded game scene under /root
-	get_node("/root/Main").get_node("UI").add_child(active_ui) 
+	# Create and add HUD
+	var hud_instance = hud_scene.instantiate()
+	ui_container.add_child(hud_instance)
 	
+	# Find WaveManager within the newly added level
+	var wave_manager = active_level.get_node_or_null("WaveManager")
+	
+	# Pass WaveManager reference to HUD
+	if hud_instance.has_method("setup_wave_manager_connection"):
+		hud_instance.setup_wave_manager_connection(wave_manager)
+	else:
+		printerr("Setup: HUD instance does not have setup_wave_manager_connection method!")
+		
 	# Start first wave
-	active_level.get_node("WaveManager").start_wave(1)
+	if wave_manager:
+		wave_manager.start_wave(1)
+	else:
+		printerr("Setup: WaveManager node not found in the loaded level scene!")
 	
 	# Start background music
-	get_node("/root/SoundManager").play_music("gameplay")
+	SoundManager.play_music("gameplay") # Use autoload directly
 	
 	current_state = GameState.PLAYING
+	print("Setup complete: Game Started Successfully") # Debug print
 
 func pause_game():
 	if current_state == GameState.PLAYING:
 		get_tree().paused = true
 		current_state = GameState.PAUSED
 		
-		# Show pause menu
-		var pause_menu = load("res://scenes/ui/pause_menu.tscn").instantiate()
-		# Assuming 'Main' is the root of the loaded game scene under /root
-		get_node("/root/Main").get_node("UI").add_child(pause_menu) 
-		pause_menu.connect("resume", resume_game)
-		pause_menu.connect("quit", show_main_menu)
+		# Show pause menu - Add it to the UI container of the current scene
+		var ui_container = get_tree().current_scene.get_node_or_null("%UI")
+		if ui_container:
+			var pause_menu = load("res://scenes/ui/pause_menu.tscn").instantiate()
+			ui_container.add_child(pause_menu)
+			# Connect signals directly here or ensure pause_menu script handles them
+			pause_menu.connect("resume", resume_game)
+			pause_menu.connect("quit", show_main_menu)
+		else:
+			printerr("Could not find UI container to add Pause Menu!")
 	elif current_state == GameState.PAUSED:
 		resume_game()
 
 func resume_game():
 	if current_state == GameState.PAUSED:
-		# Remove pause menu
-		# Assuming 'Main' is the root of the loaded game scene under /root
-		var pause_menu = get_node("/root/Main").get_node("UI/PauseMenu") 
-		if pause_menu:
-			pause_menu.queue_free()
+		# Remove pause menu - Find it within the current scene's UI container
+		var ui_container = get_tree().current_scene.get_node_or_null("%UI")
+		if ui_container:
+			var pause_menu = ui_container.get_node_or_null("PauseMenu") # Assuming node name is PauseMenu
+			if pause_menu:
+				pause_menu.queue_free()
+		else:
+			printerr("Could not find UI container to remove Pause Menu!")
 		
 		get_tree().paused = false
 		current_state = GameState.PLAYING
@@ -105,22 +150,26 @@ func game_over():
 	current_state = GameState.GAME_OVER
 	
 	# Stop background music
-	get_node("/root/SoundManager").stop_music()
+	SoundManager.stop_music() # Use autoload directly
 	
 	# Play game over sound
-	get_node("/root/SoundManager").play_sfx("game_over")
+	SoundManager.play_sfx("game_over") # Use autoload directly
 	
-	# Show game over screen
-	if active_ui != null:
-		active_ui.queue_free()
-	
-	active_ui = game_over_scene.instantiate()
-	# Assuming 'Main' is the root of the loaded game scene under /root
-	get_node("/root/Main").get_node("UI").add_child(active_ui) 
-	
-	# Connect signals
-	active_ui.connect("restart", start_game)
-	active_ui.connect("main_menu", show_main_menu)
+	# Show game over screen - Add it to the UI container of the current scene
+	var ui_container = get_tree().current_scene.get_node_or_null("%UI")
+	if ui_container:
+		# Clear previous UI if any (like HUD)
+		for child in ui_container.get_children():
+			child.queue_free()
+			
+		var game_over_instance = game_over_scene.instantiate()
+		ui_container.add_child(game_over_instance)
+		# Connect signals (assuming game_over script handles this or connect here)
+		game_over_instance.connect("restart", start_game)
+		game_over_instance.connect("main_menu", show_main_menu)
+		# active_ui = game_over_instance # Store reference if needed
+	else:
+		printerr("Could not find UI container to add Game Over screen!")
 	
 	# Keep level visible in background but disable processing
 	if active_level != null:
