@@ -148,7 +148,7 @@ shape = SubResource("RectangleShape2D_ioey5")
 position = Vector2(400, 300)
 
 [node name="SpawnPoint1" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(-322, 12)
+position = Vector2(-323, 5)
 script = ExtResource("10_morta")
 
 [node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint1"]
@@ -159,7 +159,7 @@ position = Vector2(-1, -27)
 shape = SubResource("CircleShape2D_imdmy")
 
 [node name="SpawnPoint2" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(-2, 159)
+position = Vector2(-2, 150)
 script = ExtResource("10_morta")
 
 [node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint2"]
@@ -168,7 +168,7 @@ script = ExtResource("10_morta")
 shape = SubResource("CircleShape2D_morta")
 
 [node name="SpawnPoint3" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(236, -10)
+position = Vector2(236, -21)
 script = ExtResource("10_morta")
 
 [node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint3"]
@@ -178,7 +178,7 @@ position = Vector2(-1, -27)
 shape = SubResource("CircleShape2D_p7rbk")
 
 [node name="SpawnPoint4" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(-10, -154)
+position = Vector2(-8, -162)
 script = ExtResource("10_morta")
 
 [node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint4"]
@@ -188,7 +188,7 @@ position = Vector2(-3, -23)
 shape = SubResource("CircleShape2D_l4xu8")
 
 [node name="Player" parent="." instance=ExtResource("11_dq8h5")]
-position = Vector2(398, 426)
+position = Vector2(205, 425)
 
 [node name="WaveManager" type="Node" parent="."]
 script = ExtResource("12_imdmy")
