@@ -109,7 +109,15 @@ func _physics_process(delta):
 		walk_time = 0
 		# Update animation to walking (would use proper animation in full implementation)
 		enemy_sprite.modulate = Color(0.8, 1, 0.8)  # Slight green tint when walking
+
+	# --- Add Fall Guardrail ---
+	# Check if enemy fell off the screen
+	var viewport_height = get_viewport_rect().size.y
+	var death_y_threshold = viewport_height + 50 # Kill if 50 pixels below screen bottom
 	
+	if global_position.y > death_y_threshold and current_state != State.DEAD:
+		print("Enemy %s fell off screen. Removing." % name) # Optional debug
+		queue_free() # Remove the enemy
 
 
 func screen_wrapping():

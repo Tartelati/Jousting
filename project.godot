@@ -79,3 +79,4 @@ pause={
 2d_physics/layer_5="pickup (egg collection)"
 2d_physics/layer_6="StompLayer"
 2d_physics/layer_7="VulnerableArea Layer"
+2d_physics/layer_8="SpawnBlockZone"

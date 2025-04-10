@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://bft1fic6j0ucw"]
+[gd_scene load_steps=22 format=3 uid="uid://bft1fic6j0ucw"]
 
 [ext_resource type="Texture2D" uid="uid://b0thjvuaj1cc" path="res://assets/sprites/black_background.png" id="1_0y8gg"]
 [ext_resource type="Texture2D" uid="uid://bj0ijo66dkhlf" path="res://assets/sprites/platform1.png" id="2_vvcwp"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://b5bfsp64ay6fh" path="res://scripts/entities/lava.gd" id="7_40ga3"]
 [ext_resource type="Texture2D" uid="uid://ckidsg3pwynp0" path="res://assets/sprites/platform5.png" id="8_w06h8"]
 [ext_resource type="Texture2D" uid="uid://bd1d55gbc8bun" path="res://assets/sprites/lava.png" id="8_ynct0"]
+[ext_resource type="Script" uid="uid://ciopo0w5fybtt" path="res://scripts/entities/spawn_point.gd" id="10_morta"]
 [ext_resource type="PackedScene" uid="uid://b72cmuhsp6dty" path="res://scenes/entities/player.tscn" id="11_dq8h5"]
 [ext_resource type="Script" uid="uid://cb8uooe1yjyuj" path="res://scripts/managers/wave_manager.gd" id="12_imdmy"]
 [ext_resource type="Script" uid="uid://8kf6chx1ys8p" path="res://scenes/levels/bouncing_collision.gd" id="12_morta"]
@@ -22,8 +23,20 @@ size = Vector2(979, 5)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ioey5"]
 size = Vector2(800, 108)
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_imdmy"]
+radius = 96.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_morta"]
+radius = 121.004
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_p7rbk"]
+radius = 93.0054
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_l4xu8"]
+radius = 109.0
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_p7rbk"]
-size = Vector2(10, 22)
+size = Vector2(10, 17)
 
 [node name="Level" type="Node2D"]
 
@@ -136,15 +149,43 @@ position = Vector2(400, 300)
 
 [node name="SpawnPoint1" type="Marker2D" parent="SpawnPoints"]
 position = Vector2(-322, 12)
+script = ExtResource("10_morta")
+
+[node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint1"]
+collision_layer = 128
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SpawnPoints/SpawnPoint1/PlayerDetectionZone"]
+position = Vector2(-1, -27)
+shape = SubResource("CircleShape2D_imdmy")
 
 [node name="SpawnPoint2" type="Marker2D" parent="SpawnPoints"]
 position = Vector2(-2, 159)
+script = ExtResource("10_morta")
+
+[node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint2"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SpawnPoints/SpawnPoint2/PlayerDetectionZone"]
+shape = SubResource("CircleShape2D_morta")
 
 [node name="SpawnPoint3" type="Marker2D" parent="SpawnPoints"]
 position = Vector2(236, -10)
+script = ExtResource("10_morta")
+
+[node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint3"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SpawnPoints/SpawnPoint3/PlayerDetectionZone"]
+position = Vector2(-1, -27)
+shape = SubResource("CircleShape2D_p7rbk")
 
 [node name="SpawnPoint4" type="Marker2D" parent="SpawnPoints"]
 position = Vector2(-10, -154)
+script = ExtResource("10_morta")
+
+[node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint4"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SpawnPoints/SpawnPoint4/PlayerDetectionZone"]
+position = Vector2(-3, -23)
+shape = SubResource("CircleShape2D_l4xu8")
 
 [node name="Player" parent="." instance=ExtResource("11_dq8h5")]
 position = Vector2(398, 426)
@@ -157,5 +198,5 @@ collision_layer = 2
 script = ExtResource("12_morta")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="BouncingCollision"]
-position = Vector2(732, 298)
+position = Vector2(728, 301)
 shape = SubResource("RectangleShape2D_p7rbk")
