@@ -89,17 +89,35 @@ func spawn_enemy():
 		0: enemy = enemy_basic_scene.instantiate()
 		1: enemy = enemy_hunter_scene.instantiate()
 		2: enemy = enemy_bounder_scene.instantiate()
+		_: 
+			printerr("Invalid enemy type in spawn_enemy")
+			return # Don't spawn if type is invalid
+
+	# --- Choose a SAFE spawn position ---
+	# 1. Filter spawn points to find those not blocked by the player
+	var available_spawn_points = []
+	for point in spawn_points:
+		# Check if it's a Marker2D with the spawn_point script attached
+		if point is Marker2D and point.has_method("can_spawn"): 
+			if point.can_spawn():
+				available_spawn_points.append(point)
+		# else: # Handle the case where spawn_points might contain Vector2 (fallback logic)
+			# For simplicity, assume Vector2 points are always available if used
+			# available_spawn_points.append(point) 
+			# Note: The Vector2 fallback logic might need review if used alongside Marker2D points.
+			# It's better if all spawn points are Marker2D with the script attached.
+
+	# 2. Check if any spawn points are available
+	if available_spawn_points.size() == 0:
+		# print("WaveManager: No available spawn points (player might be blocking all). Skipping spawn.")
+		return # Skip spawning this cycle
+
+	# 3. Choose a random spawn point from the *available* ones
+	var spawn_index = randi() % available_spawn_points.size()
+	var spawn_point = available_spawn_points[spawn_index]
 	
-	# Choose random spawn position
-	var spawn_index = randi() % spawn_points.size()
-	var spawn_point = spawn_points[spawn_index]
-	
-	# Set enemy position to spawn point position
-	# Handle both Marker2D and Vector2 cases
-	if spawn_point is Marker2D:
-		enemy.position = spawn_point.global_position
-	else:
-		enemy.position = spawn_point
+	# Set enemy position (assuming chosen point is Marker2D now)
+	enemy.global_position = spawn_point.global_position
 	
 	# Add enemy to the scene
 	get_parent().add_child(enemy)

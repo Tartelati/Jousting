@@ -39,6 +39,10 @@ func show_main_menu():
 	if active_level != null:
 		active_level.queue_free()
 		active_level = null
+		
+	# Ensure the game is unpaused when returning to the main menu
+	if get_tree().paused:
+		get_tree().paused = false
 	
 	# Change the entire scene to the main menu scene
 	var error = get_tree().change_scene_to_packed(main_menu_scene)
