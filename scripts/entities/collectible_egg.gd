@@ -47,18 +47,21 @@ func _ready():
 
 
 func _on_area_entered(area: Area2D):
-	print("[DEBUG Egg %s] _on_area_entered triggered by: %s" % [name, area.name]) # DEBUG
+	print("[DEBUG Egg %s] _on_area_entered triggered by: %s (Parent: %s)" % [name, area.name, area.get_parent().name if area.get_parent() else "None"]) # DEBUG
 	# Check if already collected or hatched
 	if _collected:
 		print("[DEBUG Egg %s] Area entered, but already collected/hatched. Ignoring." % name) # DEBUG
 		return
 		
 	# Check if the entering area is the player's collection area
-	if area.is_in_group("player_collectors"):
-		print("[DEBUG Egg %s] Player collector area detected!" % name) # DEBUG
+	var parent = area.get_parent()
+	if parent and parent.is_in_group("players") and area.is_in_group("player_collectors"):
+		print("[DEBUG Egg %s] Player collector area detected! Calling _collect()." % name) # DEBUG
 		_collect()
 	else:
-		print("[DEBUG Egg %s] Area %s is not in player_collectors group." % [name, area.name]) # DEBUG
+		var group_check = area.is_in_group("player_collectors") if is_instance_valid(area) else "invalid area"
+		var parent_group_check = parent.is_in_group("players") if is_instance_valid(parent) else "invalid parent"
+		print("[DEBUG Egg %s] Area %s did not match collection criteria. Is Collector Group: %s, Parent Is Player Group: %s" % [name, area.name, group_check, parent_group_check]) # DEBUG
 
 func _collect():
 	print("[DEBUG Egg %s] _collect() called. Current _collected: %s" % [name, _collected]) # DEBUG

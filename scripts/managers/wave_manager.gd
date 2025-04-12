@@ -33,8 +33,7 @@ func _ready():
 	# If no spawn points were found, create some default positions
 	if spawn_points.size() == 0:
 		print("Warning: No spawn points found. Using default positions.")
-		# Get viewport size correctly for a Node
-		var viewport_size = get_viewport().get_visible_rect().size 
+		var viewport_size = get_viewport().get_visible_rect().size # Use get_viewport()
 		# Top spawn positions
 		for i in range(5):
 			var x_pos = viewport_size.x * (i + 1) / 6
