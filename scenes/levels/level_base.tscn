@@ -200,3 +200,77 @@ script = ExtResource("12_morta")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="BouncingCollision"]
 position = Vector2(728, 301)
 shape = SubResource("RectangleShape2D_p7rbk")
+
+[node name="EggSpawnPoints" type="Node2D" parent="."]
+
+[node name="Marker2D" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(32, 301)
+
+[node name="Marker2D2" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(465, 449)
+
+[node name="Marker2D3" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(240, 450)
+
+[node name="Marker2D4" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(148, 301)
+
+[node name="Marker2D5" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(446, 134)
+
+[node name="Marker2D6" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(650, 450)
+
+[node name="Marker2D7" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(545, 446)
+
+[node name="Marker2D8" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(302, 450)
+
+[node name="Marker2D9" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(140, 449)
+
+[node name="Marker2D10" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(368, 321)
+
+[node name="Marker2D11" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(771, 301)
+
+[node name="Marker2D12" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(684, 281)
+
+[node name="Marker2D13" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(609, 280)
+
+[node name="Marker2D14" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(557, 278)
+
+[node name="Marker2D15" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(437, 324)
+
+[node name="Marker2D16" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(305, 326)
+
+[node name="Marker2D17" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(782, 117)
+
+[node name="Marker2D18" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(723, 117)
+
+[node name="Marker2D19" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(499, 135)
+
+[node name="Marker2D20" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(12, 116)
+
+[node name="Marker2D21" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(60, 113)
+
+[node name="Marker2D22" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(352, 136)
+
+[node name="Marker2D23" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(115, 302)
+
+[node name="Marker2D24" type="Marker2D" parent="EggSpawnPoints"]
+position = Vector2(290, 135)
