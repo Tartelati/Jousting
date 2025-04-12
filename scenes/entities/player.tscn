@@ -50,7 +50,8 @@ stream = ExtResource("4_d4qa6")
 stream = ExtResource("5_ss7kx")
 
 [node name="CollectionArea" type="Area2D" parent="PlayerBody"]
-collision_mask = 16
+collision_layer = 17
+collision_mask = 24
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerBody/CollectionArea"]
 position = Vector2(0, 13)

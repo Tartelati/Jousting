@@ -59,13 +59,14 @@ func _ready():
 	# Add areas to groups and connect signals
 	if combat_area:
 		combat_area.add_to_group("enemy_combat_areas") # Add area to group
-		combat_area.connect("area_entered", _on_combat_area_area_entered)
+		# Connect in editor OR uncomment below, not both. Commenting out to fix error.
+		# combat_area.connect("area_entered", _on_combat_area_area_entered) 
 		
 	if vulnerable_area:
 		vulnerable_area.add_to_group("enemy_vulnerable_areas") # Add area to group
-		# IMPORTANT: Ensure this signal is connected in the Godot Editor as well,
-		# or uncomment the line below if you prefer connecting via code.
-		vulnerable_area.connect("area_entered", _on_vulnerable_area_area_entered)
+		# IMPORTANT: Ensure this signal is connected in the Godot Editor.
+		# Connecting via code is commented out to avoid double connection error.
+		# vulnerable_area.connect("area_entered", _on_vulnerable_area_area_entered)
 	
 	# Connect egg area signal and add it to group
 	if egg_area:
@@ -81,34 +82,34 @@ func _physics_process(delta):
 		State.FLYING:
 			process_flying(delta)
 			# Ensure egg area is disabled in flying state
-			egg_area.monitoring = false
+			if egg_area: egg_area.monitoring = false
 			# Ensure combat area is enabled in flying state
-			combat_area.monitoring = true
+			if combat_area: combat_area.monitoring = true
 		State.WALKING:
 			process_walking(delta)
 			# Ensure egg area is disabled in walking state
-			egg_area.monitoring = false
+			if egg_area: egg_area.monitoring = false
 			# Ensure combat area is enabled in walking state
-			combat_area.monitoring = true
+			if combat_area: combat_area.monitoring = true
 		State.EGG:
 			process_egg(delta)
 			# Ensure combat area is disabled in egg state
-			combat_area.monitoring = false
+			if combat_area: combat_area.monitoring = false
 			# Egg area monitoring is handled in process_egg()
 		State.HATCHING:
 			# Handled by animation and timer
 			# Ensure both areas are disabled during hatching
-			combat_area.monitoring = false
-			egg_area.monitoring = true
+			if combat_area: combat_area.monitoring = false
+			if egg_area: egg_area.monitoring = true # Should be monitorable to be collected
 		State.DEAD:
 			queue_free()
 
-	# Check if landed on a platform while flying
-	if current_state == State.FLYING and is_on_floor():
-		current_state = State.WALKING
-		walk_time = 0
-		# Update animation to walking (would use proper animation in full implementation)
-		enemy_sprite.modulate = Color(0.8, 1, 0.8)  # Slight green tint when walking
+	# Check if landed on a platform while flying (moved to process_flying)
+	# if current_state == State.FLYING and is_on_floor():
+	#	 current_state = State.WALKING
+	#	 walk_time = 0
+	#	 # Update animation to walking (would use proper animation in full implementation)
+	#	 enemy_sprite.modulate = Color(0.8, 1, 0.8)  # Slight green tint when walking
 
 	# --- Add Fall Guardrail ---
 	# Check if enemy fell off the screen
@@ -153,9 +154,25 @@ func process_flying(delta):
 	# Change direction occasionally
 	if randf() < random_dir_change_chance_flying:
 		direction *= -1
-		enemy_sprite.flip_h = (direction < 0)
+		if enemy_sprite: enemy_sprite.flip_h = (direction < 0)
+		
+	var just_hit_floor = false
+	var vertical_velocity_before_move = velocity.y # Store velocity before move_and_slide
 
 	move_and_slide()
+	
+	# Check for collision with floor (platform) after moving
+	if is_on_floor() and vertical_velocity_before_move > 0: # Check if moving downwards when hitting floor
+		# Apply a small upward bounce immediately
+		velocity.y = enemy_bounce_velocity_y 
+		just_hit_floor = true # Flag that we bounced
+
+	# Transition to walking state only if we actually landed and didn't just bounce
+	if is_on_floor() and not just_hit_floor and current_state == State.FLYING: # Added check for FLYING state
+		current_state = State.WALKING
+		walk_time = 0
+		if enemy_sprite: enemy_sprite.modulate = Color(0.8, 1, 0.8) # Slight green tint when walking
+
 
 func process_walking(delta):
 	# Walking behavior
@@ -166,7 +183,7 @@ func process_walking(delta):
 
 	# Horizontal movement
 	if direction < 0:
-		enemy_sprite.flip_h = true
+		if enemy_sprite: enemy_sprite.flip_h = true
 		
 	velocity.x = direction * walk_speed
 	
@@ -179,7 +196,7 @@ func process_walking(delta):
 		current_state = State.FLYING
 		velocity.y = flap_force  # Initial flap to get airborne
 		# Update animation to flying (would use proper animation in full implementation)
-		enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
+		if enemy_sprite: enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
 
 	move_and_slide()
 
@@ -187,10 +204,11 @@ func process_walking(delta):
 	if !is_on_floor():
 		current_state = State.FLYING
 		# Update animation to flying
-		enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
+		if enemy_sprite: enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
 
 func check_ground_ahead():
 	# Use the pre-configured raycast
+	if not is_instance_valid(ground_raycast): return false # Safety check
 	ground_raycast.position.x = direction * ground_check_distance_ahead # Update position based on direction
 	ground_raycast.force_raycast_update() # Force update for immediate result
 	return ground_raycast.is_colliding()
@@ -213,10 +231,11 @@ func _on_combat_area_area_entered(area):
 		# If both enemies are walking, just change directions
 		if current_state == State.WALKING and "current_state" in other_enemy and other_enemy.current_state == State.WALKING:
 			direction *= -1
-			enemy_sprite.flip_h = (direction < 0)
+			if enemy_sprite: enemy_sprite.flip_h = (direction < 0)
 		else:
 			# For flying enemies, use the bounce behavior
 			var bounce_direction = sign(global_position.x - other_enemy.global_position.x)
+			if bounce_direction == 0: bounce_direction = 1 # Avoid zero direction
 			velocity.x = bounce_direction * enemy_bounce_velocity_x
 			velocity.y = enemy_bounce_velocity_y
 
@@ -227,24 +246,27 @@ func process_egg(delta):
 
 	# Check if landed on platform
 	if is_on_floor():
-		hatch_timer.start()
+		if hatch_timer and not hatch_timer.is_stopped(): # Check if timer exists and not already started
+			hatch_timer.start()
 		current_state = State.HATCHING
-		egg_sprite.modulate = Color(1, 1, 0.8)  # Slight yellow tint when hatching
+		if egg_sprite: egg_sprite.modulate = Color(1, 1, 0.8)  # Slight yellow tint when hatching
 		
 	# Enable Egg Collection when in Egg state
-	egg_area.monitoring = true
-	egg_area.monitorable = true
+	if egg_area: 
+		egg_area.monitoring = true
+		egg_area.monitorable = true
 
-	for area in egg_area.get_overlapping_areas():
-		if area.name == "Collection Area" and area.get_parent().is_in_group("players"):
-			print("Manual overlap detection: Egg collected")
-			collect_egg()
-			break
+	# Manual overlap check might be redundant if signal connection works, but keep for now
+	# for area in egg_area.get_overlapping_areas():
+	#	 if area.name == "Collection Area" and area.get_parent().is_in_group("players"):
+	#		 print("Manual overlap detection: Egg collected")
+	#		 collect_egg()
+	#		 break
 
 # New function for area-based egg collection
 func _on_egg_area_area_entered(area):
 	# Add debug print to see if this function is being called
-	print("Area entered egg area: ", area.name)
+	# print("Area entered egg area: ", area.name) # Can be noisy
 	
 	# Check if the entering area is the player's Collection Area (which should be in the "player_collectors" group)
 	if (current_state == State.EGG or current_state == State.HATCHING) and area.is_in_group("player_collectors"):
@@ -252,19 +274,24 @@ func _on_egg_area_area_entered(area):
 		collect_egg()
 
 func defeat():
+	if current_state == State.EGG or current_state == State.HATCHING or current_state == State.DEAD:
+		return # Already defeated or dead
+
 	current_state = State.EGG
 	
-	enemy_sprite.visible = false
-	egg_sprite.visible = true
+	if enemy_sprite: enemy_sprite.visible = false
+	if egg_sprite: egg_sprite.visible = true
 	# Change sprite to egg (would use animation in full implementation)
 
 	# Disable combat area
-	combat_area.monitoring = false
-	combat_area.monitorable = false
+	if combat_area:
+		combat_area.monitoring = false
+		combat_area.monitorable = false
 	
 	# Enable egg area for collection
-	egg_area.monitoring = true
-	egg_area.monitorable = true
+	if egg_area:
+		egg_area.monitoring = true
+		egg_area.monitorable = true
 	
 	# Change collision layers for the main body
 	set_collision_layer_value(3, false) # Turn off enemy layer
@@ -274,20 +301,21 @@ func defeat():
 	
 	
 	# Signal to score manager to add points
-	get_node("/root/ScoreManager").add_score(points_value)
+	ScoreManager.add_score(points_value)
 	
 	# print debug message
-	print("Enemy defeated")
+	print("Enemy %s defeated" % name)
 
 func collect_egg():
+	if current_state == State.DEAD: return # Already collected/dead
 	current_state = State.DEAD
 	
 	# Disable both areas
-	combat_area.monitoring = false
-	egg_area.monitoring = false
+	if combat_area: combat_area.monitoring = false
+	if egg_area: egg_area.monitoring = false
 	
 	# Add more points for collecting egg
-	get_node("/root/ScoreManager").add_score(points_value / 2)
+	ScoreManager.add_score(points_value / 2) # Use ScoreManager directly
 	
 	# Play collection sound if available
 	if has_node("CollectionSound"):
@@ -308,13 +336,23 @@ func _on_vulnerable_area_area_entered(area):
 			defeat() # Call the existing defeat logic
 
 func _on_hatch_timer_timeout():
+	if current_state != State.HATCHING: return # Only hatch if in hatching state
+
 	current_state = State.FLYING
-	enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
-	# Change sprite back to enemy
-	enemy_sprite.visible = true
-	egg_sprite.visible = false
+	if enemy_sprite: 
+		enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
+		enemy_sprite.visible = true
+	if egg_sprite: 
+		egg_sprite.visible = false
 	
 	# Reset collision layers
 	set_collision_layer_value(3, true) # Turn on enemy layer
 	set_collision_layer_value(4, false) # Turn off egg layer
 	set_collision_mask_value(1, true) # Collide with player again
+	set_collision_mask_value(2, true) # Ensure it collides with environment
+
+	# Re-enable combat area, disable egg area
+	if combat_area: combat_area.monitoring = true
+	if egg_area: egg_area.monitoring = false
+	
+	print("Enemy %s hatched" % name)
