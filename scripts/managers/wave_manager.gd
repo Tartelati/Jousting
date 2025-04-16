@@ -33,17 +33,22 @@ func _ready():
 	# If no spawn points were found, create some default positions
 	if spawn_points.size() == 0:
 		print("Warning: No spawn points found. Using default positions.")
-		var viewport_size = get_viewport().get_visible_rect().size # Use get_viewport()
-		# Top spawn positions
-		for i in range(5):
-			var x_pos = viewport_size.x * (i + 1) / 6
-			spawn_points.append(Vector2(x_pos, 50))
-		
-		# Side spawn positions
-		for i in range(3):
-			var y_pos = viewport_size.y * (i + 1) / 4
-			spawn_points.append(Vector2(50, y_pos))  # Adjusted left side spawn slightly inwards
-			spawn_points.append(Vector2(viewport_size.x - 50, y_pos))  # Adjusted right side spawn slightly inwards
+		# Get viewport size correctly for a Node
+		if is_inside_tree():
+			var viewport_size = get_viewport().get_visible_rect().size 
+			# Top spawn positions
+			for i in range(5):
+				var x_pos = viewport_size.x * (i + 1) / 6
+				spawn_points.append(Vector2(x_pos, 50))
+			
+			# Side spawn positions
+			for i in range(3):
+				var y_pos = viewport_size.y * (i + 1) / 4
+				spawn_points.append(Vector2(50, y_pos))  # Adjusted left side spawn slightly inwards
+				spawn_points.append(Vector2(viewport_size.x - 50, y_pos))  # Adjusted right side spawn slightly inwards
+		else:
+			printerr("WaveManager _ready: Node not in tree, cannot get viewport size for default spawns.")
+
 
 func _process(delta):
 	if wave_in_progress and not is_egg_wave and enemies_remaining > 0: # Only spawn enemies in non-egg waves
@@ -59,7 +64,7 @@ func _process(delta):
 		if is_egg_wave:
 			# Egg wave ends when no collectible eggs AND no enemies (hatched or otherwise) are left
 			var eggs_in_scene = get_tree().get_nodes_in_group("collectible_eggs").size()
-			# print("Eggs in scene: ", eggs_in_scene, " | Enemies in scene: ", enemies_in_scene) # DEBUG - Can be noisy
+			# print("[Wave %d Process] Eggs in scene: %d | Enemies in scene: %d" % [current_wave, eggs_in_scene, enemies_in_scene]) # DEBUG - Can be noisy
 			if eggs_in_scene == 0 and enemies_in_scene == 0: 
 				print("Egg wave complete condition met.") # DEBUG
 				wave_finished()
@@ -106,31 +111,53 @@ func start_wave(wave_number = -1):
 	
 
 func _update_platform_states(wave_num):
-	var platforms_node = get_parent().get_node_or_null("Platforms")
+	# --- DEBUG: Check Parent ---
+	var parent_node = get_parent()
+	if not parent_node:
+		printerr("WaveManager: Cannot update platforms, parent is null!")
+		return
+	print("[DEBUG Platform Update] WaveManager parent: %s" % parent_node.name)
+	# ---------------------------
+
+	var platforms_node = parent_node.get_node_or_null("Platforms")
 	if not platforms_node:
-		printerr("WaveManager: 'Platforms' node not found under parent %s!" % get_parent().name)
+		printerr("WaveManager: 'Platforms' node not found under parent %s!" % parent_node.name)
 		return
 
-	print("Updating platform states for wave: %d" % wave_num) # DEBUG
-
 	var reset_all = (wave_num > 0 and wave_num % 5 == 0)
-	print("  - Resetting all platforms: %s" % reset_all) # DEBUG
 
 	for p in platforms_node.get_children():
-		# Assuming platform structure is StaticBody2D -> Sprite2D, CollisionPolygon2D
-		if not p is StaticBody2D: continue # Skip if not a StaticBody2D
-
-		var collision_node = p.get_node_or_null("CollisionPolygon") # Use exact name
-		var sprite_node = p.get_node_or_null("Sprite2D") # Use exact name
-		
-		# Ensure both collision and sprite exist
-		if not collision_node or not collision_node is CollisionPolygon2D or not sprite_node: 
-			# print("    - Skipping node %s, missing Sprite2D or CollisionPolygon2D?" % p.name) # DEBUG
+		# Ensure 'p' itself is a valid node before proceeding
+		if not is_instance_valid(p):
+			continue
+			
+		# Assuming platform structure is StaticBody2D -> Sprite2D, CollisionPolygon2D/CollisionShape2D
+		if not p is StaticBody2D: 
 			continue 
 
-		var target_enabled = true # Default state for platforms 1, 3, 5 etc.
+		# Find Sprite and Collision nodes more robustly
+		var sprite_node = null
+		var collision_shape_node = null # Can be Polygon or Shape
 
-		# Determine the specific target state for this platform
+		for child in p.get_children():
+			if child is Sprite2D and not sprite_node: # Find first Sprite2D
+				sprite_node = child
+			elif child is CollisionPolygon2D and not collision_shape_node: # Find first CollisionPolygon2D
+				collision_shape_node = child
+			elif child is CollisionShape2D and not collision_shape_node: # Fallback to CollisionShape2D
+				collision_shape_node = child
+			# Break early if both found
+			if sprite_node and collision_shape_node:
+				break 
+		
+		# Check if BOTH nodes were found
+		if not is_instance_valid(sprite_node):
+			continue 
+		if not is_instance_valid(collision_shape_node):
+			continue
+
+		# --- Determine Target State ---
+		var target_enabled = true # Default state for platforms 1, 3, 5 etc.
 		if reset_all:
 			target_enabled = true # Enable all on reset waves
 		else:
@@ -139,16 +166,16 @@ func _update_platform_states(wave_num):
 				target_enabled = false
 			elif p.name == "platform4" and wave_num >= 4:
 				target_enabled = false
+		# -----------------------------
 				
-		# Apply the state if it needs changing
-		if sprite_node.visible != target_enabled:
-			sprite_node.visible = target_enabled # Toggle sprite visibility
-			print("    - Setting %s Sprite2D visibility to %s" % [p.name, target_enabled]) # DEBUG
+		# --- Apply State ---
+		# Apply visibility to the StaticBody itself (or sprite if preferred)
+		if p.visible != target_enabled:
+			p.visible = target_enabled 
 			
-		# collision_node.disabled is true when collision is OFF
-		if collision_node.disabled == target_enabled: 
-			collision_node.disabled = not target_enabled
-			print("    - Setting %s collision disabled state to %s" % [p.name, collision_node.disabled]) # DEBUG
+		# Apply collision state (disabled = true means NO collision)
+		if collision_shape_node.disabled == target_enabled: 
+			collision_shape_node.disabled = not target_enabled
 
 
 func spawn_enemy():
