@@ -134,7 +134,7 @@ func _on_hatch_timer_timeout():
 		
 		# Optional: Play hatch sound
 		# SoundManager.play_sfx("egg_hatch")
-	else:
+		# SoundManager.play_sfx("egg_hatch")
 		printerr("[DEBUG Hatch %s] enemy_scene is null after match statement!" % name) # DEBUG Error
 		print("[DEBUG Hatch %s] Queueing free due to null enemy_scene." % name) # DEBUG Error
 		queue_free()

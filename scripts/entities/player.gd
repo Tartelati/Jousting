@@ -394,11 +394,14 @@ func respawn():
 	velocity = Vector2.ZERO
 	sprite.modulate = Color(1, 1, 1)  # Reset color
 
+# --- Signal Handlers ---
+
 func _on_collection_area_area_entered(area):
-	#Debug print to check if this function is being called
-	print("Player collection area detected collision with: ", area.name)
+	print("[DEBUG Player] CollectionArea entered by: %s (Parent: %s)" % [area.name, area.get_parent().name if area.get_parent() else "None"]) # DEBUG
 	
-	# Check if the area entered is an enemy's egg collection zone
+	# Check if the area entered is an enemy's egg collection zone (for defeated enemies)
+	# Note: This check seems redundant with the connection logic in _ready, 
+	# but keeping it for now. Ideally, the signal connection ensures this.
 	if area.is_in_group("egg_collection_zones") and area.get_parent().is_in_group("enemies"):
 		var enemy = area.get_parent()
 		
@@ -406,7 +409,7 @@ func _on_collection_area_area_entered(area):
 		print("Enemy current_state: ", enemy.current_state if "current_state" in enemy else "unknown")
 		print("Enemy State.EGG value: ", enemy.State.EGG if "State" in enemy else "unknown")
 		
-		# Check if enemy is in EGG state
+		# Check if enemy is in EGG state (or hatching, as eggs might be collectible briefly during hatch)
 		if "current_state" in enemy and (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
 			print("Egg Collected by player via collection area!")
-			enemy.collect_egg()
+			enemy.collect_egg() # Assuming the enemy script has a collect_egg method
