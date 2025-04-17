@@ -1,19 +1,27 @@
 extends CharacterBody2D
 
+# --- States Enum ---
+enum State { IDLE, WALKING, FLYING }
+
+# --- State Variables ---
+var current_state : State = State.IDLE
+var previous_state : State = State.IDLE # Track previous state for transitions
+
+# --- Movement Parameters ---
 @export_group("Movement")
-@export var gravity: float = 800.0
-@export var flap_force: float = -300.0
-@export var base_speed: float = 100.0
-@export var max_speed_level: int = 3
-@export var speed_multipliers: Array[float] = [0.0, 1.0, 2.0, 3.0] # Multipliers for each level
-@export var level_deceleration_time: float = 0.3  # Time to decrease one speed level
-@export var max_fall_speed: float = 400.0
+@export var speed_values : Array[float] = [0.0, 100.0, 200.0, 300.0] # Index 0 = Idle, 1-3 = Speed Levels
+var current_speed_level : int = 0
+
+# Use project gravity by default, can be overridden in inspector
+@export var gravity : float = ProjectSettings.get_setting("physics/2d/default_gravity", 800.0)
+@export var flap_force : float = -300.0 # Negative value for upward force
+@export var max_fall_speed: float = 400.0 # Keep max fall speed
 
 @export_group("Collision")
-@export var joust_bounce_velocity: float = -150.0
-@export var side_collision_bounce_x: float = 200.0
-@export var side_collision_bounce_y: float = -100.0
-@export var collision_y_threshold: float = 10.0 # Threshold for determining win/loss/bounce
+@export var joust_bounce_velocity: float = -150.0 # Bounce after winning joust
+@export var side_collision_bounce_x: float = 200.0 # Horizontal bounce velocity on side collision
+@export var side_collision_bounce_y: float = -100.0 # Vertical bounce velocity on side collision
+@export var collision_y_threshold: float = 10.0 # Y-velocity difference threshold for joust win/loss
 
 @export_group("Screen Wrap")
 @export var screen_wrap_buffer: float = 10.0
@@ -21,395 +29,504 @@ extends CharacterBody2D
 @export_group("Respawn")
 @export var respawn_delay: float = 2.0
 
-# --- Movement State Machine ---
-enum MoveState { IDLE, MOVING, DECELERATING }
-var move_state = MoveState.IDLE
-# --- End Movement State Machine ---
+# --- Node References (Update paths as needed in the editor) ---
+@onready var sprite = $Sprite2D
+@onready var animation_player = $AnimationPlayer # Assumes AnimationPlayer node exists
+@onready var walking_audio = $WalkingAudioPlayer # Assumes AudioStreamPlayer node exists
+@onready var flying_audio = $FlyingAudioPlayer # Assumes AudioStreamPlayer node exists
+@onready var flap_sound = $FlapSound # Keep existing flap sound reference
+@onready var collision_sound = $CollisionSound # Keep existing collision sound reference
+@onready var death_sound = $DeathSound # Keep existing death sound reference
+@onready var combat_area = $CombatArea # Keep existing combat area reference
+@onready var collection_area = $CollectionArea # Keep existing collection area reference
+@onready var stomp_area = $StompArea # Keep existing stomp area reference
 
-# Internal state variables (not exported)
-var current_speed_level = 0  # 0=stopped, 1=base, 2=2x, 3=3x
-var current_direction = 0  # -1=left, 0=none, 1=right
-var target_direction_during_decel = 0 # Direction player intends to move after decelerating
-var deceleration_timer = 0.0
-# var is_changing_direction = false # Replaced by DECELERATING state
-# var current_speed_value: float = 0.0  # No longer needed, set velocity.x directly
-# var target_speed_value: float = 0.0   # Target speed during deceleration - Removed for level-step deceleration
-# var _just_stomped = false # Removed - relying on separate signal handling
-
-# Input Cooldown
-var horizontal_input_cooldown: float = 0.15 # Seconds (adjust as needed)
-var last_horizontal_input_processed_time: float = 0.0 
-
-#state tracking
-var is_flapping = false
+# --- Internal Variables ---
 var is_alive = true
 
-#references
-@onready var sprite = $Sprite2D
-@onready var flap_sound = $FlapSound
-@onready var collision_sound = $CollisionSound
-@onready var death_sound = $DeathSound
-@onready var combat_area = $CombatArea # Main body collision
-@onready var collection_area = $CollectionArea # For collecting eggs
-@onready var stomp_area = $StompArea # For stomping enemies
-
-
+# --- Initialization ---
 func _ready():
-	# Add to player group for easy access
-	add_to_group("players")
-	
-	# Connect combat area signal
+	add_to_group("players") # Keep player in group
+	set_state(State.IDLE) # Initialize state properly
+
+	# Connect signals (ensure these are connected in editor or uncomment if needed)
 	if combat_area:
 		combat_area.connect("area_entered", _on_combat_area_area_entered)
-	
-	# Connect collection_area signal and add it to group
 	if collection_area:
-		collection_area.add_to_group("player_collectors") # Add area to group
+		collection_area.add_to_group("player_collectors")
 		collection_area.connect("area_entered", _on_collection_area_area_entered)
-		
-	# Connect stomp_area signal and add it to group
 	if stomp_area:
-		stomp_area.add_to_group("player_stomp_areas") # Add area to group
-		# Connect the signal from the StompArea node to this script's function
-		# IMPORTANT: Ensure this signal is connected in the Godot Editor as well, 
-		# or uncomment the line below if you prefer connecting via code.
-		stomp_area.connect("area_entered", _on_stomp_area_area_entered) 
+		stomp_area.add_to_group("player_stomp_areas")
+		stomp_area.connect("area_entered", _on_stomp_area_area_entered)
 
+# --- State Management Helper ---
+func set_state(new_state: State):
+	if current_state == new_state: return # Avoid redundant transitions
+
+	previous_state = current_state
+	current_state = new_state
+	print("Player entering state: ", State.keys()[current_state]) # Debugging
+
+	# Logic executed ONLY on entering a state
+	match new_state:
+		State.IDLE:
+			stop_audio()
+		State.WALKING:
+			play_walking_audio()
+		State.FLYING:
+			play_flying_audio()
+
+# --- Main Physics Loop ---
 func _physics_process(delta):
 	if not is_alive:
 		return
-		
-	# Apply gravity only when not on floor
-	if not is_on_floor():
-		velocity.y += gravity * delta
-		velocity.y = min(velocity.y, max_fall_speed)
-	
-	# Handle flapping
-	if Input.is_action_just_pressed("Flap"):
-		velocity.y = flap_force
-		is_flapping = true
-		flap_sound.play()
-	else:
-		is_flapping = false
-	
-	# --- State Machine Based Horizontal Movement ---
-	var input_direction = _get_input_direction() # Get input for state logic AND sprite flip
-	
-	# Handle sprite flipping based on input or current direction, but NOT during deceleration
-	if move_state != MoveState.DECELERATING:
-		if input_direction != 0:
-			sprite.flip_h = (input_direction < 0)
-		elif current_direction != 0: # Keep facing last direction if stopping (and not decelerating)
-			sprite.flip_h = (current_direction < 0)
 
-	match move_state:
-		MoveState.IDLE:
-			_state_idle(input_direction)
-		MoveState.MOVING:
-			_state_moving(input_direction, delta)
-		MoveState.DECELERATING:
-			_state_decelerating(input_direction, delta)
-			
-	# _apply_horizontal_velocity() # Removed - velocity.x is set within state functions
-	# --- End State Machine Based Horizontal Movement ---
-	
-	# Handle screen wrapping
-	screen_wrapping()
-	
-	# Update animation based on movement
-	update_animation()
-	
-	# Move the character
+	# 1. Gather Input
+	var direction_input = Input.get_axis("move_left", "move_right")
+	var flap_input_pressed = Input.is_action_just_pressed("flap")
+
+	# 2. Apply Gravity
+	if not is_on_floor() or current_state == State.FLYING:
+		velocity.y += gravity * delta
+		velocity.y = min(velocity.y, max_fall_speed) # Apply max fall speed
+	elif is_on_floor() and current_state != State.FLYING:
+		# Ensure player stays grounded when walking/idle unless flapping
+		velocity.y = max(velocity.y, 0) # Prevent accumulating negative velocity on floor
+
+	# 3. Handle State Logic
+	match current_state:
+		State.IDLE:
+			handle_idle_state(delta, direction_input, flap_input_pressed)
+		State.WALKING:
+			handle_walking_state(delta, direction_input, flap_input_pressed)
+		State.FLYING:
+			handle_flying_state(delta, direction_input, flap_input_pressed)
+
+	# 4. Apply Movement and Handle Collisions
 	move_and_slide()
 
-func screen_wrapping():
-	var viewport_rect = get_viewport_rect().size
-	
-	# Check if player is about to go off the left edge
-	if global_position.x < screen_wrap_buffer:
-		# Immediately teleport to right side with same velocity
-		global_position.x = viewport_rect.x - screen_wrap_buffer
-		# No need to change velocity, keep momentum
-	
-	# Check if player is about to go off the right edge
-	elif global_position.x > viewport_rect.x - screen_wrap_buffer:
-	# Immediately teleport to left side with same velocity
-		global_position.x = screen_wrap_buffer
-	# No need to change velocity, keep momentum
+	# 5. Handle Specific Collision Responses (after move_and_slide)
+	handle_collisions() # Check for wall bumps etc.
+
+	# 6. Check for Automatic State Transitions (like landing)
+	check_automatic_transitions()
+
+	# 7. Update Animation & Audio based on current state and velocity/speed level
+	update_animation()
+	update_audio()
+
+	# 8. Screen Wrapping (moved after move_and_slide to use updated position)
+	screen_wrapping()
 
 
-# --- Horizontal Movement State Functions ---
+# --- State Logic Functions ---
 
-func _get_input_direction() -> int:
-	"""Gets the horizontal input direction (-1 for left, 1 for right, 0 for none)."""
-	if Input.is_action_pressed("move_left"):
-		return -1
-	elif Input.is_action_pressed("move_right"):
-		return 1
-	else:
-		return 0
+func handle_idle_state(delta, direction_input, flap_input_pressed):
+	# Stop horizontal movement completely in idle
+	velocity.x = move_toward(velocity.x, 0, 5000 * delta) # Apply high friction
 
-func _state_idle(input_direction: int):
-	"""Handles logic when the player is not moving horizontally."""
-	current_speed_level = 0
-	velocity.x = 0 # Ensure velocity is zero when idle
-	current_direction = 0 
-	if input_direction != 0:
-		# Start moving
-		current_direction = input_direction
-		current_speed_level = 1
-		# Set velocity directly
-		velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
-		move_state = MoveState.MOVING
+	# Transition to Walking
+	if direction_input != 0:
+		transition_to_walking(direction_input)
 
-func _state_moving(input_direction: int, delta: float):
-	"""Handles logic when the player is actively moving."""
-	# Player continues moving even if input_direction is 0
-	
-	var current_time = Time.get_ticks_msec() / 1000.0 # Get current time in seconds
-	
-	if input_direction == current_direction:
-		# Pressing same direction - accelerate on *just pressed* with cooldown
-		if (Input.is_action_just_pressed("move_left") or Input.is_action_just_pressed("move_right")) \
-		and (current_time > last_horizontal_input_processed_time + horizontal_input_cooldown):
-			current_speed_level = min(current_speed_level + 1, max_speed_level)
-			last_horizontal_input_processed_time = current_time # Update timestamp
-	elif input_direction != 0 and input_direction != current_direction:
-		# Pressed opposite direction - start decelerating (cooldown applied in _enter_decelerating_state)
-		target_direction_during_decel = input_direction # Store intended direction
-		_enter_decelerating_state() 
-		# Velocity for this frame remains as it was, deceleration starts next frame
-		return # Exit early to avoid applying normal moving velocity this frame
-		
-	# Update velocity based on the current level and direction
-	velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
+	# Transition to Flying
+	elif flap_input_pressed:
+		transition_to_flying()
 
-func _state_decelerating(input_direction: int, delta: float):
-	"""Handles logic when the player is decelerating by pressing the opposite direction."""
-	
-	# --- Handle Input During Deceleration ---
-	if input_direction == current_direction: 
-		# Pressed original direction again - cancel deceleration
-		move_state = MoveState.MOVING
-		# Keep current (potentially reduced) speed level and direction
-		# Velocity will be updated correctly in MOVING state next frame
-		return 
-	var current_time = Time.get_ticks_msec() / 1000.0 # Get current time in seconds
-	
-	# --- Handle Input During Deceleration ---
-	if input_direction == current_direction: 
-		# Pressed original direction again - cancel deceleration
-		move_state = MoveState.MOVING
-		# Keep current (potentially reduced) speed level and direction
-		# Velocity will be updated correctly in MOVING state next frame
-		return 
-	elif input_direction == target_direction_during_decel:
-		# Pressing the target direction (accelerating the brake) with cooldown
-		if (Input.is_action_just_pressed("move_left") or Input.is_action_just_pressed("move_right")) \
-		and (current_time > last_horizontal_input_processed_time + horizontal_input_cooldown):
-			# Decrease speed level immediately if possible
-			if current_speed_level > 0:
-				current_speed_level -= 1
-				last_horizontal_input_processed_time = current_time # Update timestamp
-				deceleration_timer = 0.0 # Reset timer for the new level drop
-				# Update velocity immediately for the new lower level
-				if current_speed_level > 0:
-					velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
-				else: # Reached level 0
-					velocity.x = 0
-					current_direction = 0
-					move_state = MoveState.IDLE
-					return # Exit early, now idle
-	# If input_direction is 0 (keys released), continue decelerating based on timer.
+func handle_walking_state(delta, direction_input, flap_input_pressed):
+	# Check for Flying Transition first
+	if flap_input_pressed:
+		transition_to_flying()
+		return
 
-	# --- Timer-Based Deceleration ---
-	# Only proceed with timer logic if not already transitioned to IDLE
-	if move_state == MoveState.DECELERATING:
-		deceleration_timer += delta
-		
-		if deceleration_timer >= level_deceleration_time:
-			# Time to decrease a speed level
-			current_speed_level -= 1
-			deceleration_timer = 0.0 # Reset timer for next level drop
-			
-			if current_speed_level <= 0:
-				# Reached speed 0, stop completely
-				current_speed_level = 0
-				velocity.x = 0
-				current_direction = 0
-				move_state = MoveState.IDLE
+	var move_left_pressed = Input.is_action_just_pressed("move_left")
+	var move_right_pressed = Input.is_action_just_pressed("move_right")
+	var direction_just_pressed = move_left_pressed or move_right_pressed
+	var target_velocity_x = 0.0
+
+	if direction_input != 0:
+		var facing_right = not sprite.flip_h
+		var input_is_right = direction_input > 0
+		var input_matches_facing = (facing_right and input_is_right) or (not facing_right and not input_is_right)
+		var original_facing_direction = 1.0 if facing_right else -1.0 # Store original direction
+
+		if direction_just_pressed:
+			if input_matches_facing:
+				# Accelerate
+				current_speed_level = min(current_speed_level + 1, 3)
+				target_velocity_x = original_facing_direction * speed_values[current_speed_level]
 			else:
-				# Still moving, update velocity for the new lower level
-				velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
-		# else: 
-			# Velocity remains at the speed of the current level until timer completes
-			# No interpolation needed for this stepped deceleration approach
+				# Decelerate - Apply reduced speed in ORIGINAL direction for this frame
+				current_speed_level = max(current_speed_level - 1, 0)
+				play_deceleration_animation()
+				# Apply velocity using original direction and new speed level IMMEDIATELY
+				velocity.x = original_facing_direction * speed_values[current_speed_level]
+				# Flip sprite now so it faces the input direction for the *next* frame
+				sprite.flip_h = direction_input < 0
+				# Transition to idle if speed becomes 0
+				if current_speed_level == 0:
+					transition_to_idle()
+				# Exit function for this frame after applying deceleration velocity
+				return # IMPORTANT: Prevent normal velocity calculation below from overwriting
+			# End of Accel/Decel block for direction_just_pressed
 
-func _enter_decelerating_state():
-	"""Sets up variables needed when entering the DECELERATING state."""
-	if current_speed_level <= 0: return # Cannot decelerate if already stopped
-	
-	var current_time = Time.get_ticks_msec() / 1000.0 # Get current time in seconds
-	# Check cooldown before allowing deceleration to start
-	if current_time <= last_horizontal_input_processed_time + horizontal_input_cooldown:
-		return # Ignore input if still within cooldown
-		
-	move_state = MoveState.DECELERATING
-	deceleration_timer = 0.0
-	
-	# Immediately decrease speed level by 1
-	current_speed_level -= 1
-	last_horizontal_input_processed_time = current_time # Update timestamp as deceleration input was processed
-	
-	# Update velocity to the new lower speed level (still in original direction)
-	if current_speed_level > 0:
-		velocity.x = base_speed * speed_multipliers[current_speed_level] * current_direction
-	else: # If dropping to level 0 immediately
-		velocity.x = 0
-		current_direction = 0
-		move_state = MoveState.IDLE # Go straight to IDLE if starting deceleration from level 1
+		# If not decelerating this frame, update sprite flip and calculate target velocity normally
+		# Sprite flip is handled here only if NOT decelerating this frame
+		sprite.flip_h = direction_input < 0
+		# Target velocity is calculated based on the current speed level and the direction the sprite is NOW facing
+		target_velocity_x = (1.0 if not sprite.flip_h else -1.0) * speed_values[current_speed_level]
 
-# Removed _apply_horizontal_velocity function
-
-# --- End Refactored Horizontal Movement Functions ---
-
-func bounce_from_wall(new_velocity):
-	"""Handles bouncing from a wall by directly modifying player state"""
-	# Apply the new velocity
-	velocity = new_velocity
-	
-	# Update direction based on new velocity
-	current_direction = sign(velocity.x)
-	
-	# Force the character into MOVING state
-	move_state = MoveState.MOVING
-	
-	# Set speed level based on velocity
-	var speed_value = abs(velocity.x) / base_speed
-	for i in range(speed_multipliers.size() - 1, -1, -1):
-		if speed_value >= speed_multipliers[i] * 0.9:  # 90% threshold
-			current_speed_level = i
-			break
-	
-	# Flip sprite based on new direction
-	sprite.flip_h = (current_direction < 0)
-	
-	# Play collision sound
-	collision_sound.play()
+	else: # No direction input
+		# Stop horizontal movement if speed level is 0
+		if current_speed_level == 0:
+			target_velocity_x = 0.0
+			# Transition to idle if velocity is near zero
+			if is_zero_approx(velocity.x):
+				transition_to_idle()
+		else:
+			# Keep moving at current speed level if input released (classic feel)
+			target_velocity_x = (1.0 if not sprite.flip_h else -1.0) * speed_values[current_speed_level]
 
 
-func update_animation():
-	# This would be replaced with proper animation states
-	# when using AnimatedSprite2D
-	if is_flapping:
-		sprite.modulate = Color(1, 1, 0.8)  # Slight yellow tint when flapping
-	else:
-		sprite.modulate = Color(1, 1, 1)  # Normal color otherwise
+	velocity.x = target_velocity_x # Instant speed change
+
+	# Check if fallen off an edge
+	# If not on floor, gravity will take over (handled in _physics_process).
+	# State remains WALKING (conceptually, falling after walking)
+	# until flap is pressed or landing occurs.
+	# if not is_on_floor():
+	#	 transition_to_flying() # REMOVED - Do not automatically fly when falling
+
+func handle_flying_state(delta, direction_input, flap_input_pressed):
+	# --- Flying State Logic ---
+
+	# --- Flying State Logic ---
+
+	# Store original facing direction and movement direction
+	var was_facing_right = not sprite.flip_h
+	var original_move_direction = sign(velocity.x)
+	# If stopped horizontally, use facing direction as the 'original' move direction
+	if is_zero_approx(original_move_direction):
+		original_move_direction = 1.0 if was_facing_right else -1.0
+
+	# 1. Handle Flap Input (Vertical force & Horizontal logic)
+	if flap_input_pressed:
+		# Apply vertical force
+		velocity.y = flap_force
+		if flap_sound: flap_sound.play()
+
+		# Check for horizontal speed changes (Requires Flap + Direction)
+		if direction_input != 0:
+			var input_is_right = direction_input > 0
+			# Check if input is opposite to the ORIGINAL MOVEMENT direction
+			var input_is_opposite = (original_move_direction > 0 and not input_is_right) or (original_move_direction < 0 and input_is_right)
+
+			if input_is_opposite:
+				# Decelerate: Reduce speed level
+				print("[DEBUG] Flying Decel Triggered: Old Level: ", current_speed_level) # DEBUG
+				current_speed_level = max(current_speed_level - 1, 0)
+				print("[DEBUG] Flying Decel Result: New Level: ", current_speed_level) # DEBUG
+				# Apply velocity using ORIGINAL movement direction and NEW speed level
+				velocity.x = original_move_direction * speed_values[current_speed_level]
+				print("[DEBUG] Applying Flying Decel Vel: OrigMoveDir=", original_move_direction, " NewSpeedVal=", speed_values[current_speed_level], " TargetVelX=", velocity.x) # DEBUG
+			else:
+				# Accelerate: Increase speed level (Input matches original movement direction)
+				# print("[DEBUG] Flying Accel Triggered: Old Level: ", current_speed_level) # DEBUG
+				current_speed_level = min(current_speed_level + 1, 3)
+				# print("[DEBUG] Flying Accel Result: New Level: ", current_speed_level) # DEBUG
+				# Apply velocity using CURRENT facing direction (which should match input) and NEW speed level
+				var current_facing_direction = 1.0 if not sprite.flip_h else -1.0
+				velocity.x = current_facing_direction * speed_values[current_speed_level]
+				print("[DEBUG] Applying Flying Accel/SameDir Vel: Dir=", current_facing_direction, " SpeedVal=", speed_values[current_speed_level], " TargetVelX=", velocity.x) # DEBUG
+		else:
+			# Flap only (no direction input) - Maintain current horizontal velocity
+			# velocity.x = velocity.x # No change needed
+			print("[DEBUG] Applying Flying Vel (Flap Only): Maintaining VelX=", velocity.x) # DEBUG
+
+	# else: If flap is NOT pressed, velocity.x remains unchanged (coasting/drifting).
+
+	# 2. Handle Sprite Flipping (Based on direction input alone, happens AFTER velocity calc)
+	if direction_input != 0:
+		sprite.flip_h = direction_input < 0
+
+
+# --- Automatic State Transitions ---
+
+func check_automatic_transitions():
+	# Check for landing while in Flying state
+	# If we are flying and detect being on the floor, transition to walking.
+	if current_state == State.FLYING and is_on_floor():
+			# print("Landing detected: Transitioning to WALKING") # Debug print
+			transition_to_walking()
+
 
 # --- Collision Handling ---
 
+func handle_collisions():
+	for i in range(get_slide_collision_count()):
+		var collision = get_slide_collision(i)
+		if not collision: continue # Skip if collision data is invalid
+
+		var collider = collision.get_collider()
+		if not collider: continue
+
+		# Check for wall bumps while walking
+		if current_state == State.WALKING and (collider.is_in_group("Platform") or collider.is_in_group("Enemy")):
+			if abs(collision.get_normal().x) > 0.7: # Hit a vertical wall
+				print("Player hit wall while walking")
+				sprite.flip_h = !sprite.flip_h # Change direction
+				velocity.x = 0 # Stop horizontal movement against wall
+				current_speed_level = max(current_speed_level - 1, 0)
+				if current_speed_level == 0:
+					transition_to_idle()
+				else:
+					# Apply new velocity based on reduced speed level and new direction
+					var facing_direction = 1.0 if not sprite.flip_h else -1.0
+					velocity.x = facing_direction * speed_values[current_speed_level]
+
+				if collision_sound: collision_sound.play()
+				break # Handle only one wall collision per frame
+
+
+# --- State Transition Functions ---
+
+func transition_to_idle():
+	if current_state == State.IDLE: return
+	set_state(State.IDLE)
+	current_speed_level = 0
+	# Let friction handle stopping in handle_idle_state
+
+func transition_to_walking(initial_direction = 0.0):
+	if current_state == State.WALKING: return
+	set_state(State.WALKING)
+
+	if previous_state == State.IDLE:
+		current_speed_level = 1
+		if initial_direction != 0.0:
+			sprite.flip_h = initial_direction < 0
+			velocity.x = initial_direction * speed_values[current_speed_level]
+	elif previous_state == State.FLYING:
+		# Speed level preserved from flying state
+		var facing_direction = 1.0 if not sprite.flip_h else -1.0
+		velocity.x = facing_direction * speed_values[current_speed_level]
+
+	velocity.y = 0 # Ensure vertical velocity is zeroed
+
+func transition_to_flying():
+	if current_state == State.FLYING: return
+	set_state(State.FLYING)
+
+	if previous_state == State.IDLE:
+		current_speed_level = 0
+		velocity.x = 0
+
+	# Apply initial flap force ONLY if transitioning from a grounded state
+	if previous_state == State.IDLE or previous_state == State.WALKING:
+		velocity.y = flap_force
+		# Play flap sound here as well, since handle_flying_state might not run before landing check
+		if flap_sound: flap_sound.play()
+
+
+# --- Audio Implementation ---
+
+func update_audio():
+	# Walking Audio
+	var walking_audio_should_play = (current_state == State.WALKING and current_speed_level > 0 and is_on_floor())
+	if walking_audio and walking_audio.is_valid(): # Check if node exists and is valid
+		if walking_audio_should_play:
+			if not walking_audio.playing:
+				walking_audio.play()
+			var target_pitch = 1.0 + (current_speed_level * 0.2) # Example pitch scaling
+			walking_audio.pitch_scale = target_pitch
+		else:
+			if walking_audio.playing:
+				walking_audio.stop()
+
+	# Flying Audio
+	var flying_audio_should_play = (current_state == State.FLYING)
+	if flying_audio and flying_audio.is_valid():
+		if flying_audio_should_play:
+			if not flying_audio.playing:
+				flying_audio.play()
+		else:
+			if flying_audio.playing:
+				flying_audio.stop()
+
+func play_walking_audio():
+	if flying_audio and flying_audio.is_valid() and flying_audio.playing: flying_audio.stop()
+	# Actual play handled by update_audio
+
+func play_flying_audio():
+	if walking_audio and walking_audio.is_valid() and walking_audio.playing: walking_audio.stop()
+	# Actual play handled by update_audio
+
+func stop_audio():
+	if walking_audio and walking_audio.is_valid() and walking_audio.playing: walking_audio.stop()
+	if flying_audio and flying_audio.is_valid() and flying_audio.playing: flying_audio.stop()
+
+
+# --- Animation Implementation ---
+
+func update_animation():
+	if not animation_player or not animation_player.is_valid(): return
+
+	var anim_name = "idle"
+	match current_state:
+		State.IDLE:
+			anim_name = "idle"
+		State.WALKING:
+			if not is_on_floor():
+				anim_name = "fly" # Use fly/fall animation if walking off edge
+			elif current_speed_level > 0:
+				anim_name = "walk_" + str(current_speed_level) # Assumes walk_1, walk_2, walk_3
+			else:
+				anim_name = "idle"
+		State.FLYING:
+			# Could add fly_up, fall animations based on velocity.y
+			anim_name = "fly" # Default flying animation
+
+	if animation_player.current_animation != anim_name:
+		animation_player.play(anim_name)
+
+func play_deceleration_animation():
+	if animation_player and animation_player.is_valid():
+		# Assumes "decelerate" animation exists
+		animation_player.play("decelerate")
+
+
+# --- Screen Wrapping ---
+func screen_wrapping():
+	var viewport_rect = get_viewport_rect().size
+	if global_position.x < -screen_wrap_buffer: # Check beyond buffer
+		global_position.x = viewport_rect.x + screen_wrap_buffer
+	elif global_position.x > viewport_rect.x + screen_wrap_buffer:
+		global_position.x = -screen_wrap_buffer
+
+
+# --- Combat / Interaction Logic ---
+
 func _on_combat_area_area_entered(area):
-	"""Handles collisions with the main player body (e.g., side collisions, getting hit)."""
-	# This function assumes a stomp was NOT successful (that's handled by _on_stomp_area_area_entered 
-	# triggering the enemy's _on_vulnerable_area_area_entered which calls defeat()).
 	if not is_alive: return
-		
-	# Check if colliding with an enemy's main combat area
-	# Assuming enemy combat areas are in a group like "enemy_combat_areas"
-	# (This group needs to be added to the enemy's CombatArea node in the editor)
-	if area.is_in_group("enemy_combat_areas"): 
+
+	# Player vs Enemy Collision
+	if area.is_in_group("enemy_combat_areas"):
 		var enemy = area.get_parent()
-		if not enemy or not enemy.is_in_group("enemies"): return # Ensure parent is valid enemy
-		
-		# Skip if enemy is in egg or hatching state
-		if "current_state" in enemy and (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
+		if not enemy or not enemy.is_in_group("Enemy"): return # Use Enemy group
+
+		# Skip if enemy is in egg/hatching state
+		if "current_state" in enemy and "State" in enemy and \
+		   (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
 			return
 
-		# Player didn't stomp successfully (handled by StompArea signal)
-		# Determine if it's a side collision or player death
-		
-		# Simple approach: If player is moving downwards significantly, assume they lost.
-		# A more robust check might involve comparing relative positions slightly, 
-		# but this requires careful tuning. Let's stick to velocity for now.
-		if velocity.y > 50: # Threshold for downward velocity indicating player lost joust
-			die()
+		# --- Joust Logic ---
+		var enemy_velocity_y = enemy.velocity.y if "velocity" in enemy else 0.0
+		var relative_velocity_y = velocity.y - enemy_velocity_y
+
+		if relative_velocity_y > collision_y_threshold: # Player moving down relative to enemy
+			# Check if stomp area is overlapping enemy vulnerable area
+			var is_stomping = false
+			if stomp_area:
+				for overlapping_area in stomp_area.get_overlapping_areas():
+					if overlapping_area.is_in_group("enemy_vulnerable_areas") and overlapping_area.get_parent() == enemy:
+						is_stomping = true
+						break
+			if not is_stomping:
+				print("Player lost joust")
+				die()
+			# else: Stomp success handled by _on_stomp_area_area_entered
+
+		elif relative_velocity_y < -collision_y_threshold: # Player moving up relative to enemy
+			# Player wins joust - bounce handled by _on_stomp_area_area_entered
+			print("Player won joust (velocity check)")
+			# velocity.y = joust_bounce_velocity # Bounce is applied in stomp handler
+
 		else:
-			# Assume side collision - bounce off each other
+			# --- Side Collision / Bounce ---
+			print("Side collision player vs enemy")
 			var direction_to_enemy = sign(global_position.x - enemy.global_position.x)
-			# Ensure direction is not zero if perfectly aligned
-			if direction_to_enemy == 0: direction_to_enemy = 1 
-			
+			if direction_to_enemy == 0: direction_to_enemy = 1
+
+			# Player bounces
 			velocity.x = direction_to_enemy * side_collision_bounce_x
-			velocity.y = side_collision_bounce_y # Small upward bounce for player
-			
-			# Apply bounce to enemy as well (if enemy has velocity)
-			if "velocity" in enemy:
-				enemy.velocity.x = -direction_to_enemy * side_collision_bounce_x
-				enemy.velocity.y = side_collision_bounce_y # Small upward bounce for enemy
-			
-			collision_sound.play()
+			velocity.y = side_collision_bounce_y
+			sprite.flip_h = velocity.x < 0
+			current_speed_level = max(current_speed_level - 1, 0)
+			if current_speed_level == 0:
+				transition_to_idle()
+			else: # Need to ensure state is correct if bounced while flying/idle
+				if current_state == State.FLYING: # If bounced while flying, stay flying? Or force walk?
+					pass # Keep flying state, velocity updated
+				else: # If bounced while idle or walking
+					transition_to_walking(sign(velocity.x))
+
+
+			# Tell enemy to handle bounce
+			if enemy.has_method("handle_bounce"):
+				enemy.handle_bounce(-direction_to_enemy, side_collision_bounce_x, side_collision_bounce_y)
+
+			if collision_sound: collision_sound.play()
+
+	# Player vs Platform Collision (Handled by handle_collisions using move_and_slide results)
+	# elif area.is_in_group("Platform"):
+	#	 pass # Wall bump logic is now in handle_collisions
+
 
 func _on_stomp_area_area_entered(area):
-	"""Handles the PLAYER'S reaction to successfully stomping an enemy."""
-	# The enemy handles its own defeat via its _on_vulnerable_area_area_entered signal.
 	if not is_alive: return
 
-	# Check if the area entered is an enemy's vulnerable spot
-	# Assuming enemy vulnerable areas are in a group like "enemy_vulnerable_areas"
-	# (This group needs to be added to the enemy's VulnerableArea node in the editor)
 	if area.is_in_group("enemy_vulnerable_areas"):
 		var enemy = area.get_parent()
-		if not enemy or not enemy.is_in_group("enemies"): return # Ensure parent is valid enemy
+		if not enemy or not enemy.is_in_group("Enemy"): return
 
-		# Skip if enemy is already in egg or hatching state (shouldn't happen if layers/masks correct)
-		if "current_state" in enemy and (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
+		# Skip if enemy is already defeated
+		if "current_state" in enemy and "State" in enemy and \
+		   (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING or enemy.current_state == enemy.State.DEAD):
 			return
-			
-		# Player wins - Stomped successfully!
-		# We don't call enemy.defeat() here. The enemy does that itself.
-		# We just handle the player's bounce.
-		
-		# Add a small upward bounce for the player
-		velocity.y = joust_bounce_velocity
-		
-		# Play victory sound (optional)
-		if has_node("VictorySound"):
-			$VictorySound.play()
+
+		print("Player stomp successful (signal)")
+		velocity.y = joust_bounce_velocity # Apply bounce on successful stomp
+		# Enemy handles its own defeat via its _on_vulnerable_area_area_entered signal
+
+
+func _on_collection_area_area_entered(area):
+	if not is_alive: return
+
+	# Collect Eggs
+	if area.is_in_group("egg_collection_zones"):
+		var parent = area.get_parent()
+		if parent and parent.is_in_group("Enemy") and "current_state" in parent and "State" in parent and parent.has_method("collect_egg"):
+			if parent.current_state == parent.State.EGG or parent.current_state == parent.State.HATCHING:
+				print("Player collected egg")
+				parent.collect_egg()
+
+	# Add logic for other collectibles here
+
+
+# --- Death and Respawn ---
 
 func die():
+	if not is_alive: return
 	is_alive = false
-	death_sound.play()
-	sprite.modulate = Color(1, 0.5, 0.5)  # Red tint
-	
-	# Notify game manager
-	get_node("/root/ScoreManager").lose_life()
-	
-	# Wait and respawn
+	if death_sound: death_sound.play()
+	sprite.modulate = Color(1, 0.5, 0.5)
+	velocity = Vector2.ZERO
+	set_physics_process(false) # Stop processing physics
+
+	# Notify game manager (ensure ScoreManager exists and has lose_life)
+	var score_manager = get_node_or_null("/root/ScoreManager")
+	if score_manager and score_manager.has_method("lose_life"):
+		score_manager.lose_life()
+	else:
+		print("Error: ScoreManager or lose_life method not found!")
+
 	await get_tree().create_timer(respawn_delay).timeout
 	respawn()
 
 func respawn():
 	is_alive = true
+	# Reset position (e.g., to center or spawn point)
 	position = Vector2(get_viewport_rect().size.x / 2, get_viewport_rect().size.y / 2)
 	velocity = Vector2.ZERO
-	sprite.modulate = Color(1, 1, 1)  # Reset color
-
-# --- Signal Handlers ---
-
-func _on_collection_area_area_entered(area):
-	print("[DEBUG Player] CollectionArea entered by: %s (Parent: %s)" % [area.name, area.get_parent().name if area.get_parent() else "None"]) # DEBUG
-	
-	# Check if the area entered is an enemy's egg collection zone (for defeated enemies)
-	# Note: This check seems redundant with the connection logic in _ready, 
-	# but keeping it for now. Ideally, the signal connection ensures this.
-	if area.is_in_group("egg_collection_zones") and area.get_parent().is_in_group("enemies"):
-		var enemy = area.get_parent()
-		
-		# Print more debug info to understand the state
-		print("Enemy current_state: ", enemy.current_state if "current_state" in enemy else "unknown")
-		print("Enemy State.EGG value: ", enemy.State.EGG if "State" in enemy else "unknown")
-		
-		# Check if enemy is in EGG state (or hatching, as eggs might be collectible briefly during hatch)
-		if "current_state" in enemy and (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
-			print("Egg Collected by player via collection area!")
-			enemy.collect_egg() # Assuming the enemy script has a collect_egg method
+	sprite.modulate = Color(1, 1, 1)
+	set_state(State.IDLE) # Respawn in idle state
+	set_physics_process(true) # Resume physics processing
