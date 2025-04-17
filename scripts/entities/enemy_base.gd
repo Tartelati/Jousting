@@ -356,3 +356,27 @@ func _on_hatch_timer_timeout():
 	if egg_area: egg_area.monitoring = false
 	
 	print("Enemy %s hatched" % name)
+
+# Called by Player script during side collisions
+func handle_bounce(bounce_direction, bounce_vel_x, bounce_vel_y):
+	"""Handles being bounced by the player or another object."""
+	if current_state == State.EGG or current_state == State.HATCHING or current_state == State.DEAD:
+		return # Don't bounce if in these states
+
+	print("Enemy %s received bounce command. Direction: %s" % [name, bounce_direction]) # Debug
+
+	# Apply vertical bounce velocity immediately
+	velocity.y = bounce_vel_y
+
+	# Apply horizontal bounce velocity (using enemy's own bounce value for consistency?)
+	# Or use the player's passed value? Let's use the enemy's value for now.
+	velocity.x = bounce_direction * enemy_bounce_velocity_x
+
+	# Reverse internal direction variable
+	direction = bounce_direction # Set direction based on bounce
+	if enemy_sprite:
+		enemy_sprite.flip_h = (direction < 0)
+
+	# IMPORTANT: Do NOT change move_speed or walk_speed here.
+	# The velocity change handles the immediate bounce effect.
+	# The base speed for subsequent movement remains the same.

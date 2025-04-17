@@ -162,14 +162,14 @@ func _update_platform_states(wave_num):
 			target_enabled = true # Enable all on reset waves
 		else:
 			# Apply specific disabling logic for non-reset waves
-			if p.name == "platform2" and wave_num >= 3:
+			if p.name == "platform1" and wave_num >= 3:
 				target_enabled = false
-			elif p.name == "platform4" and wave_num >= 4:
+			elif p.name == "platform2" and wave_num >= 4:
 				target_enabled = false
 		# -----------------------------
 				
 		# --- Apply State ---
-		# Apply visibility to the StaticBody itself (or sprite if preferred)
+		# Apply visibility to the StaticBody itself (or sprite if preferred )
 		if p.visible != target_enabled:
 			p.visible = target_enabled 
 			
