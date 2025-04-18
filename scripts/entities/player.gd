@@ -46,9 +46,12 @@ var current_speed_level : int = 0
 var is_alive = true
 var brake_timer : float = 0.0
 var direction_during_brake : int = 0
+var hold_change_timer: float = 0.0 # Timer for hold input speed changes
+@export var hold_change_interval: float = 0.2 # Time interval for hold changes
 
 # --- Initialization ---
 func _ready():
+	hold_change_timer = hold_change_interval # Initialize timer
 	add_to_group("players") # Keep player in group
 	set_state(State.IDLE) # Initialize state properly
 
@@ -75,15 +78,19 @@ func set_state(new_state: State):
 		State.IDLE:
 			stop_audio()
 			sprite.modulate = Color.WHITE # Reset color if braking ended here
+			hold_change_timer = hold_change_interval # Reset hold timer
 		State.WALKING:
 			play_walking_audio()
 			sprite.modulate = Color.WHITE # Reset color
+			hold_change_timer = hold_change_interval # Reset hold timer
 		State.FLYING:
 			play_flying_audio()
 			sprite.modulate = Color.WHITE # Reset color
+			hold_change_timer = hold_change_interval # Reset hold timer
 		State.BRAKING:
 			# Keep walking audio playing during brake
 			play_deceleration_animation() # Play placeholder visual / actual animation
+			hold_change_timer = hold_change_interval # Reset hold timer
 
 # --- Main Physics Loop ---
 func _physics_process(delta):
@@ -163,29 +170,35 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 
 		if direction_just_pressed:
 			if input_matches_facing:
-				# Accelerate
+				# Accelerate (Initial Press)
 				current_speed_level = min(current_speed_level + 1, 3)
 				target_velocity_x = original_facing_direction * speed_values[current_speed_level]
+				hold_change_timer = hold_change_interval # Reset timer on initial press
 			else:
-				# --- Start Braking ---
-				# Store original direction, reduce speed, set timer, change state
-				direction_during_brake = original_facing_direction # Store the direction we WERE going
-				current_speed_level = max(current_speed_level - 1, 0) # Reduce speed level
-				brake_timer = brake_duration_per_level # Start timer for this level's brake
-				set_state(State.BRAKING) # Enter braking state (this calls play_deceleration_animation)
-				# Apply velocity for this first brake frame (reduced speed, original direction)
+				# --- Start Braking (Initial Press) ---
+				direction_during_brake = original_facing_direction
+				current_speed_level = max(current_speed_level - 1, 0)
+				brake_timer = brake_duration_per_level
+				set_state(State.BRAKING)
 				velocity.x = direction_during_brake * speed_values[current_speed_level]
-				# Exit handle_walking_state for this frame
-				return
-			# End of Accel/Decel block for direction_just_pressed
+				return # Exit handle_walking_state for this frame
+		elif Input.is_action_pressed("move_left") or Input.is_action_pressed("move_right"): # Check if holding
+			if input_matches_facing:
+				# --- Holding Logic (Acceleration) ---
+				hold_change_timer -= delta
+				if hold_change_timer <= 0:
+					current_speed_level = min(current_speed_level + 1, 3)
+					hold_change_timer = hold_change_interval # Reset timer
+					print("[DEBUG] Walk Accel (Hold): New Level: ", current_speed_level) # DEBUG
+			# Note: Holding opposite direction is handled by BRAKING state logic
 
-		# If not decelerating this frame, update sprite flip and calculate target velocity normally
-		# Sprite flip is handled here only if NOT decelerating this frame
+		# Update sprite flip based on input (always happens if input != 0)
 		sprite.flip_h = direction_input < 0
 		# Target velocity is calculated based on the current speed level and the direction the sprite is NOW facing
 		target_velocity_x = (1.0 if not sprite.flip_h else -1.0) * speed_values[current_speed_level]
 
 	else: # No direction input
+		hold_change_timer = hold_change_interval # Reset hold timer when input released
 		# Stop horizontal movement if speed level is 0
 		if current_speed_level == 0:
 			target_velocity_x = 0.0
@@ -199,18 +212,16 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 
 	velocity.x = target_velocity_x # Instant speed change
 
+	# Reset hold timer if input direction changes or is released
+	if Input.is_action_just_released("move_left") or Input.is_action_just_released("move_right") or direction_input == 0:
+		hold_change_timer = hold_change_interval
+
 	# Check if fallen off an edge
 	# If not on floor, gravity will take over (handled in _physics_process).
 	# State remains WALKING (conceptually, falling after walking)
 	# until flap is pressed or landing occurs.
-	# if not is_on_floor():
-	#	 transition_to_flying() # REMOVED - Do not automatically fly when falling
 
 func handle_flying_state(delta, direction_input, flap_input_pressed):
-	# --- Flying State Logic ---
-
-	# --- Flying State Logic ---
-
 	# Store original facing direction and movement direction
 	var was_facing_right = not sprite.flip_h
 	var original_move_direction = sign(velocity.x)
@@ -218,46 +229,70 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 	if is_zero_approx(original_move_direction):
 		original_move_direction = 1.0 if was_facing_right else -1.0
 
-	# 1. Handle Flap Input (Vertical force & Horizontal logic)
+	# 1. Handle Sprite Flipping
+	if direction_input != 0:
+		# If direction input is held, face that direction
+		sprite.flip_h = direction_input < 0
+	elif not is_zero_approx(velocity.x):
+		# If no direction input, but moving horizontally, face movement direction
+		sprite.flip_h = velocity.x < 0
+	# Else (no input and not moving horizontally), keep current facing direction
+
+	# 2. Handle Flap Input (Vertical force & Horizontal logic)
 	if flap_input_pressed:
 		# Apply vertical force
 		velocity.y = flap_force
 		if flap_sound: flap_sound.play()
 
-		# Check for horizontal speed changes (Requires Flap + Direction)
+		# --- Initial Speed Change on Flap Press ---
 		if direction_input != 0:
 			var input_is_right = direction_input > 0
-			# Check if input is opposite to the ORIGINAL MOVEMENT direction
 			var input_is_opposite = (original_move_direction > 0 and not input_is_right) or (original_move_direction < 0 and input_is_right)
 
-			if input_is_opposite:
-				# Decelerate: Reduce speed level
-				print("[DEBUG] Flying Decel Triggered: Old Level: ", current_speed_level) # DEBUG
+			if input_is_opposite: # Decelerate
 				current_speed_level = max(current_speed_level - 1, 0)
-				print("[DEBUG] Flying Decel Result: New Level: ", current_speed_level) # DEBUG
-				# Apply velocity using ORIGINAL movement direction and NEW speed level
 				velocity.x = original_move_direction * speed_values[current_speed_level]
-				print("[DEBUG] Applying Flying Decel Vel: OrigMoveDir=", original_move_direction, " NewSpeedVal=", speed_values[current_speed_level], " TargetVelX=", velocity.x) # DEBUG
-			else:
-				# Accelerate: Increase speed level (Input matches original movement direction)
-				# print("[DEBUG] Flying Accel Triggered: Old Level: ", current_speed_level) # DEBUG
+				print("[DEBUG] Flying Decel (Press): New Level: ", current_speed_level) # DEBUG
+			else: # Accelerate
 				current_speed_level = min(current_speed_level + 1, 3)
-				# print("[DEBUG] Flying Accel Result: New Level: ", current_speed_level) # DEBUG
-				# Apply velocity using CURRENT facing direction (which should match input) and NEW speed level
 				var current_facing_direction = 1.0 if not sprite.flip_h else -1.0
 				velocity.x = current_facing_direction * speed_values[current_speed_level]
-				print("[DEBUG] Applying Flying Accel/SameDir Vel: Dir=", current_facing_direction, " SpeedVal=", speed_values[current_speed_level], " TargetVelX=", velocity.x) # DEBUG
+				print("[DEBUG] Flying Accel (Press): New Level: ", current_speed_level) # DEBUG
+
+			hold_change_timer = hold_change_interval # Reset timer after initial press change
 		else:
 			# Flap only (no direction input) - Maintain current horizontal velocity
-			# velocity.x = velocity.x # No change needed
 			print("[DEBUG] Applying Flying Vel (Flap Only): Maintaining VelX=", velocity.x) # DEBUG
+			hold_change_timer = hold_change_interval # Reset timer
 
-	# else: If flap is NOT pressed, velocity.x remains unchanged (coasting/drifting).
+	# 3. Handle Hold Logic (Only if Flapping AND Holding Direction)
+	elif Input.is_action_pressed("flap") and direction_input != 0:
+		# --- Holding Logic (Acceleration/Deceleration) ---
+		hold_change_timer -= delta
+		if hold_change_timer <= 0:
+			var input_is_right = direction_input > 0
+			# Need to re-check original move direction relative to current input
+			var current_original_move_direction = sign(velocity.x)
+			if is_zero_approx(current_original_move_direction):
+				current_original_move_direction = 1.0 if not sprite.flip_h else -1.0
 
-	# 2. Handle Sprite Flipping (Based on direction input alone, happens AFTER velocity calc)
-	# This ensures sprite flips even if not flapping, but velocity only changes if flapping.
-	if direction_input != 0:
-		sprite.flip_h = direction_input < 0
+			var input_is_opposite = (current_original_move_direction > 0 and not input_is_right) or (current_original_move_direction < 0 and input_is_right)
+
+			if input_is_opposite: # Decelerate
+				current_speed_level = max(current_speed_level - 1, 0)
+				velocity.x = current_original_move_direction * speed_values[current_speed_level]
+				print("[DEBUG] Flying Decel (Hold): New Level: ", current_speed_level) # DEBUG
+			else: # Accelerate
+				current_speed_level = min(current_speed_level + 1, 3)
+				var current_facing_direction = 1.0 if not sprite.flip_h else -1.0
+				velocity.x = current_facing_direction * speed_values[current_speed_level]
+				print("[DEBUG] Flying Accel (Hold): New Level: ", current_speed_level) # DEBUG
+
+			hold_change_timer = hold_change_interval # Reset timer after hold change
+
+	# 4. Reset Hold Timer if Flap Released or No Direction Input while Flapping
+	if Input.is_action_just_released("flap") or (Input.is_action_pressed("flap") and direction_input == 0):
+		hold_change_timer = hold_change_interval
 
 
 func handle_braking_state(delta, direction_input):
@@ -271,19 +306,23 @@ func handle_braking_state(delta, direction_input):
 	# Check for state change conditions
 	if brake_timer <= 0:
 		# Brake duration for this level finished
-		# Check if the opposite direction is *still held*
-		var opposite_direction_held = (direction_input != 0 and sign(direction_input) == -direction_during_brake)
+		# Check if the opposite direction is *still held* using is_action_pressed
+		var opposite_direction_action = "move_left" if direction_during_brake > 0 else "move_right"
+		var opposite_direction_pressed = Input.is_action_pressed(opposite_direction_action)
 
-		if opposite_direction_held:
+		if opposite_direction_pressed:
 			if current_speed_level > 0:
-				# Continue braking: reduce speed, reset timer, play animation again
+				# --- Continue Braking (Loop) ---
 				current_speed_level = max(current_speed_level - 1, 0)
-				brake_timer = brake_duration_per_level
-				play_deceleration_animation() # Re-trigger placeholder visual
-				# Velocity for next frame will be calculated based on new level
+				brake_timer = brake_duration_per_level # Reset timer for next level
+				play_deceleration_animation() # Re-trigger placeholder visual / animation
+				print("[DEBUG] Brake Loop: New Level: ", current_speed_level) # DEBUG
+				# Velocity for next frame will be calculated at the start of the next handle_braking_state call
 			else:
 				# Braked to Speed 0, start walking in the new direction
-				transition_to_walking(direction_input)
+				# Use the actual input axis value to determine the new walking direction
+				var new_direction_input = Input.get_axis("move_left", "move_right")
+				transition_to_walking(new_direction_input)
 		else:
 			# Opposite key released during brake
 			if current_speed_level == 0:

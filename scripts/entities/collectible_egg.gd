@@ -33,8 +33,7 @@ func _ready():
 		print("[DEBUG Egg %s] Connected hatch_timer timeout signal." % name) # DEBUG
 	else:
 		print("[DEBUG Egg %s] hatch_timer timeout signal ALREADY connected." % name) # DEBUG
-	connect("area_entered", _on_area_entered)
-	hatch_timer.connect("timeout", _on_hatch_timer_timeout)
+	# Removed duplicate connections below
 	
 	# Start the timer immediately
 	hatch_timer.start()
@@ -134,12 +133,19 @@ func _on_hatch_timer_timeout():
 		
 		# Optional: Play hatch sound
 		# SoundManager.play_sfx("egg_hatch")
-		# SoundManager.play_sfx("egg_hatch")
-		printerr("[DEBUG Hatch %s] enemy_scene is null after match statement!" % name) # DEBUG Error
-		print("[DEBUG Hatch %s] Queueing free due to null enemy_scene." % name) # DEBUG Error
+		
+		# Remove the egg AFTER successfully adding the enemy
+		print("[DEBUG Hatch %s] Successfully added enemy. Queueing free for egg." % name) # DEBUG 8
 		queue_free()
-		return
+		return # Explicit return after successful hatch + free
 
-	# Remove the egg
-	print("[DEBUG Hatch %s] Reached end of function. Queueing free." % name) # DEBUG 8
+	# This else block was causing issues - it ran even if enemy_scene was valid
+	# else: 
+	#	printerr("[DEBUG Hatch %s] enemy_scene is null after match statement!" % name) # DEBUG Error
+	#	print("[DEBUG Hatch %s] Queueing free due to null enemy_scene." % name) # DEBUG Error
+	#	queue_free()
+	#	return
+
+	# This final queue_free() should only be reached if something failed before adding the enemy
+	print("[DEBUG Hatch %s] Reached end of function unexpectedly (likely error). Queueing free." % name) # DEBUG 9
 	queue_free()
