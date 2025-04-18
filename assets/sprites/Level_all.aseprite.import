@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://bxhf0px3gn3sa"
+path="res://.godot/imported/Level_all.aseprite-7791894d12a3607f3f349b5f32e58502.res"
+
+[deps]
+
+source_file="res://assets/sprites/Level_all.aseprite"
+dest_files=["res://.godot/imported/Level_all.aseprite-7791894d12a3607f3f349b5f32e58502.res"]
+
+[params]
+
