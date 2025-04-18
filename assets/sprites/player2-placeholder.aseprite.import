@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://b6fkit0c2k1b6"
+path="res://.godot/imported/player2-placeholder.aseprite-7ec39d8ac5bec4b86e1d32b632b6de89.res"
+
+[deps]
+
+source_file="res://assets/sprites/player2-placeholder.aseprite"
+dest_files=["res://.godot/imported/player2-placeholder.aseprite-7ec39d8ac5bec4b86e1d32b632b6de89.res"]
+
+[params]
+

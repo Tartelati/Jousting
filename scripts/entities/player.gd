@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
 # --- States Enum ---
-enum State { IDLE, WALKING, FLYING }
+enum State { IDLE, WALKING, FLYING, BRAKING } # Added BRAKING state
 
 # --- State Variables ---
 var current_state : State = State.IDLE
@@ -16,6 +16,7 @@ var current_speed_level : int = 0
 @export var gravity : float = ProjectSettings.get_setting("physics/2d/default_gravity", 800.0)
 @export var flap_force : float = -300.0 # Negative value for upward force
 @export var max_fall_speed: float = 400.0 # Keep max fall speed
+@export var brake_duration_per_level : float = 20.0 / 60.0 # ~20 frames at 60fps
 
 @export_group("Collision")
 @export var joust_bounce_velocity: float = -150.0 # Bounce after winning joust
@@ -43,6 +44,8 @@ var current_speed_level : int = 0
 
 # --- Internal Variables ---
 var is_alive = true
+var brake_timer : float = 0.0
+var direction_during_brake : int = 0
 
 # --- Initialization ---
 func _ready():
@@ -71,10 +74,16 @@ func set_state(new_state: State):
 	match new_state:
 		State.IDLE:
 			stop_audio()
+			sprite.modulate = Color.WHITE # Reset color if braking ended here
 		State.WALKING:
 			play_walking_audio()
+			sprite.modulate = Color.WHITE # Reset color
 		State.FLYING:
 			play_flying_audio()
+			sprite.modulate = Color.WHITE # Reset color
+		State.BRAKING:
+			# Keep walking audio playing during brake
+			play_deceleration_animation() # Play placeholder visual / actual animation
 
 # --- Main Physics Loop ---
 func _physics_process(delta):
@@ -101,6 +110,8 @@ func _physics_process(delta):
 			handle_walking_state(delta, direction_input, flap_input_pressed)
 		State.FLYING:
 			handle_flying_state(delta, direction_input, flap_input_pressed)
+		State.BRAKING:
+			handle_braking_state(delta, direction_input)
 
 	# 4. Apply Movement and Handle Collisions
 	move_and_slide()
@@ -156,18 +167,16 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 				current_speed_level = min(current_speed_level + 1, 3)
 				target_velocity_x = original_facing_direction * speed_values[current_speed_level]
 			else:
-				# Decelerate - Apply reduced speed in ORIGINAL direction for this frame
-				current_speed_level = max(current_speed_level - 1, 0)
-				play_deceleration_animation()
-				# Apply velocity using original direction and new speed level IMMEDIATELY
-				velocity.x = original_facing_direction * speed_values[current_speed_level]
-				# Flip sprite now so it faces the input direction for the *next* frame
-				sprite.flip_h = direction_input < 0
-				# Transition to idle if speed becomes 0
-				if current_speed_level == 0:
-					transition_to_idle()
-				# Exit function for this frame after applying deceleration velocity
-				return # IMPORTANT: Prevent normal velocity calculation below from overwriting
+				# --- Start Braking ---
+				# Store original direction, reduce speed, set timer, change state
+				direction_during_brake = original_facing_direction # Store the direction we WERE going
+				current_speed_level = max(current_speed_level - 1, 0) # Reduce speed level
+				brake_timer = brake_duration_per_level # Start timer for this level's brake
+				set_state(State.BRAKING) # Enter braking state (this calls play_deceleration_animation)
+				# Apply velocity for this first brake frame (reduced speed, original direction)
+				velocity.x = direction_during_brake * speed_values[current_speed_level]
+				# Exit handle_walking_state for this frame
+				return
 			# End of Accel/Decel block for direction_just_pressed
 
 		# If not decelerating this frame, update sprite flip and calculate target velocity normally
@@ -246,8 +255,47 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 	# else: If flap is NOT pressed, velocity.x remains unchanged (coasting/drifting).
 
 	# 2. Handle Sprite Flipping (Based on direction input alone, happens AFTER velocity calc)
+	# This ensures sprite flips even if not flapping, but velocity only changes if flapping.
 	if direction_input != 0:
 		sprite.flip_h = direction_input < 0
+
+
+func handle_braking_state(delta, direction_input):
+	# Apply velocity based on the direction we were going when brake started
+	# Ensure direction_during_brake is treated as float for multiplication
+	velocity.x = float(direction_during_brake) * speed_values[current_speed_level]
+
+	# Tick down timer
+	brake_timer -= delta
+
+	# Check for state change conditions
+	if brake_timer <= 0:
+		# Brake duration for this level finished
+		# Check if the opposite direction is *still held*
+		var opposite_direction_held = (direction_input != 0 and sign(direction_input) == -direction_during_brake)
+
+		if opposite_direction_held:
+			if current_speed_level > 0:
+				# Continue braking: reduce speed, reset timer, play animation again
+				current_speed_level = max(current_speed_level - 1, 0)
+				brake_timer = brake_duration_per_level
+				play_deceleration_animation() # Re-trigger placeholder visual
+				# Velocity for next frame will be calculated based on new level
+			else:
+				# Braked to Speed 0, start walking in the new direction
+				transition_to_walking(direction_input)
+		else:
+			# Opposite key released during brake
+			if current_speed_level == 0:
+				transition_to_idle()
+			else:
+				# Transition back to walking, maintaining current speed and original brake direction
+				transition_to_walking(float(direction_during_brake)) # Pass direction as float
+
+	# Allow cancelling brake by pressing original direction again
+	elif direction_input != 0 and sign(direction_input) == direction_during_brake:
+		# If player presses original direction again, cancel brake immediately
+		transition_to_walking(float(direction_during_brake)) # Pass direction as float
 
 
 # --- Automatic State Transitions ---
@@ -305,12 +353,18 @@ func transition_to_walking(initial_direction = 0.0):
 		if initial_direction != 0.0:
 			sprite.flip_h = initial_direction < 0
 			velocity.x = initial_direction * speed_values[current_speed_level]
-	elif previous_state == State.FLYING:
-		# Speed level preserved from flying state
+	elif previous_state == State.FLYING or previous_state == State.BRAKING: # Also handle transition from BRAKING
+		# Speed level preserved from flying/braking state
 		var facing_direction = 1.0 if not sprite.flip_h else -1.0
+		# If initial_direction is provided (e.g., from braking finish), use that
+		if initial_direction != 0.0:
+			facing_direction = sign(initial_direction)
+			sprite.flip_h = facing_direction < 0
 		velocity.x = facing_direction * speed_values[current_speed_level]
 
+
 	velocity.y = 0 # Ensure vertical velocity is zeroed
+	sprite.modulate = Color.WHITE # Ensure color reset when entering walking
 
 func transition_to_flying():
 	if current_state == State.FLYING: return
@@ -391,7 +445,10 @@ func update_animation():
 func play_deceleration_animation():
 	if animation_player and animation_player.is_valid():
 		# Assumes "decelerate" animation exists
-		animation_player.play("decelerate")
+		# animation_player.play("decelerate")
+		pass # Actual animation handled by AnimationPlayer
+	# Placeholder visual:
+	sprite.modulate = Color.LIGHT_BLUE # Simple color change for now
 
 
 # --- Screen Wrapping ---
