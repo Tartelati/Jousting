@@ -64,6 +64,7 @@ func _process(delta):
 		if is_egg_wave:
 			# Egg wave ends when no collectible eggs AND no enemies (hatched or otherwise) are left
 			var eggs_in_scene = get_tree().get_nodes_in_group("collectible_eggs").size()
+			print("[DEBUG WaveManager _process] Egg Wave Check - Eggs: %d, Enemies: %d" % [eggs_in_scene, enemies_in_scene]) # DEBUG
 			# print("[Wave %d Process] Eggs in scene: %d | Enemies in scene: %d" % [current_wave, eggs_in_scene, enemies_in_scene]) # DEBUG - Can be noisy
 			if eggs_in_scene == 0 and enemies_in_scene == 0: 
 				print("Egg wave complete condition met.") # DEBUG
@@ -253,6 +254,7 @@ func _start_egg_wave():
 		var egg_instance = collectible_egg_scene.instantiate()
 		egg_instance.global_position = random_marker.global_position
 		get_parent().add_child(egg_instance) # Add egg to the level
+		print("[DEBUG WaveManager _start_egg_wave] Added egg instance: %s at %s" % [egg_instance.name, egg_instance.global_position]) # DEBUG
 
 func wave_finished():
 	wave_in_progress = false
