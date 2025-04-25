@@ -254,7 +254,8 @@ func _start_egg_wave():
 		var egg_instance = collectible_egg_scene.instantiate()
 		egg_instance.global_position = random_marker.global_position
 		get_parent().add_child(egg_instance) # Add egg to the level
-		print("[DEBUG WaveManager _start_egg_wave] Added egg instance: %s at %s" % [egg_instance.name, egg_instance.global_position]) # DEBUG
+		egg_instance.add_to_group("collectible_eggs") # Add to group immediately
+		print("[DEBUG WaveManager _start_egg_wave] Added egg instance: %s to group 'collectible_eggs' at %s" % [egg_instance.name, egg_instance.global_position]) # DEBUG Updated
 
 func wave_finished():
 	wave_in_progress = false
