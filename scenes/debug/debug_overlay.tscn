@@ -4,9 +4,11 @@
 
 [node name="DebugOverlay" type="CanvasLayer"]
 layer = 100
+visible = false
 script = ExtResource("1_debug")
 
 [node name="DebugPanel" type="Panel" parent="."]
+visible = false
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0

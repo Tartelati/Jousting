@@ -6,7 +6,9 @@ var current_state = GameState.MAIN_MENU
 var current_level = null
 var main_menu_scene = preload("res://scenes/ui/main_menu.tscn")
 var game_over_scene = preload("res://scenes/ui/game_over.tscn")
-var main_game_scene = preload("res://scenes/main_game.tscn") # Added
+# For the Demo_Showcase it will only load the preview animation
+var main_game_scene = preload("res://scenes/demo_showcase.tscn")
+#var main_game_scene = preload("res://scenes/main_game.tscn") # Commented for demo
 var level_scene = preload("res://scenes/levels/level_base.tscn")
 var hud_scene = preload("res://scenes/ui/hud.tscn")
 var debug_overlay_scene = preload("res://scenes/debug/debug_overlay.tscn")
