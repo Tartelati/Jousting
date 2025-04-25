@@ -1,49 +1,9 @@
 [gd_scene load_steps=8 format=3 uid="uid://dwrviakaq2pkj"]
 
-[ext_resource type="Script" uid="uid://dphul6ur08ukp" path="res://scenes/demo_showcase.gd" id="1_o4oio"]
+[ext_resource type="Script" uid="uid://dphul6ur08ukp" path="res://scripts/ui/demo_showcase.gd" id="1_o4oio"]
 [ext_resource type="Texture2D" uid="uid://brr2xp2sgnc5i" path="res://assets/sprites/alpha-v1.png" id="1_xfyp3"]
 [ext_resource type="Texture2D" uid="uid://c18ukrhdfwdy4" path="res://assets/sprites/alpha-eggs-v1.png" id="2_7e47y"]
 [ext_resource type="Texture2D" uid="uid://brpuidrirwit8" path="res://assets/sprites/alpha_v2.png" id="3_0u6c0"]
-
-[sub_resource type="Animation" id="Animation_ymoyc"]
-length = 15.0
-loop_mode = 1
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("AnimationPlayer/TextureRect2:visible")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 5, 10),
-"transitions": PackedFloat32Array(1, 1, 1),
-"update": 1,
-"values": [false, true, false]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("AnimationPlayer/TextureRect:visible")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0, 5, 10),
-"transitions": PackedFloat32Array(1, 1, 1),
-"update": 1,
-"values": [true, false, false]
-}
-tracks/2/type = "value"
-tracks/2/imported = false
-tracks/2/enabled = true
-tracks/2/path = NodePath("AnimationPlayer/TextureRect3:visible")
-tracks/2/interp = 1
-tracks/2/loop_wrap = true
-tracks/2/keys = {
-"times": PackedFloat32Array(0, 9.96667, 15),
-"transitions": PackedFloat32Array(1, 1, 1),
-"update": 1,
-"values": [false, true, false]
-}
 
 [sub_resource type="Animation" id="Animation_q6el8"]
 resource_name = "demo_showcase_animation"
@@ -86,9 +46,50 @@ tracks/2/keys = {
 "values": [false, true, false]
 }
 
+[sub_resource type="Animation" id="Animation_ymoyc"]
+resource_name = "DemoShowcase"
+length = 15.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("AnimationPlayer/TextureRect2:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 5, 10),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [false, true, false]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("AnimationPlayer/TextureRect:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 5, 10),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [true, false, false]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("AnimationPlayer/TextureRect3:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 9.96667, 15),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [false, true, false]
+}
+
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_pi6ym"]
 _data = {
-&"RESET": SubResource("Animation_ymoyc"),
+&"DemoShowcase": SubResource("Animation_ymoyc"),
 &"demo_showcase_animation": SubResource("Animation_q6el8")
 }
 
@@ -98,6 +99,7 @@ anchors_preset = 0
 script = ExtResource("1_o4oio")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+unique_name_in_owner = true
 libraries = {
 &"": SubResource("AnimationLibrary_pi6ym")
 }
@@ -141,3 +143,5 @@ offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 0
 text = "Quit"
+
+[connection signal="pressed" from="AnimationPlayer/QuitButton" to="." method="_on_quit_button_pressed"]
