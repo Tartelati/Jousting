@@ -1,7 +1,7 @@
 [gd_scene load_steps=11 format=3 uid="uid://cba2m06mfhdpm"]
 
 [ext_resource type="Script" uid="uid://v56hqa6big8u" path="res://scripts/entities/enemy_base.gd" id="1_ltmif"]
-[ext_resource type="Texture2D" uid="uid://75doebxc70lg" path="res://assets/sprites/enemy_base-placeholder.png" id="2_1odx1"]
+[ext_resource type="Texture2D" uid="uid://bhobw0eyciqr6" path="res://assets/sprites/Enemy_base_no_knight.png" id="2_1odx1"]
 [ext_resource type="AudioStream" uid="uid://d1sd8lcae1tjg" path="res://assets/sounds/sfx/enemy_flap.wav" id="3_1odx1"]
 [ext_resource type="Texture2D" uid="uid://cvd3kcrwla4om" path="res://assets/sprites/egg.png" id="3_qag7e"]
 [ext_resource type="AudioStream" uid="uid://ctmd2on11oc70" path="res://assets/sounds/sfx/collision_sound.wav" id="4_xadvl"]
@@ -27,6 +27,7 @@ collision_mask = 7
 script = ExtResource("1_ltmif")
 
 [node name="EnemySprite" type="Sprite2D" parent="EnemyBody"]
+texture_filter = 1
 texture = ExtResource("2_1odx1")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody"]

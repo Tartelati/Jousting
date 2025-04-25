@@ -26,34 +26,66 @@ layout_mode = 2
 [node name="TopRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="ScoreLabel" type="Label" parent="MarginContainer/VBoxContainer/TopRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Score: 0"
-
 [node name="WaveLabel" type="Label" parent="MarginContainer/VBoxContainer/TopRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Wave: 1"
 horizontal_alignment = 1
 
-[node name="LivesContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TopRow"]
+[node name="P1HudLives" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -95.0
+offset_top = -85.0
+offset_right = 65.0
+offset_bottom = -45.0
+grow_horizontal = 2
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+
+[node name="LivesContainer" type="HBoxContainer" parent="P1HudLives"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
+size_flags_vertical = 8
 alignment = 2
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TopRow/LivesContainer"]
-layout_mode = 2
-text = "Lives: "
-
-[node name="Life1" type="TextureRect" parent="MarginContainer/VBoxContainer/TopRow/LivesContainer"]
+[node name="Life1" type="TextureRect" parent="P1HudLives/LivesContainer"]
 layout_mode = 2
 texture = ExtResource("2_bo48s")
 
-[node name="Life2" type="TextureRect" parent="MarginContainer/VBoxContainer/TopRow/LivesContainer"]
+[node name="Life2" type="TextureRect" parent="P1HudLives/LivesContainer"]
 layout_mode = 2
 texture = ExtResource("2_bo48s")
 
-[node name="Life3" type="TextureRect" parent="MarginContainer/VBoxContainer/TopRow/LivesContainer"]
+[node name="Life3" type="TextureRect" parent="P1HudLives/LivesContainer"]
 layout_mode = 2
 texture = ExtResource("2_bo48s")
+
+[node name="Life4" type="TextureRect" parent="P1HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="P1HudScore" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -278.0
+offset_top = -82.0
+offset_right = -118.0
+offset_bottom = -42.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ScoreLabel" type="Label" parent="P1HudScore"]
+clip_contents = true
+layout_direction = 3
+layout_mode = 2
+size_flags_horizontal = 3
+text = " 0"
