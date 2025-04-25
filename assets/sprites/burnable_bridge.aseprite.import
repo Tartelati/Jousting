@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://icgrwswh53nr"
+path="res://.godot/imported/burnable_bridge.aseprite-d52fbb6a775d426b627767b71a0a3a9d.res"
+
+[deps]
+
+source_file="res://assets/sprites/burnable_bridge.aseprite"
+dest_files=["res://.godot/imported/burnable_bridge.aseprite-d52fbb6a775d426b627767b71a0a3a9d.res"]
+
+[params]
+
