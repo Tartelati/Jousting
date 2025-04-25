@@ -1,7 +1,7 @@
 [gd_scene load_steps=10 format=3 uid="uid://b72cmuhsp6dty"]
 
 [ext_resource type="Script" uid="uid://cbusgpsbm2fr1" path="res://scripts/entities/player.gd" id="1_5u6hq"]
-[ext_resource type="Texture2D" uid="uid://cc5i1nwn5kj05" path="res://assets/sprites/player1-placeholder.png" id="1_ucweq"]
+[ext_resource type="Texture2D" uid="uid://cnoa4wpcsl3u2" path="res://assets/sprites/player1.png" id="2_5u6hq"]
 [ext_resource type="AudioStream" uid="uid://bue6cgvu2wq0d" path="res://assets/sounds/sfx/flapsound.wav" id="3_5u6hq"]
 [ext_resource type="AudioStream" uid="uid://ctmd2on11oc70" path="res://assets/sounds/sfx/collision_sound.wav" id="4_d4qa6"]
 [ext_resource type="AudioStream" uid="uid://bfqp85rr2ou5m" path="res://assets/sounds/sfx/death_sound.wav" id="5_ss7kx"]
@@ -26,7 +26,8 @@ collision_mask = 134
 script = ExtResource("1_5u6hq")
 
 [node name="Sprite2D" type="Sprite2D" parent="PlayerBody"]
-texture = ExtResource("1_ucweq")
+texture_filter = 1
+texture = ExtResource("2_5u6hq")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerBody"]
 position = Vector2(4, 9)

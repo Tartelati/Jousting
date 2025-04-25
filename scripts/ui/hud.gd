@@ -1,8 +1,8 @@
 extends Control
 
-@onready var score_label = $MarginContainer/VBoxContainer/TopRow/ScoreLabel
+@onready var p1_score_label = $P1HudScore/ScoreLabel
 @onready var wave_label = $MarginContainer/VBoxContainer/TopRow/WaveLabel
-@onready var lives_container = $MarginContainer/VBoxContainer/TopRow/LivesContainer
+@onready var p1_lives_container = $P1HudLives/LivesContainer
 
 # Life indicator references
 var life_indicators = []
@@ -22,7 +22,7 @@ func _ready():
 	_on_lives_changed(get_node("/root/ScoreManager").lives)
 	
 	# Find all life indicators
-	for child in lives_container.get_children():
+	for child in p1_lives_container.get_children():
 		if child is TextureRect:
 			life_indicators.append(child)
 	
@@ -39,7 +39,7 @@ func setup_wave_manager_connection(wave_manager_node):
 		printerr("HUD: Invalid WaveManager node provided or signal missing.")
 
 func _on_score_changed(new_score):
-	score_label.text = "Score: " + str(new_score)
+	p1_score_label.text = str(new_score)
 
 func _on_lives_changed(new_lives):
 	# Update life indicators
