@@ -9,6 +9,7 @@ const INTRO_DELAY: float = 5.0 # Seconds to wait after sound starts
 @onready var black_background: ColorRect = %BlackBackground # Ensure this line remains commented out if unused
 
 var _is_skipping: bool = false # Flag to prevent double transition
+var _is_waiting_for_input: bool = false
 
 func _ready():
 	# Play the sound immediately
@@ -36,6 +37,15 @@ func _ready():
 		printerr("OpeningCinematic: AnimationPlayer node not found after delay!")
 		# Fallback: Go directly to main menu if animation player is missing
 		_go_to_main_menu()
+		
+# This function is called by the Call Method Track keyframe you created
+func _pause_for_input() -> void:
+	if animation_player and animation_player.is_playing():
+		animation_player.pause()
+		_is_waiting_for_input = true
+		print("Intro animation paused, waiting for input.")
+		# Optional: Show the prompt label
+		# if continue_prompt: continue_prompt.show()
 
 func _unhandled_input(event):
 	# Ensure the node is ready and in the tree before processing input
