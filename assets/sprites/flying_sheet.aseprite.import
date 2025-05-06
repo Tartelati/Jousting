@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://brcovla4m3ikj"
+path="res://.godot/imported/flying_sheet.aseprite-52aa9e42267fc341f234b47e84069263.res"
+
+[deps]
+
+source_file="res://assets/sprites/flying_sheet.aseprite"
+dest_files=["res://.godot/imported/flying_sheet.aseprite-52aa9e42267fc341f234b47e84069263.res"]
+
+[params]
+
