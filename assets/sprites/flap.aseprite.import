@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://lhcjsftv8yq"
+path="res://.godot/imported/flap.aseprite-79dc88a77fd9bbecb761554fb2a8b442.res"
+
+[deps]
+
+source_file="res://assets/sprites/flap.aseprite"
+dest_files=["res://.godot/imported/flap.aseprite-79dc88a77fd9bbecb761554fb2a8b442.res"]
+
+[params]
+
