@@ -31,16 +31,18 @@ var current_speed_level : int = 0
 @export var respawn_delay: float = 2.0
 
 # --- Node References (Update paths as needed in the editor) ---
-@onready var sprite = $Sprite2D
-@onready var animation_player = $AnimationPlayer # Assumes AnimationPlayer node exists
+#@onready var sprite: Sprite2D = $Sprite2D
+@onready var animation_player: AnimationPlayer = $AnimationPlayer # Assumes AnimationPlayer node exists
 @onready var walking_audio = $WalkingAudioPlayer # Assumes AudioStreamPlayer node exists
 @onready var flying_audio = $FlyingAudioPlayer # Assumes AudioStreamPlayer node exists
 @onready var flap_sound = $FlapSound # Keep existing flap sound reference
 @onready var collision_sound = $CollisionSound # Keep existing collision sound reference
 @onready var death_sound = $DeathSound # Keep existing death sound reference
-@onready var combat_area = $CombatArea # Keep existing combat area reference
-@onready var collection_area = $CollectionArea # Keep existing collection area reference
-@onready var stomp_area = $StompArea # Keep existing stomp area reference
+@onready var combat_area: Area2D = $CombatArea # Keep existing combat area reference
+@onready var collection_area: Area2D = $CollectionArea # Keep existing collection area reference
+@onready var stomp_area: Area2D = $StompArea # Keep existing stomp area reference
+@onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
+
 
 # --- Internal Variables ---
 var is_alive = true
@@ -54,6 +56,7 @@ func _ready():
 	hold_change_timer = hold_change_interval # Initialize timer
 	add_to_group("players") # Keep player in group
 	set_state(State.IDLE) # Initialize state properly
+	animated_sprite.play("Idle")
 
 	# Connect signals (ensure these are connected in editor or uncomment if needed)
 	if combat_area:
@@ -77,19 +80,20 @@ func set_state(new_state: State):
 	match new_state:
 		State.IDLE:
 			stop_audio()
-			sprite.modulate = Color.WHITE # Reset color if braking ended here
+			animated_sprite.play("Idle")
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.WALKING:
 			play_walking_audio()
-			sprite.modulate = Color.WHITE # Reset color
+			animated_sprite.play("Walk")
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.FLYING:
 			play_flying_audio()
-			sprite.modulate = Color.WHITE # Reset color
+			#animated_sprite.play("Fly")
+			animated_sprite.play("Fly")
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.BRAKING:
 			# Keep walking audio playing during brake
-			play_deceleration_animation() # Play placeholder visual / actual animation
+			animated_sprite.play("Brake")
 			hold_change_timer = hold_change_interval # Reset hold timer
 
 # --- Main Physics Loop ---
@@ -157,13 +161,14 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 		transition_to_flying()
 		return
 
+	var walking_speed_animation = {1: 1, 2: 1.4, 3: 1.8}
 	var move_left_pressed = Input.is_action_just_pressed("move_left")
 	var move_right_pressed = Input.is_action_just_pressed("move_right")
 	var direction_just_pressed = move_left_pressed or move_right_pressed
 	var target_velocity_x = 0.0
 
 	if direction_input != 0:
-		var facing_right = not sprite.flip_h
+		var facing_right = not animated_sprite.flip_h
 		var input_is_right = direction_input > 0
 		var input_matches_facing = (facing_right and input_is_right) or (not facing_right and not input_is_right)
 		var original_facing_direction = 1.0 if facing_right else -1.0 # Store original direction
@@ -172,6 +177,7 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 			if input_matches_facing:
 				# Accelerate (Initial Press)
 				current_speed_level = min(current_speed_level + 1, 3)
+				animated_sprite.play("Walk", walking_speed_animation[current_speed_level])
 				target_velocity_x = original_facing_direction * speed_values[current_speed_level]
 				hold_change_timer = hold_change_interval # Reset timer on initial press
 			else:
@@ -193,9 +199,9 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 			# Note: Holding opposite direction is handled by BRAKING state logic
 
 		# Update sprite flip based on input (always happens if input != 0)
-		sprite.flip_h = direction_input < 0
+		animated_sprite.flip_h = direction_input < 0
 		# Target velocity is calculated based on the current speed level and the direction the sprite is NOW facing
-		target_velocity_x = (1.0 if not sprite.flip_h else -1.0) * speed_values[current_speed_level]
+		target_velocity_x = (1.0 if not animated_sprite.flip_h else -1.0) * speed_values[current_speed_level]
 
 	else: # No direction input
 		hold_change_timer = hold_change_interval # Reset hold timer when input released
@@ -207,7 +213,7 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 				transition_to_idle()
 		else:
 			# Keep moving at current speed level if input released (classic feel)
-			target_velocity_x = (1.0 if not sprite.flip_h else -1.0) * speed_values[current_speed_level]
+			target_velocity_x = (1.0 if not animated_sprite.flip_h else -1.0) * speed_values[current_speed_level]
 
 
 	velocity.x = target_velocity_x # Instant speed change
@@ -223,8 +229,15 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 
 func handle_flying_state(delta, direction_input, flap_input_pressed):
 	# Store original facing direction and movement direction
-	var was_facing_right = not sprite.flip_h
+	var was_facing_right = not animated_sprite.flip_h
 	var original_move_direction = sign(velocity.x)
+	
+	# Flap animation triggered if flap input pressed or just pressed
+	if Input.is_action_just_released("flap") or Input.is_action_pressed("flap"):
+		animated_sprite.play("Flap2")
+	else: 
+		animated_sprite.play("Fly")
+	
 	# If stopped horizontally, use facing direction as the 'original' move direction
 	if is_zero_approx(original_move_direction):
 		original_move_direction = 1.0 if was_facing_right else -1.0
@@ -232,10 +245,10 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 	# 1. Handle Sprite Flipping
 	if direction_input != 0:
 		# If direction input is held, face that direction
-		sprite.flip_h = direction_input < 0
+		animated_sprite.flip_h = direction_input < 0
 	elif not is_zero_approx(velocity.x):
 		# If no direction input, but moving horizontally, face movement direction
-		sprite.flip_h = velocity.x < 0
+		animated_sprite.flip_h = velocity.x < 0
 	# Else (no input and not moving horizontally), keep current facing direction
 
 	# 2. Handle Flap Input (Vertical force & Horizontal logic)
@@ -255,7 +268,7 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 				print("[DEBUG] Flying Decel (Press): New Level: ", current_speed_level) # DEBUG
 			else: # Accelerate
 				current_speed_level = min(current_speed_level + 1, 3)
-				var current_facing_direction = 1.0 if not sprite.flip_h else -1.0
+				var current_facing_direction = 1.0 if not animated_sprite.flip_h else -1.0
 				velocity.x = current_facing_direction * speed_values[current_speed_level]
 				print("[DEBUG] Flying Accel (Press): New Level: ", current_speed_level) # DEBUG
 
@@ -274,7 +287,7 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 			# Need to re-check original move direction relative to current input
 			var current_original_move_direction = sign(velocity.x)
 			if is_zero_approx(current_original_move_direction):
-				current_original_move_direction = 1.0 if not sprite.flip_h else -1.0
+				current_original_move_direction = 1.0 if not animated_sprite.flip_h else -1.0
 
 			var input_is_opposite = (current_original_move_direction > 0 and not input_is_right) or (current_original_move_direction < 0 and input_is_right)
 
@@ -284,7 +297,7 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 				print("[DEBUG] Flying Decel (Hold): New Level: ", current_speed_level) # DEBUG
 			else: # Accelerate
 				current_speed_level = min(current_speed_level + 1, 3)
-				var current_facing_direction = 1.0 if not sprite.flip_h else -1.0
+				var current_facing_direction = 1.0 if not animated_sprite.flip_h else -1.0
 				velocity.x = current_facing_direction * speed_values[current_speed_level]
 				print("[DEBUG] Flying Accel (Hold): New Level: ", current_speed_level) # DEBUG
 
@@ -315,7 +328,6 @@ func handle_braking_state(delta, direction_input):
 				# --- Continue Braking (Loop) ---
 				current_speed_level = max(current_speed_level - 1, 0)
 				brake_timer = brake_duration_per_level # Reset timer for next level
-				play_deceleration_animation() # Re-trigger placeholder visual / animation
 				print("[DEBUG] Brake Loop: New Level: ", current_speed_level) # DEBUG
 				# Velocity for next frame will be calculated at the start of the next handle_braking_state call
 			else:
@@ -361,14 +373,14 @@ func handle_collisions():
 		if current_state == State.WALKING and (collider.is_in_group("Platform") or collider.is_in_group("Enemy")):
 			if abs(collision.get_normal().x) > 0.7: # Hit a vertical wall
 				print("Player hit wall while walking")
-				sprite.flip_h = !sprite.flip_h # Change direction
+				animated_sprite.flip_h = !animated_sprite.flip_h # Change direction
 				velocity.x = 0 # Stop horizontal movement against wall
 				current_speed_level = max(current_speed_level - 1, 0)
 				if current_speed_level == 0:
 					transition_to_idle()
 				else:
 					# Apply new velocity based on reduced speed level and new direction
-					var facing_direction = 1.0 if not sprite.flip_h else -1.0
+					var facing_direction = 1.0 if not animated_sprite.flip_h else -1.0
 					velocity.x = facing_direction * speed_values[current_speed_level]
 
 				if collision_sound: collision_sound.play()
@@ -390,20 +402,19 @@ func transition_to_walking(initial_direction = 0.0):
 	if previous_state == State.IDLE:
 		current_speed_level = 1
 		if initial_direction != 0.0:
-			sprite.flip_h = initial_direction < 0
+			animated_sprite.flip_h = initial_direction < 0
 			velocity.x = initial_direction * speed_values[current_speed_level]
 	elif previous_state == State.FLYING or previous_state == State.BRAKING: # Also handle transition from BRAKING
 		# Speed level preserved from flying/braking state
-		var facing_direction = 1.0 if not sprite.flip_h else -1.0
+		var facing_direction = 1.0 if not animated_sprite.flip_h else -1.0
 		# If initial_direction is provided (e.g., from braking finish), use that
 		if initial_direction != 0.0:
 			facing_direction = sign(initial_direction)
-			sprite.flip_h = facing_direction < 0
+			animated_sprite.flip_h = facing_direction < 0
 		velocity.x = facing_direction * speed_values[current_speed_level]
 
 
 	velocity.y = 0 # Ensure vertical velocity is zeroed
-	sprite.modulate = Color.WHITE # Ensure color reset when entering walking
 
 func transition_to_flying():
 	if current_state == State.FLYING: return
@@ -481,14 +492,6 @@ func update_animation():
 	if animation_player.current_animation != anim_name:
 		animation_player.play(anim_name)
 
-func play_deceleration_animation():
-	if animation_player and animation_player.is_valid():
-		# Assumes "decelerate" animation exists
-		# animation_player.play("decelerate")
-		pass # Actual animation handled by AnimationPlayer
-	# Placeholder visual:
-	sprite.modulate = Color.LIGHT_BLUE # Simple color change for now
-
 
 # --- Screen Wrapping ---
 func screen_wrapping():
@@ -545,7 +548,7 @@ func _on_combat_area_area_entered(area):
 			# Player bounces
 			velocity.x = direction_to_enemy * side_collision_bounce_x
 			velocity.y = side_collision_bounce_y
-			sprite.flip_h = velocity.x < 0
+			animated_sprite.flip_h = velocity.x < 0
 			current_speed_level = max(current_speed_level - 1, 0)
 			if current_speed_level == 0:
 				transition_to_idle()
@@ -604,7 +607,6 @@ func die():
 	if not is_alive: return
 	is_alive = false
 	if death_sound: death_sound.play()
-	sprite.modulate = Color(1, 0.5, 0.5)
 	velocity = Vector2.ZERO
 	set_physics_process(false) # Stop processing physics
 
@@ -623,6 +625,5 @@ func respawn():
 	# Reset position (e.g., to center or spawn point)
 	position = Vector2(get_viewport_rect().size.x / 2, get_viewport_rect().size.y / 2)
 	velocity = Vector2.ZERO
-	sprite.modulate = Color(1, 1, 1)
 	set_state(State.IDLE) # Respawn in idle state
 	set_physics_process(true) # Resume physics processing
