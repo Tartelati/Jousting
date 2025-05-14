@@ -133,8 +133,7 @@ func _physics_process(delta):
 	# 6. Check for Automatic State Transitions (like landing)
 	check_automatic_transitions()
 
-	# 7. Update Animation & Audio based on current state and velocity/speed level
-	update_animation()
+	# 7. Update Audio based on current state and velocity/speed level
 	update_audio()
 
 	# 8. Screen Wrapping (moved after move_and_slide to use updated position)
@@ -160,6 +159,10 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 	if flap_input_pressed:
 		transition_to_flying()
 		return
+	
+	if not is_on_floor():
+		set_state(State.FLYING)
+		return # Exit this function immediately since we're no longer walking
 
 	var walking_speed_animation = {1: 1, 2: 1.4, 3: 1.8}
 	var move_left_pressed = Input.is_action_just_pressed("move_left")
@@ -232,10 +235,14 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 	var was_facing_right = not animated_sprite.flip_h
 	var original_move_direction = sign(velocity.x)
 	
+	# Fly animation if not floor / falling
+	if not is_on_floor():
+		animated_sprite.play("Fly")
+	
 	# Flap animation triggered if flap input pressed or just pressed
 	if Input.is_action_just_released("flap") or Input.is_action_pressed("flap"):
 		animated_sprite.play("Flap2")
-	else: 
+	else:
 		animated_sprite.play("Fly")
 	
 	# If stopped horizontally, use facing direction as the 'original' move direction
@@ -356,7 +363,7 @@ func check_automatic_transitions():
 	# If we are flying and detect being on the floor, transition to walking.
 	if current_state == State.FLYING and is_on_floor():
 			# print("Landing detected: Transitioning to WALKING") # Debug print
-			transition_to_walking()
+		transition_to_walking()
 
 
 # --- Collision Handling ---
@@ -468,31 +475,6 @@ func stop_audio():
 	if walking_audio and walking_audio.is_valid() and walking_audio.playing: walking_audio.stop()
 	if flying_audio and flying_audio.is_valid() and flying_audio.playing: flying_audio.stop()
 
-
-# --- Animation Implementation ---
-
-func update_animation():
-	if not animation_player or not animation_player.is_valid(): return
-
-	var anim_name = "idle"
-	match current_state:
-		State.IDLE:
-			anim_name = "idle"
-		State.WALKING:
-			if not is_on_floor():
-				anim_name = "fly" # Use fly/fall animation if walking off edge
-			elif current_speed_level > 0:
-				anim_name = "walk_" + str(current_speed_level) # Assumes walk_1, walk_2, walk_3
-			else:
-				anim_name = "idle"
-		State.FLYING:
-			# Could add fly_up, fall animations based on velocity.y
-			anim_name = "fly" # Default flying animation
-
-	if animation_player.current_animation != anim_name:
-		animation_player.play(anim_name)
-
-
 # --- Screen Wrapping ---
 func screen_wrapping():
 	var viewport_rect = get_viewport_rect().size
@@ -514,7 +496,7 @@ func _on_combat_area_area_entered(area):
 
 		# Skip if enemy is in egg/hatching state
 		if "current_state" in enemy and "State" in enemy and \
-		   (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
+			(enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
 			return
 
 		# --- Joust Logic ---
@@ -579,7 +561,7 @@ func _on_stomp_area_area_entered(area):
 
 		# Skip if enemy is already defeated
 		if "current_state" in enemy and "State" in enemy and \
-		   (enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING or enemy.current_state == enemy.State.DEAD):
+			(enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING or enemy.current_state == enemy.State.DEAD):
 			return
 
 		print("Player stomp successful (signal)")
