@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://bft1fic6j0ucw"]
+[gd_scene load_steps=22 format=3 uid="uid://bft1fic6j0ucw"]
 
 [ext_resource type="Texture2D" uid="uid://b0thjvuaj1cc" path="res://assets/sprites/black_background.png" id="1_0y8gg"]
 [ext_resource type="Texture2D" uid="uid://dbhh4s6x7i0tx" path="res://assets/sprites/platform1_final.png" id="2_p7rbk"]
@@ -13,7 +13,6 @@
 [ext_resource type="Script" uid="uid://ciopo0w5fybtt" path="res://scripts/entities/spawn_point.gd" id="10_morta"]
 [ext_resource type="PackedScene" uid="uid://b72cmuhsp6dty" path="res://scenes/entities/player.tscn" id="11_dq8h5"]
 [ext_resource type="Script" uid="uid://cb8uooe1yjyuj" path="res://scripts/managers/wave_manager.gd" id="12_imdmy"]
-[ext_resource type="Script" uid="uid://8kf6chx1ys8p" path="res://scenes/levels/bouncing_collision.gd" id="12_morta"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_dq8h5"]
 size = Vector2(979, 5)
@@ -39,9 +38,6 @@ radius = 93.0054
 [sub_resource type="CircleShape2D" id="CircleShape2D_l4xu8"]
 radius = 109.0
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_p7rbk"]
-size = Vector2(5, 17)
-
 [node name="Level" type="Node2D"]
 
 [node name="Background" type="Sprite2D" parent="."]
@@ -52,7 +48,7 @@ texture = ExtResource("1_0y8gg")
 [node name="Platforms" type="Node2D" parent="."]
 position = Vector2(400, 300)
 
-[node name="platform1" type="StaticBody2D" parent="Platforms"]
+[node name="platform1" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 position = Vector2(-36, -13)
 collision_layer = 2
 collision_mask = 13
@@ -65,7 +61,7 @@ texture = ExtResource("2_p7rbk")
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Platforms/platform1"]
 polygon = PackedVector2Array(-114, -146, 117, -145, 105, -127, 90, -124, -13, -117, -60, -119, -100, -126, -104, -135)
 
-[node name="platform2" type="StaticBody2D" parent="Platforms"]
+[node name="platform2" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 collision_layer = 2
 collision_mask = 13
 
@@ -80,7 +76,7 @@ polygon = PackedVector2Array(289, -173, 303, -160, 311, -152, 433, -150, 432, -1
 [node name="CollisionPolygon2D2" type="CollisionPolygon2D" parent="Platforms/platform2"]
 polygon = PackedVector2Array(-426, -174, -316, -174, -319, -167, -341, -156, -360, -156, -398, -154, -425, -154)
 
-[node name="platform3" type="StaticBody2D" parent="Platforms"]
+[node name="platform3" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 collision_layer = 2
 collision_mask = 13
 
@@ -95,7 +91,7 @@ polygon = PackedVector2Array(-432, 12, -244, 12, -248, 21, -257, 29, -262, 38, -
 [node name="CollisionPolygon2D2" type="CollisionPolygon2D" parent="Platforms/platform3"]
 polygon = PackedVector2Array(306, 12, 431, 12, 430, 30, 369, 29, 349, 34, 311, 34, 311, 26, 307, 22)
 
-[node name="platform4" type="StaticBody2D" parent="Platforms"]
+[node name="platform4" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 position = Vector2(-7, 0)
 collision_layer = 2
 collision_mask = 13
@@ -108,7 +104,7 @@ texture = ExtResource("5_p3ew5")
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Platforms/platform4"]
 polygon = PackedVector2Array(145, -6, 311, -6, 306, 4, 300, 8, 289, 20, 276, 30, 258, 30, 246, 26, 222, 24, 200, 21, 198, 18, 166, 15, 154, 7)
 
-[node name="platform5" type="StaticBody2D" parent="Platforms"]
+[node name="platform5" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 position = Vector2(-116, 87)
 collision_layer = 2
 collision_mask = 13
@@ -128,7 +124,7 @@ collision_layer = 2
 position = Vector2(-23.5, -301.5)
 shape = SubResource("RectangleShape2D_dq8h5")
 
-[node name="GroundBase" type="StaticBody2D" parent="Platforms"]
+[node name="GroundBase" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 position = Vector2(-57, 35)
 collision_layer = 2
 collision_mask = 13
@@ -142,7 +138,7 @@ texture = ExtResource("7_1vve2")
 position = Vector2(57.5, 176.5)
 shape = SubResource("RectangleShape2D_imdmy")
 
-[node name="BurnableBridge" type="StaticBody2D" parent="Platforms"]
+[node name="BurnableBridge" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 collision_layer = 2
 collision_mask = 13
 
@@ -219,14 +215,6 @@ position = Vector2(206, 467)
 
 [node name="WaveManager" type="Node" parent="."]
 script = ExtResource("12_imdmy")
-
-[node name="BouncingCollision" type="Area2D" parent="."]
-collision_layer = 2
-script = ExtResource("12_morta")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="BouncingCollision"]
-position = Vector2(704.5, 303)
-shape = SubResource("RectangleShape2D_p7rbk")
 
 [node name="EggSpawnPoints" type="Node2D" parent="."]
 
