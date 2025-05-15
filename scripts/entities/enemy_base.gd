@@ -72,7 +72,7 @@ func _ready():
 	if egg_area:
 		egg_area.add_to_group("egg_collection_zones") # Add area to group
 		egg_area.connect("area_entered", _on_egg_area_area_entered)
-		egg_area.monitoring = false  # Start disabled
+		egg_area.set_deferred("monitoring", false)  # Start disabled
 
 func _physics_process(delta):
 	# Handle screen wrapping
@@ -201,7 +201,7 @@ func process_walking(delta):
 	move_and_slide()
 
 	# If we're not on floor anymore (walked off edge), switch to flying
-	if !is_on_floor():
+	if not is_on_floor():
 		current_state = State.FLYING
 		# Update animation to flying
 		if enemy_sprite: enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
@@ -273,7 +273,7 @@ func _on_egg_area_area_entered(area):
 		print("Egg collected by player's collection area!")
 		collect_egg()
 
-func defeat():
+func defeat(award_score := true):
 	if current_state == State.EGG or current_state == State.HATCHING or current_state == State.DEAD:
 		return # Already defeated or dead
 
@@ -301,7 +301,8 @@ func defeat():
 	
 	
 	# Signal to score manager to add points
-	ScoreManager.add_score(points_value)
+	if award_score:
+		ScoreManager.add_score(points_value)
 	
 	# print debug message
 	print("Enemy %s defeated" % name)
