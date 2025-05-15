@@ -14,7 +14,6 @@ var wave_in_progress = false
 var enemy_basic_scene = preload("res://scenes/entities/enemy_base.tscn")
 var enemy_hunter_scene = preload("res://scenes/entities/enemy_hunter.tscn")
 var enemy_bounder_scene = preload("res://scenes/entities/enemy_bounder.tscn")
-var collectible_egg_scene = preload("res://scenes/entities/collectible_egg.tscn") # Added
 
 # Spawn parameters
 var spawn_timer = 0
@@ -35,7 +34,7 @@ func _ready():
 		print("Warning: No spawn points found. Using default positions.")
 		# Get viewport size correctly for a Node
 		if is_inside_tree():
-			var viewport_size = get_viewport().get_visible_rect().size 
+			var viewport_size = get_viewport().get_visible_rect().size
 			# Top spawn positions
 			for i in range(5):
 				var x_pos = viewport_size.x * (i + 1) / 6
@@ -63,10 +62,8 @@ func _process(delta):
 		var enemies_in_scene = get_tree().get_nodes_in_group("enemies").size()
 		if is_egg_wave:
 			# Egg wave ends when no collectible eggs AND no enemies (hatched or otherwise) are left
-			var eggs_in_scene = get_tree().get_nodes_in_group("collectible_eggs").size()
-			print("[DEBUG WaveManager _process] Egg Wave Check - Eggs: %d, Enemies: %d" % [eggs_in_scene, enemies_in_scene]) # DEBUG
-			# print("[Wave %d Process] Eggs in scene: %d | Enemies in scene: %d" % [current_wave, eggs_in_scene, enemies_in_scene]) # DEBUG - Can be noisy
-			if eggs_in_scene == 0 and enemies_in_scene == 0: 
+			var eggs_in_scene = get_tree().get_nodes_in_group("enemies").size()
+			if eggs_in_scene == 0 and enemies_in_scene == 0:
 				print("Egg wave complete condition met.") # DEBUG
 				wave_finished()
 		else:
@@ -95,8 +92,8 @@ func start_wave(wave_number = -1):
 		is_egg_wave = true
 		_start_egg_wave()
 		# Don't proceed with normal enemy setup for egg waves
-		emit_signal("wave_started", current_wave) 
-		return 
+		emit_signal("wave_started", current_wave)
+		return
 	# --------------------------
 	
 	# --- Normal Enemy Wave Setup ---
@@ -133,8 +130,8 @@ func _update_platform_states(wave_num):
 			continue
 			
 		# Assuming platform structure is StaticBody2D -> Sprite2D, CollisionPolygon2D/CollisionShape2D
-		if not p is StaticBody2D: 
-			continue 
+		if not p is StaticBody2D:
+			continue
 
 		# Find Sprite and Collision nodes more robustly
 		var sprite_node = null
@@ -149,11 +146,11 @@ func _update_platform_states(wave_num):
 				collision_shape_node = child
 			# Break early if both found
 			if sprite_node and collision_shape_node:
-				break 
+				break
 		
 		# Check if BOTH nodes were found
 		if not is_instance_valid(sprite_node):
-			continue 
+			continue
 		if not is_instance_valid(collision_shape_node):
 			continue
 
@@ -172,10 +169,10 @@ func _update_platform_states(wave_num):
 		# --- Apply State ---
 		# Apply visibility to the StaticBody itself (or sprite if preferred )
 		if p.visible != target_enabled:
-			p.visible = target_enabled 
+			p.visible = target_enabled
 			
 		# Apply collision state (disabled = true means NO collision)
-		if collision_shape_node.disabled == target_enabled: 
+		if collision_shape_node.disabled == target_enabled:
 			collision_shape_node.disabled = not target_enabled
 
 
@@ -197,7 +194,7 @@ func spawn_enemy():
 		0: enemy = enemy_basic_scene.instantiate()
 		1: enemy = enemy_hunter_scene.instantiate()
 		2: enemy = enemy_bounder_scene.instantiate()
-		_: 
+		_:
 			printerr("Invalid enemy type in spawn_enemy")
 			return # Don't spawn if type is invalid
 
@@ -206,7 +203,7 @@ func spawn_enemy():
 	var available_spawn_points = []
 	for point in spawn_points:
 		# Check if it's a Marker2D with the spawn_point script attached
-		if point is Marker2D and point.has_method("can_spawn"): 
+		if point is Marker2D and point.has_method("can_spawn"):
 			if point.can_spawn():
 				available_spawn_points.append(point)
 		# else: # Handle the case where spawn_points might contain Vector2 (fallback logic)
@@ -246,16 +243,28 @@ func _start_egg_wave():
 		printerr("WaveManager: No Marker2D children found under EggSpawnPoints!")
 		return
 
-	var num_eggs_to_spawn = 10 # As requested
+	var num_eggs_to_spawn = randi_range(15, 25)
+	print("[DEBUG] Number of eggs to spawn: %d" % num_eggs_to_spawn) # Ensure we don't exceed the number of available spawn points
+
 	for i in range(num_eggs_to_spawn):
 		var random_marker = egg_spawn_markers.pick_random()
-		if not random_marker is Marker2D: continue # Skip if not a marker
+		if not random_marker is Marker2D:
+			continue # Skip if not a marker
 
-		var egg_instance = collectible_egg_scene.instantiate()
-		egg_instance.global_position = random_marker.global_position
-		get_parent().add_child(egg_instance) # Add egg to the level
-		egg_instance.add_to_group("collectible_eggs") # Add to group immediately
-		print("[DEBUG WaveManager _start_egg_wave] Added egg instance: %s to group 'collectible_eggs' at %s" % [egg_instance.name, egg_instance.global_position]) # DEBUG Updated
+		# Instantiate the enemy_base scene
+		var enemy_instance = enemy_basic_scene.instantiate()
+		if enemy_instance:
+			# Access the EnemyBody node
+			var enemy_body = enemy_instance.get_node("EnemyBody")
+			if enemy_body:
+				enemy_instance.global_position = random_marker.global_position # Set position of the egg
+				get_parent().add_child(enemy_instance) # Add egg to the level
+				enemy_body.call_deferred("defeat", false)
+				print("[DEBUG] Set enemy state to EGG for: %s" % enemy_instance.name)
+			else:
+				print("[ERROR] Could not set EGG state for: %s" % enemy_instance.name)
+			#
+			print("[DEBUG WaveManager _start_egg_wave] Added egg instance: %s to group 'enemies' at %s" % [enemy_instance.name, enemy_instance.global_position]) # DEBUG Updated
 
 func wave_finished():
 	wave_in_progress = false
