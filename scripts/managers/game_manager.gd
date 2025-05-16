@@ -1,5 +1,8 @@
 extends Node
 
+var player_scene = preload("res://scenes/entities/player.tscn")
+var player_nodes = [] # Store references to player instances
+
 enum GameState {MAIN_MENU, PLAYING, PAUSED, GAME_OVER}
 
 var current_state = GameState.MAIN_MENU
@@ -29,6 +32,10 @@ func _ready():
 func _input(event):
 	if event.is_action_pressed("pause") and current_state == GameState.PLAYING:
 		pause_game()
+ # Listen for "start_game" to add Player 2
+	if event.is_action_pressed("start_game") and current_state == GameState.PLAYING:
+		if player_nodes.size() < 2:
+			spawn_players(2, Vector2(600, 467)) # Adjust spawn position as needed
 
 func show_main_menu():
 	# Clear any existing UI
@@ -68,6 +75,20 @@ func start_game():
 		# show_main_menu() 
 		return
 
+func spawn_players(player_index: int, position: Vector2):
+	if not active_level:
+		printerr("No active level to spawn players in!")
+		return
+	# Prevent duplicate players
+	for p in player_nodes:
+		if p.player_index == player_index:
+			return
+	var player = player_scene.instantiate()
+	player.get_node("PlayerBody").player_index = player_index
+	player.global_position = position
+	active_level.add_child(player)
+	player_nodes.append(player)
+
 func setup_new_gameplay_scene(main_game_node):
 	# This function is called by the main_game scene itself once it's ready.
 	
@@ -92,6 +113,9 @@ func setup_new_gameplay_scene(main_game_node):
 	# Create and add level
 	active_level = level_scene.instantiate()
 	current_scene_container.add_child(active_level)
+	
+	# Spawn Player 1 at start
+	spawn_players(1, Vector2(200, 467)) # Adjust spawn position as needed
 	
 	# Create and add HUD
 	var hud_instance = hud_scene.instantiate()

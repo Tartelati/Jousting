@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+@export var player_index: int = 1
+
 # --- States Enum ---
 enum State { IDLE, WALKING, FLYING, BRAKING } # Added BRAKING state
 
