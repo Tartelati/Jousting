@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://bq3ib5pv80suw"
+path="res://.godot/imported/P2_walking-Sheet.aseprite-7de9212eb0f0fdf91b8b1d8b8bf7b8d5.res"
+
+[deps]
+
+source_file="res://assets/sprites/P2_walking-Sheet.aseprite"
+dest_files=["res://.godot/imported/P2_walking-Sheet.aseprite-7de9212eb0f0fdf91b8b1d8b8bf7b8d5.res"]
+
+[params]
+
