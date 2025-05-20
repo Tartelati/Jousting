@@ -34,7 +34,6 @@ var current_speed_level : int = 0
 
 # --- Node References (Update paths as needed in the editor) ---
 #@onready var sprite: Sprite2D = $Sprite2D
-@onready var animation_player: AnimationPlayer = $AnimationPlayer # Assumes AnimationPlayer node exists
 @onready var walking_audio = $WalkingAudioPlayer # Assumes AudioStreamPlayer node exists
 @onready var flying_audio = $FlyingAudioPlayer # Assumes AudioStreamPlayer node exists
 @onready var flap_sound = $FlapSound # Keep existing flap sound reference
@@ -58,7 +57,7 @@ func _ready():
 	hold_change_timer = hold_change_interval # Initialize timer
 	add_to_group("players") # Keep player in group
 	set_state(State.IDLE) # Initialize state properly
-	animated_sprite.play("Idle")
+	animated_sprite.play("P%d_Idle" % player_index)
 
 	# Connect signals (ensure these are connected in editor or uncomment if needed)
 	if combat_area:
@@ -82,30 +81,41 @@ func set_state(new_state: State):
 	match new_state:
 		State.IDLE:
 			stop_audio()
-			animated_sprite.play("Idle")
+			animated_sprite.play("P%d_Idle" % player_index)
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.WALKING:
 			play_walking_audio()
-			animated_sprite.play("Walk")
+			animated_sprite.play("P%d_Walk" % player_index)
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.FLYING:
 			play_flying_audio()
 			#animated_sprite.play("Fly")
-			animated_sprite.play("Fly")
+			animated_sprite.play("P%d_Fly" % player_index)
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.BRAKING:
 			# Keep walking audio playing during brake
-			animated_sprite.play("Brake")
+			animated_sprite.play("P%d_Brake" % player_index)
 			hold_change_timer = hold_change_interval # Reset hold timer
+
+func get_input_actions():
+	if player_index == 1:
+		return {"left": "move_left", "right": "move_right", "flap": "flap"}
+	elif player_index == 2: 
+		return {"left": "p2_move_left", "right": "p2_move_right", "flap": "p2_flap"}
+	elif player_index == 3: 
+		return {"left": "p3_move_left", "right": "p3_move_right", "flap": "p3_flap"}
+	elif player_index == 4: 
+		return {"left": "p3_move_left", "right": "p3_move_right", "flap": "p3_flap"}
 
 # --- Main Physics Loop ---
 func _physics_process(delta):
 	if not is_alive:
 		return
-
+	
 	# 1. Gather Input
-	var direction_input = Input.get_axis("move_left", "move_right")
-	var flap_input_pressed = Input.is_action_just_pressed("flap")
+	var actions = get_input_actions()
+	var direction_input = Input.get_axis(actions["left"], actions["right"])
+	var flap_input_pressed = Input.is_action_just_pressed(actions["flap"])
 
 	# 2. Apply Gravity
 	if not is_on_floor() or current_state == State.FLYING:
@@ -182,7 +192,7 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 			if input_matches_facing:
 				# Accelerate (Initial Press)
 				current_speed_level = min(current_speed_level + 1, 3)
-				animated_sprite.play("Walk", walking_speed_animation[current_speed_level])
+				animated_sprite.play("P%d_Walk" % player_index, walking_speed_animation[current_speed_level])
 				target_velocity_x = original_facing_direction * speed_values[current_speed_level]
 				hold_change_timer = hold_change_interval # Reset timer on initial press
 			else:
@@ -239,13 +249,13 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 	
 	# Fly animation if not floor / falling
 	if not is_on_floor():
-		animated_sprite.play("Fly")
+		animated_sprite.play("P%d_Fly" % player_index)
 	
 	# Flap animation triggered if flap input pressed or just pressed
 	if Input.is_action_just_released("flap") or Input.is_action_pressed("flap"):
-		animated_sprite.play("Flap2")
+		animated_sprite.play("P%d_Flap2" % player_index)
 	else:
-		animated_sprite.play("Fly")
+		animated_sprite.play("P%d_Fly" % player_index)
 	
 	# If stopped horizontally, use facing direction as the 'original' move direction
 	if is_zero_approx(original_move_direction):
