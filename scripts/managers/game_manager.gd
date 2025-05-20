@@ -84,7 +84,7 @@ func spawn_players(player_index: int, position: Vector2):
 		if p.player_index == player_index:
 			return
 	var player = player_scene.instantiate()
-	player.get_node("PlayerBody").player_index = player_index
+	player.player_index = player_index
 	player.global_position = position
 	active_level.add_child(player)
 	player_nodes.append(player)

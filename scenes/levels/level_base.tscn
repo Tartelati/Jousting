@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://bft1fic6j0ucw"]
+[gd_scene load_steps=21 format=3 uid="uid://bft1fic6j0ucw"]
 
 [ext_resource type="Texture2D" uid="uid://b0thjvuaj1cc" path="res://assets/sprites/black_background.png" id="1_0y8gg"]
 [ext_resource type="Texture2D" uid="uid://dbhh4s6x7i0tx" path="res://assets/sprites/platform1_final.png" id="2_p7rbk"]
@@ -11,7 +11,6 @@
 [ext_resource type="Texture2D" uid="uid://b6tasxl4hy3fi" path="res://assets/sprites/burnable_bridge.png" id="8_bbft6"]
 [ext_resource type="Texture2D" uid="uid://bd1d55gbc8bun" path="res://assets/sprites/lava.png" id="8_ynct0"]
 [ext_resource type="Script" uid="uid://ciopo0w5fybtt" path="res://scripts/entities/spawn_point.gd" id="10_morta"]
-[ext_resource type="PackedScene" uid="uid://b72cmuhsp6dty" path="res://scenes/entities/player.tscn" id="11_dq8h5"]
 [ext_resource type="Script" uid="uid://cb8uooe1yjyuj" path="res://scripts/managers/wave_manager.gd" id="12_imdmy"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_dq8h5"]
@@ -209,9 +208,6 @@ script = ExtResource("10_morta")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="SpawnPoints/SpawnPoint4/PlayerDetectionZone"]
 position = Vector2(-3, -23)
 shape = SubResource("CircleShape2D_l4xu8")
-
-[node name="Player" parent="." instance=ExtResource("11_dq8h5")]
-position = Vector2(206, 467)
 
 [node name="WaveManager" type="Node" parent="."]
 script = ExtResource("12_imdmy")
