@@ -21,7 +21,7 @@ var current_speed_level : int = 0
 @export var brake_duration_per_level : float = 20.0 / 60.0 # ~20 frames at 60fps
 
 @export_group("Collision")
-@export var joust_bounce_velocity: float = -150.0 # Bounce after winning joust
+@export var joust_bounce_velocity: float = -250.0 # Bounce after winning joust
 @export var side_collision_bounce_x: float = 200.0 # Horizontal bounce velocity on side collision
 @export var side_collision_bounce_y: float = -100.0 # Vertical bounce velocity on side collision
 @export var collision_y_threshold: float = 10.0 # Y-velocity difference threshold for joust win/loss
@@ -89,7 +89,6 @@ func set_state(new_state: State):
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.FLYING:
 			play_flying_audio()
-			#animated_sprite.play("Fly")
 			animated_sprite.play("P%d_Fly" % player_index)
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.BRAKING:
@@ -111,7 +110,7 @@ func get_input_actions():
 func _physics_process(delta):
 	if not is_alive:
 		return
-	
+
 	# 1. Gather Input
 	var actions = get_input_actions()
 	var direction_input = Input.get_axis(actions["left"], actions["right"])
