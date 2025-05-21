@@ -255,6 +255,7 @@ func process_egg(delta):
 	if egg_area: 
 		egg_area.monitoring = true
 		egg_area.monitorable = true
+		vulnerable_area.monitoring = false
 
 	# Manual overlap check might be redundant if signal connection works, but keep for now
 	# for area in egg_area.get_overlapping_areas():
@@ -335,6 +336,7 @@ func _on_vulnerable_area_area_entered(area):
 		if player and player.is_in_group("players"):
 			# Player successfully stomped this enemy
 			defeat() # Call the existing defeat logic
+			player.velocity.y = player.joust_bounce_velocity
 
 func _on_hatch_timer_timeout():
 	if current_state != State.HATCHING: return # Only hatch if in hatching state

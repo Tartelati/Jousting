@@ -252,19 +252,16 @@ func _start_egg_wave():
 			continue # Skip if not a marker
 
 		# Instantiate the enemy_base scene
-		var enemy_instance = enemy_basic_scene.instantiate()
-		if enemy_instance:
-			# Access the EnemyBody node
-			var enemy_body = enemy_instance.get_node("EnemyBody")
-			if enemy_body:
-				enemy_instance.global_position = random_marker.global_position # Set position of the egg
-				get_parent().add_child(enemy_instance) # Add egg to the level
-				enemy_body.call_deferred("defeat", false)
-				print("[DEBUG] Set enemy state to EGG for: %s" % enemy_instance.name)
-			else:
-				print("[ERROR] Could not set EGG state for: %s" % enemy_instance.name)
-			#
-			print("[DEBUG WaveManager _start_egg_wave] Added egg instance: %s to group 'enemies' at %s" % [enemy_instance.name, enemy_instance.global_position]) # DEBUG Updated
+		var enemy_body = enemy_basic_scene.instantiate()
+		if enemy_body:
+			enemy_body.global_position = random_marker.global_position # Set position of the egg
+			get_parent().add_child(enemy_body) # Add egg to the level
+			enemy_body.call_deferred("defeat", false)
+			print("[DEBUG] Set enemy state to EGG for: %s" % enemy_body.name)
+		else:
+			print("[ERROR] Could not set EGG state for: %s" % enemy_body.name)
+		#
+		print("[DEBUG WaveManager _start_egg_wave] Added egg instance: %s to group 'enemies' at %s" % [enemy_body.name, enemy_body.global_position]) # DEBUG Updated
 
 func wave_finished():
 	wave_in_progress = false

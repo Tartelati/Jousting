@@ -186,7 +186,7 @@ debug_color = Color(0, 0.539836, 0.959078, 0.42)
 texture_filter = 1
 sprite_frames = SubResource("SpriteFrames_ss7kx")
 animation = &"P1_Walk"
-frame_progress = 0.511841
+frame_progress = 0.763886
 metadata/_aseprite_wizard_interface_config_ = {
 "animation_section": true,
 "layer_section": false,
