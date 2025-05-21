@@ -388,7 +388,7 @@ func handle_collisions():
 		if not collider: continue
 
 		# Check for wall bumps while walking
-		if current_state == State.WALKING and (collider.is_in_group("Platform") or collider.is_in_group("Enemy")):
+		if current_state == State.WALKING and (collider.is_in_group("Platform") or collider.is_in_group("players") or collider.is_in_group("Enemy")):
 			if abs(collision.get_normal().x) > 0.7: # Hit a vertical wall
 				print("Player hit wall while walking")
 				animated_sprite.flip_h = !animated_sprite.flip_h # Change direction
