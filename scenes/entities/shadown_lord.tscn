@@ -16,54 +16,52 @@ height = 22.0
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_jktoc"]
 size = Vector2(34, 13)
 
-[node name="EnemyBase" type="Node2D"]
-
-[node name="EnemyBody" type="CharacterBody2D" parent="."]
+[node name="EnemyBody" type="CharacterBody2D"]
 collision_layer = 4
 collision_mask = 7
 script = ExtResource("1_8oph7")
 
-[node name="EnemySprite" type="Sprite2D" parent="EnemyBody"]
+[node name="EnemySprite" type="Sprite2D" parent="."]
 texture = ExtResource("2_8oph7")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(2, 10)
 shape = SubResource("CircleShape2D_ltmif")
 
-[node name="CombatArea" type="Area2D" parent="EnemyBody"]
+[node name="CombatArea" type="Area2D" parent="."]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/CombatArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CombatArea"]
 position = Vector2(3.5, 6.75)
 shape = SubResource("RectangleShape2D_qi62q")
 debug_color = Color(0.799881, 0.236544, 0.856672, 0.42)
 
-[node name="HatchTimer" type="Timer" parent="EnemyBody"]
+[node name="HatchTimer" type="Timer" parent="."]
 wait_time = 5.0
 one_shot = true
 
-[node name="FlapSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+[node name="FlapSound" type="AudioStreamPlayer2D" parent="."]
 
-[node name="CollisionSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+[node name="CollisionSound" type="AudioStreamPlayer2D" parent="."]
 
-[node name="DeathSound" type="AudioStreamPlayer2D" parent="EnemyBody"]
+[node name="DeathSound" type="AudioStreamPlayer2D" parent="."]
 
-[node name="EggArea" type="Area2D" parent="EnemyBody"]
+[node name="EggArea" type="Area2D" parent="."]
 collision_layer = 16
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/EggArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EggArea"]
 position = Vector2(1, 21)
 shape = SubResource("CapsuleShape2D_jktoc")
 debug_color = Color(0.631305, 0.516451, 0.327184, 0.42)
 
-[node name="EggSprite" type="Sprite2D" parent="EnemyBody"]
+[node name="EggSprite" type="Sprite2D" parent="."]
 visible = false
 position = Vector2(1, 22)
 texture = ExtResource("3_qi62q")
 
-[node name="VulnerableArea" type="Area2D" parent="EnemyBody"]
+[node name="VulnerableArea" type="Area2D" parent="."]
 collision_layer = 64
 collision_mask = 32
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="EnemyBody/VulnerableArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="VulnerableArea"]
 position = Vector2(1, -10)
 shape = SubResource("RectangleShape2D_jktoc")

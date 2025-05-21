@@ -24,6 +24,5 @@ func process_flying(delta):
 	
 	# Horizontal movement
 	velocity.x = direction * move_speed
-
 	
 	move_and_slide()
