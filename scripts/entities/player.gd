@@ -105,6 +105,8 @@ func get_input_actions():
 		return {"left": "p3_move_left", "right": "p3_move_right", "flap": "p3_flap"}
 	elif player_index == 4: 
 		return {"left": "p3_move_left", "right": "p3_move_right", "flap": "p3_flap"}
+	else:
+		return {"left": "move_left", "right": "move_right", "flap": "flap"} # fallback
 
 # --- Main Physics Loop ---
 func _physics_process(delta):
@@ -129,11 +131,11 @@ func _physics_process(delta):
 		State.IDLE:
 			handle_idle_state(delta, direction_input, flap_input_pressed)
 		State.WALKING:
-			handle_walking_state(delta, direction_input, flap_input_pressed)
+			handle_walking_state(delta, direction_input, flap_input_pressed, actions)
 		State.FLYING:
-			handle_flying_state(delta, direction_input, flap_input_pressed)
+			handle_flying_state(delta, direction_input, flap_input_pressed, actions)
 		State.BRAKING:
-			handle_braking_state(delta, direction_input)
+			handle_braking_state(delta, direction_input, actions)
 
 	# 4. Apply Movement and Handle Collisions
 	move_and_slide()
@@ -165,7 +167,7 @@ func handle_idle_state(delta, direction_input, flap_input_pressed):
 	elif flap_input_pressed:
 		transition_to_flying()
 
-func handle_walking_state(delta, direction_input, flap_input_pressed):
+func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
 	# Check for Flying Transition first
 	if flap_input_pressed:
 		transition_to_flying()
@@ -176,8 +178,8 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 		return # Exit this function immediately since we're no longer walking
 
 	var walking_speed_animation = {1: 1, 2: 1.4, 3: 1.8}
-	var move_left_pressed = Input.is_action_just_pressed("move_left")
-	var move_right_pressed = Input.is_action_just_pressed("move_right")
+	var move_left_pressed = Input.is_action_just_pressed(actions["left"])
+	var move_right_pressed = Input.is_action_just_pressed(actions["right"])
 	var direction_just_pressed = move_left_pressed or move_right_pressed
 	var target_velocity_x = 0.0
 
@@ -241,7 +243,7 @@ func handle_walking_state(delta, direction_input, flap_input_pressed):
 	# State remains WALKING (conceptually, falling after walking)
 	# until flap is pressed or landing occurs.
 
-func handle_flying_state(delta, direction_input, flap_input_pressed):
+func handle_flying_state(delta, direction_input, flap_input_pressed, actions):
 	# Store original facing direction and movement direction
 	var was_facing_right = not animated_sprite.flip_h
 	var original_move_direction = sign(velocity.x)
@@ -251,7 +253,7 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 		animated_sprite.play("P%d_Fly" % player_index)
 	
 	# Flap animation triggered if flap input pressed or just pressed
-	if Input.is_action_just_released("flap") or Input.is_action_pressed("flap"):
+	if Input.is_action_just_released(actions["flap"]) or Input.is_action_pressed(actions["flap"]):
 		animated_sprite.play("P%d_Flap2" % player_index)
 	else:
 		animated_sprite.play("P%d_Fly" % player_index)
@@ -297,7 +299,7 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 			hold_change_timer = hold_change_interval # Reset timer
 
 	# 3. Handle Hold Logic (Only if Flapping AND Holding Direction)
-	elif Input.is_action_pressed("flap") and direction_input != 0:
+	elif Input.is_action_pressed(actions["flap"]) and direction_input != 0:
 		# --- Holding Logic (Acceleration/Deceleration) ---
 		hold_change_timer -= delta
 		if hold_change_timer <= 0:
@@ -322,11 +324,21 @@ func handle_flying_state(delta, direction_input, flap_input_pressed):
 			hold_change_timer = hold_change_interval # Reset timer after hold change
 
 	# 4. Reset Hold Timer if Flap Released or No Direction Input while Flapping
-	if Input.is_action_just_released("flap") or (Input.is_action_pressed("flap") and direction_input == 0):
+	if Input.is_action_just_released(actions["flap"]) or (Input.is_action_pressed(actions["flap"]) and direction_input == 0):
 		hold_change_timer = hold_change_interval
 
 
-func handle_braking_state(delta, direction_input):
+func handle_braking_state(delta, direction_input, actions):
+	# 1. If not on floor, immediately transition to flying
+	if not is_on_floor():
+		set_state(State.FLYING)
+		return 
+	
+	# 2. If flap is pressde, immediately transition to flying
+	if Input.is_action_just_pressed(actions["flap"]):
+		transition_to_flying()
+		return
+
 	# Apply velocity based on the direction we were going when brake started
 	# Ensure direction_during_brake is treated as float for multiplication
 	velocity.x = float(direction_during_brake) * speed_values[current_speed_level]
@@ -338,7 +350,7 @@ func handle_braking_state(delta, direction_input):
 	if brake_timer <= 0:
 		# Brake duration for this level finished
 		# Check if the opposite direction is *still held* using is_action_pressed
-		var opposite_direction_action = "move_left" if direction_during_brake > 0 else "move_right"
+		var opposite_direction_action = actions["left"] if direction_during_brake > 0 else actions["right"]
 		var opposite_direction_pressed = Input.is_action_pressed(opposite_direction_action)
 
 		if opposite_direction_pressed:
@@ -351,7 +363,7 @@ func handle_braking_state(delta, direction_input):
 			else:
 				# Braked to Speed 0, start walking in the new direction
 				# Use the actual input axis value to determine the new walking direction
-				var new_direction_input = Input.get_axis("move_left", "move_right")
+				var new_direction_input = Input.get_axis(actions["left"], actions["right"])
 				transition_to_walking(new_direction_input)
 		else:
 			# Opposite key released during brake
@@ -443,7 +455,7 @@ func transition_to_flying():
 		velocity.x = 0
 
 	# Apply initial flap force ONLY if transitioning from a grounded state
-	if previous_state == State.IDLE or previous_state == State.WALKING:
+	if previous_state == State.IDLE or previous_state == State.WALKING or previous_state == State.BRAKING:
 		velocity.y = flap_force
 		# Play flap sound here as well, since handle_flying_state might not run before landing check
 		if flap_sound: flap_sound.play()
