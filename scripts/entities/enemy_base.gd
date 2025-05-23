@@ -265,16 +265,16 @@ func process_egg(delta):
 	#		 break
 
 # New function for area-based egg collection
-func _on_egg_area_area_entered(area):
+func _on_egg_area_area_entered(player_index: int, area):
 	# Add debug print to see if this function is being called
 	# print("Area entered egg area: ", area.name) # Can be noisy
 	
 	# Check if the entering area is the player's Collection Area (which should be in the "player_collectors" group)
 	if (current_state == State.EGG or current_state == State.HATCHING) and area.is_in_group("player_collectors"):
 		print("Egg collected by player's collection area!")
-		collect_egg()
+		collect_egg(player_index)
 
-func defeat(award_score := true):
+func defeat(player_index: int, award_score := true):
 	if current_state == State.EGG or current_state == State.HATCHING or current_state == State.DEAD:
 		return # Already defeated or dead
 
@@ -303,12 +303,12 @@ func defeat(award_score := true):
 	
 	# Signal to score manager to add points
 	if award_score:
-		ScoreManager.add_score(points_value)
+		ScoreManager.add_score(player_index, points_value)
 	
 	# print debug message
 	print("Enemy %s defeated" % name)
 
-func collect_egg():
+func collect_egg(player_index):
 	if current_state == State.DEAD: return # Already collected/dead
 	current_state = State.DEAD
 	
@@ -317,7 +317,7 @@ func collect_egg():
 	if egg_area: egg_area.monitoring = false
 	
 	# Add more points for collecting egg
-	ScoreManager.add_score(points_value / 2) # Use ScoreManager directly
+	ScoreManager.add_score(player_index, points_value / 2) # Use ScoreManager directly
 	
 	# Play collection sound if available
 	if has_node("CollectionSound"):
@@ -327,7 +327,7 @@ func collect_egg():
 	   
 	queue_free()
 
-func _on_vulnerable_area_area_entered(area):
+func _on_vulnerable_area_area_entered(player_index: int, area):
 	"""Handles being stomped by the player."""
 	# Check if the entering area is the player's stomp area
 	if area.is_in_group("player_stomp_areas"):
@@ -335,7 +335,7 @@ func _on_vulnerable_area_area_entered(area):
 		var player = area.get_parent()
 		if player and player.is_in_group("players"):
 			# Player successfully stomped this enemy
-			defeat() # Call the existing defeat logic
+			defeat(player_index) # Call the existing defeat logic
 			player.velocity.y = player.joust_bounce_velocity
 
 func _on_hatch_timer_timeout():

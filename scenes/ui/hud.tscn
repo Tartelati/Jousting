@@ -89,3 +89,183 @@ layout_direction = 3
 layout_mode = 2
 size_flags_horizontal = 3
 text = " 0"
+
+[node name="P2HudLives" type="MarginContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 110.0
+offset_top = -92.0
+offset_right = 255.0
+offset_bottom = -42.0
+grow_horizontal = 2
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+
+[node name="LivesContainer" type="HBoxContainer" parent="P2HudLives"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 8
+alignment = 2
+
+[node name="Life1" type="TextureRect" parent="P2HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="Life2" type="TextureRect" parent="P2HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="Life3" type="TextureRect" parent="P2HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="Life4" type="TextureRect" parent="P2HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="P2HudScore" type="MarginContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -69.0
+offset_top = -81.0
+offset_right = 91.0
+offset_bottom = -41.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ScoreLabel" type="Label" parent="P2HudScore"]
+clip_contents = true
+layout_direction = 3
+layout_mode = 2
+size_flags_horizontal = 3
+text = " 0"
+
+[node name="P3HudLives" type="MarginContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 110.0
+offset_top = -36.0
+offset_right = 255.0
+offset_bottom = 14.0
+grow_horizontal = 2
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+
+[node name="LivesContainer" type="HBoxContainer" parent="P3HudLives"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 8
+alignment = 2
+
+[node name="Life1" type="TextureRect" parent="P3HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="Life2" type="TextureRect" parent="P3HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="Life3" type="TextureRect" parent="P3HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="Life4" type="TextureRect" parent="P3HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="P3HudScore" type="MarginContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -69.0
+offset_top = -23.0
+offset_right = 91.0
+offset_bottom = 17.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ScoreLabel" type="Label" parent="P3HudScore"]
+clip_contents = true
+layout_direction = 3
+layout_mode = 2
+size_flags_horizontal = 3
+text = " 0"
+
+[node name="P4HudScore" type="MarginContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -278.0
+offset_top = -27.0
+offset_right = -118.0
+offset_bottom = 13.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ScoreLabel" type="Label" parent="P4HudScore"]
+clip_contents = true
+layout_direction = 3
+layout_mode = 2
+size_flags_horizontal = 3
+text = " 0"
+
+[node name="P4HudLives" type="MarginContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -93.0
+offset_top = -36.0
+offset_right = 52.0
+offset_bottom = 14.0
+grow_horizontal = 2
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+
+[node name="LivesContainer" type="HBoxContainer" parent="P4HudLives"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 8
+alignment = 2
+
+[node name="Life1" type="TextureRect" parent="P4HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="Life2" type="TextureRect" parent="P4HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="Life3" type="TextureRect" parent="P4HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")
+
+[node name="Life4" type="TextureRect" parent="P4HudLives/LivesContainer"]
+layout_mode = 2
+texture = ExtResource("2_bo48s")

@@ -1,14 +1,14 @@
 extends Node
 
 # Signals
-signal score_changed(new_score)
+signal score_changed(player_index, new_score)
 signal high_score_changed(new_high_score)
-signal lives_changed(new_lives)
+signal lives_changed(player_index, new_lives)
 
 # Properties
-var score = 0
+var scores = {}
+var lives = {}
 var high_score = 0
-var lives = 3
 var max_lives = 5
 
 # Points values for different actions
@@ -18,50 +18,60 @@ var points = {
 	"enemy_bounder": 150,
 	"pterodactyl": 1000,
 	"egg_collect": 50,
-	"wave_complete": 100  # Per wave number (wave 3 = 300 points)
+	"wave_complete": 100
 }
 
 func _ready():
-	# Load high score from save file if it exists
 	load_high_score()
 
-func add_score(points_to_add):
-	score += points_to_add
-	emit_signal("score_changed", score)
-	
+func add_score(player_index: int, points_to_add: int):
+	if not scores.has(player_index):
+		scores[player_index] = 0
+	if not lives.has(player_index):
+		lives[player_index] = 3
+	scores[player_index] += points_to_add
+	emit_signal("score_changed", player_index, scores[player_index])
+
 	# Check for high score
-	if score > high_score:
-		high_score = score
+	if scores[player_index] > high_score:
+		high_score = scores[player_index]
 		emit_signal("high_score_changed", high_score)
 		save_high_score()
-	
+
 	# Award extra life every 10,000 points
-	if int(score / 10000) > int((score - points_to_add) / 10000):
-		gain_life()
+	if int(scores[player_index] / 10000) > int((scores[player_index] - points_to_add) / 10000):
+		gain_life(player_index)
 
-func reset_score():
-	score = 0
-	emit_signal("score_changed", score)
+func reset_score(player_index: int):
+	scores[player_index] = 0
+	emit_signal("score_changed", player_index, 0)
 
-func lose_life():
-	lives -= 1
-	emit_signal("lives_changed", lives)
-	
-	# Check for game over
-	if lives <= 0:
-		# Get reference to GameManager and call game_over
+func lose_life(player_index: int):
+	if not lives.has(player_index):
+		lives[player_index] = 3
+	lives[player_index] -= 1
+	emit_signal("lives_changed", player_index, lives[player_index])
+	if lives[player_index] <= 0:
 		var game_manager = get_node_or_null("/root/GameManager")
 		if game_manager:
 			game_manager.game_over()
 
-func gain_life():
-	if lives < max_lives:
-		lives += 1
-		emit_signal("lives_changed", lives)
+func gain_life(player_index: int):
+	if not lives.has(player_index):
+		lives[player_index] = 3
+	if lives[player_index] < max_lives:
+		lives[player_index] += 1
+		emit_signal("lives_changed", player_index, lives[player_index])
 
-func reset_lives():
-	lives = 3
-	emit_signal("lives_changed", lives)
+func reset_lives(player_index: int):
+	lives[player_index] = 3
+	emit_signal("lives_changed", player_index, 3)
+
+func get_score(player_index: int) -> int:
+	return scores.get(player_index, 0)
+
+func get_lives(player_index: int) -> int:
+	return lives.get(player_index, 3)
 
 func save_high_score():
 	var save_file = FileAccess.open("user://high_score.save", FileAccess.WRITE)
