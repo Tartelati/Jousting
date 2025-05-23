@@ -89,7 +89,7 @@ func spawn_players(player_index: int, position: Vector2):
 	active_level.add_child(player)
 	player_nodes.append(player)
 
-func setup_new_gameplay_scene(main_game_node):
+func setup_new_gameplay_scene(player_index: int, main_game_node):
 	# This function is called by the main_game scene itself once it's ready.
 	
 	if not main_game_node:
@@ -99,8 +99,8 @@ func setup_new_gameplay_scene(main_game_node):
 	print("Main Game Scene reported ready, proceeding with setup.")
 
 	# Reset score and lives
-	ScoreManager.reset_score()
-	ScoreManager.reset_lives()
+	ScoreManager.reset_score(player_index)
+	ScoreManager.reset_lives(player_index)
 
 	# Find the containers within the provided main_game_node
 	var current_scene_container = main_game_node.get_node_or_null("%CurrentScene")

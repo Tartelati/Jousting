@@ -1,53 +1,53 @@
 extends Control
 
-@onready var p1_score_label = $P1HudScore/ScoreLabel
-@onready var wave_label = $MarginContainer/VBoxContainer/TopRow/WaveLabel
-@onready var p1_lives_container = $P1HudLives/LivesContainer
+# Dictionaries to hold references for each player's HUD elements
+var score_labels := {}
+var lives_containers := {}
+var life_indicators := {}
 
-# Life indicator references
-var life_indicators = []
+@onready var wave_label = $MarginContainer/VBoxContainer/TopRow/WaveLabel
 
 func _ready():
-	# Connect to score manager signals
-	get_node("/root/ScoreManager").connect("score_changed", _on_score_changed)
-	get_node("/root/ScoreManager").connect("lives_changed", _on_lives_changed)
-	# ScoreManager is an autoload, so we can access it directly: ScoreManager.connect(...)
-	# ScoreManager.connect("score_changed", _on_score_changed)
-	# ScoreManager.connect("lives_changed", _on_lives_changed)
-	
-	# Don't connect to WaveManager here. GameManager will provide the reference.
-	
-	# Update initial values using direct access to autoload
-	_on_score_changed(ScoreManager.score)
-	_on_lives_changed(get_node("/root/ScoreManager").lives)
-	
-	# Find all life indicators
-	for child in p1_lives_container.get_children():
-		if child is TextureRect:
-			life_indicators.append(child)
-	
-	# Sort them by name to ensure correct order
-	life_indicators.sort_custom(func(a, b): return a.name < b.name)
+	# Dynamically find all player HUD containers (assumes naming convention: P1HudLives, P2HudLives, etc.)
+	for i in range(1, 5): # Supports up to 4 players
+		var lives_path = "P%dHudLives/LivesContainer" % i
+		var score_path = "P%dHudScore/ScoreLabel" % i
+		if has_node(lives_path):
+			lives_containers[i] = get_node(lives_path)
+			# Gather life indicators for this player
+			life_indicators[i] = []
+			for child in lives_containers[i].get_children():
+				if child is TextureRect:
+					life_indicators[i].append(child)
+			life_indicators[i].sort_custom(func(a, b): return a.name < b.name)
+		if has_node(score_path):
+			score_labels[i] = get_node(score_path)
 
-func setup_wave_manager_connection(wave_manager_node):
-	if wave_manager_node and wave_manager_node.has_signal("wave_started"):
-		if not wave_manager_node.is_connected("wave_started", _on_wave_started):
-			wave_manager_node.connect("wave_started", _on_wave_started)
-		# Optionally update initial wave display if needed, assuming wave_manager has current wave info
-		# _on_wave_started(wave_manager_node.current_wave_number) 
-	else:
-		printerr("HUD: Invalid WaveManager node provided or signal missing.")
+	# Connect to ScoreManager signals (assuming ScoreManager emits per-player signals or you adapt this)
+	ScoreManager.connect("score_changed", _on_score_changed)
+	ScoreManager.connect("lives_changed", _on_lives_changed)
 
-func _on_score_changed(new_score):
-	p1_score_label.text = str(new_score)
+	# Initialize HUD for all players (if ScoreManager supports per-player data)
+	for i in score_labels.keys():
+		_on_score_changed(i, ScoreManager.get_score(i))
+	for i in life_indicators.keys():
+		_on_lives_changed(i, ScoreManager.get_lives(i))
 
-func _on_lives_changed(new_lives):
-	# Update life indicators
-	for i in range(life_indicators.size()):
-		if i < new_lives:
-			life_indicators[i].visible = true
-		else:
-			life_indicators[i].visible = false
+func update_lives(player_index: int, lives: int):
+	if life_indicators.has(player_index):
+		for i in range(life_indicators[player_index].size()):
+			life_indicators[player_index][i].visible = i < lives
+
+func update_score(player_index: int, score: int):
+	if score_labels.has(player_index):
+		score_labels[player_index].text = str(score)
+
+# Example signal handlers for per-player updates
+func _on_score_changed(player_index: int, new_score: int):
+	update_score(player_index, new_score)
+
+func _on_lives_changed(player_index: int, new_lives: int):
+	update_lives(player_index, new_lives)
 
 func _on_wave_started(wave_number):
 	wave_label.text = "Wave: " + str(wave_number)

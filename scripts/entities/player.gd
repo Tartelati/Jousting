@@ -99,11 +99,11 @@ func set_state(new_state: State):
 func get_input_actions():
 	if player_index == 1:
 		return {"left": "move_left", "right": "move_right", "flap": "flap"}
-	elif player_index == 2: 
+	elif player_index == 2:
 		return {"left": "p2_move_left", "right": "p2_move_right", "flap": "p2_flap"}
-	elif player_index == 3: 
+	elif player_index == 3:
 		return {"left": "p3_move_left", "right": "p3_move_right", "flap": "p3_flap"}
-	elif player_index == 4: 
+	elif player_index == 4:
 		return {"left": "p3_move_left", "right": "p3_move_right", "flap": "p3_flap"}
 	else:
 		return {"left": "move_left", "right": "move_right", "flap": "flap"} # fallback
@@ -332,7 +332,7 @@ func handle_braking_state(delta, direction_input, actions):
 	# 1. If not on floor, immediately transition to flying
 	if not is_on_floor():
 		set_state(State.FLYING)
-		return 
+		return
 	
 	# 2. If flap is pressde, immediately transition to flying
 	if Input.is_action_just_pressed(actions["flap"]):
@@ -378,17 +378,6 @@ func handle_braking_state(delta, direction_input, actions):
 		# If player presses original direction again, cancel brake immediately
 		transition_to_walking(float(direction_during_brake)) # Pass direction as float
 
-
-# --- Automatic State Transitions ---
-
-func check_automatic_transitions():
-	# Check for landing while in Flying state
-	# If we are flying and detect being on the floor, transition to walking.
-	if current_state == State.FLYING and is_on_floor():
-			# print("Landing detected: Transitioning to WALKING") # Debug print
-		transition_to_walking()
-
-
 # --- Collision Handling ---
 
 func handle_collisions():
@@ -398,6 +387,19 @@ func handle_collisions():
 
 		var collider = collision.get_collider()
 		if not collider: continue
+
+		# Player vs Player collision
+		if collider.is_in_group("players"):
+		   # Example: Bounce both players away from each other
+			var direction_to_other = sign(global_position.x - collider.global_position.x)
+			if direction_to_other == 0: direction_to_other = 1
+			velocity.x = direction_to_other * side_collision_bounce_x
+			velocity.y = side_collision_bounce_y
+			animated_sprite.flip_h = velocity.x < 0
+			current_speed_level = max(current_speed_level - 1, 0)
+			if collision_sound: collision_sound.play()
+		   # Optionally, also affect the other player if you want
+			break
 
 		# Check for wall bumps while walking
 		if current_state == State.WALKING and (collider.is_in_group("Platform") or collider.is_in_group("players") or collider.is_in_group("Enemy")):
@@ -416,6 +418,14 @@ func handle_collisions():
 				if collision_sound: collision_sound.play()
 				break # Handle only one wall collision per frame
 
+# --- Automatic State Transitions ---
+
+func check_automatic_transitions():
+	# Check for landing while in Flying state
+	# If we are flying and detect being on the floor, transition to walking.
+	if current_state == State.FLYING and is_on_floor():
+			# print("Landing detected: Transitioning to WALKING") # Debug print
+		transition_to_walking()
 
 # --- State Transition Functions ---
 

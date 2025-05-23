@@ -169,7 +169,7 @@ animations = [{
 }]
 
 [node name="PlayerBody" type="CharacterBody2D"]
-collision_mask = 134
+collision_mask = 135
 script = ExtResource("1_5u6hq")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]

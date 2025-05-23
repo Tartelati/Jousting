@@ -8,7 +8,7 @@ func _ready():
 	# Tell the GameManager that this scene is loaded and ready for setup.
 	# Check if GameManager exists to avoid errors if run standalone
 	if GameManager: 
-		GameManager.setup_new_gameplay_scene(self)
+		GameManager.setup_new_gameplay_scene(1, self)
 	else:
 		printerr("MainGame Scene: GameManager not found!")
 
