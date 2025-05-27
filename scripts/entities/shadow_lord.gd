@@ -1,7 +1,8 @@
 extends "res://scripts/entities/enemy_base.gd"
 
 var target = null
-var sprite_path = "res://assets/sprites/enemy_bounder-placeholder.png"
+# Update sprite_path to use shadow-lord placeholder if available
+var sprite_path = "res://assets/sprites/enemy_shadow-lord-placeholder.png"
 
 func _ready():
 	super._ready()

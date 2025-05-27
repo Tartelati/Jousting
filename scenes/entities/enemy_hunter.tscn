@@ -20,6 +20,22 @@ size = Vector2(34, 13)
 collision_layer = 4
 collision_mask = 7
 script = ExtResource("1_w2pmv")
+gravity = null
+flap_force = null
+move_speed = null
+walk_speed = null
+max_walk_time = null
+egg_fall_speed = null
+random_flap_chance = null
+random_dir_change_chance_flying = null
+random_dir_change_chance_walking = null
+random_fly_chance_walking = null
+points_value = null
+collision_y_threshold = null
+enemy_bounce_velocity_x = null
+enemy_bounce_velocity_y = null
+ground_check_distance_ahead = null
+ground_check_distance_down = null
 
 [node name="EnemySprite" type="Sprite2D" parent="."]
 texture = ExtResource("2_w2pmv")

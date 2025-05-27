@@ -32,14 +32,15 @@ var direction = 1
 var walk_time = 0.0
 
 # References
-@onready var enemy_sprite = $EnemySprite
+#@onready var enemy_sprite = $EnemySprite
 @onready var hatch_timer = $HatchTimer
 @onready var combat_area = $CombatArea # Main body collision
 @onready var egg_area = $EggArea # For player collecting egg
 @onready var egg_sprite = $EggSprite
 @onready var vulnerable_area = $VulnerableArea # For player stomping enemy
+@onready var enemy_animation: AnimatedSprite2D = $AnimatedSprite2D
 var ground_raycast: RayCast2D # Declare variable for the raycast
-
+var is_spawning := true
 
 func _ready():
 	add_to_group("enemies")
@@ -49,6 +50,9 @@ func _ready():
 	add_child(ground_raycast) # Add it as a child node
 	ground_raycast.target_position = Vector2(0, ground_check_distance_down)
 	ground_raycast.enabled = true # Ensure it's enabled
+	
+	enemy_animation.play("Enemy_spawn")
+	enemy_animation.connect("animation_finished", Callable(self, "_on_enemy_animation_finished"))
 	
 	if hatch_timer:
 		hatch_timer.connect("timeout", _on_hatch_timer_timeout)
@@ -74,9 +78,17 @@ func _ready():
 		egg_area.connect("area_entered", _on_egg_area_area_entered)
 		egg_area.set_deferred("monitoring", false)  # Start disabled
 
+func _on_enemy_animation_finished(anim_name):
+	if anim_name == "Enemy_spawn":
+		is_spawning = false
+
 func _physics_process(delta):
 	# Handle screen wrapping
 	screen_wrapping()
+	
+	if is_spawning:
+		velocity = Vector2.ZERO
+		return
 	
 	match current_state:
 		State.FLYING:
@@ -103,13 +115,6 @@ func _physics_process(delta):
 			if egg_area: egg_area.monitoring = true # Should be monitorable to be collected
 		State.DEAD:
 			queue_free()
-
-	# Check if landed on a platform while flying (moved to process_flying)
-	# if current_state == State.FLYING and is_on_floor():
-	#	 current_state = State.WALKING
-	#	 walk_time = 0
-	#	 # Update animation to walking (would use proper animation in full implementation)
-	#	 enemy_sprite.modulate = Color(0.8, 1, 0.8)  # Slight green tint when walking
 
 	# --- Add Fall Guardrail ---
 	# Check if enemy fell off the screen
@@ -154,7 +159,7 @@ func process_flying(delta):
 	# Change direction occasionally
 	if randf() < random_dir_change_chance_flying:
 		direction *= -1
-		if enemy_sprite: enemy_sprite.flip_h = (direction < 0)
+		if enemy_animation: enemy_animation.flip_h = (direction < 0)
 		
 	var just_hit_floor = false
 	var vertical_velocity_before_move = velocity.y # Store velocity before move_and_slide
@@ -171,7 +176,8 @@ func process_flying(delta):
 	if is_on_floor() and not just_hit_floor and current_state == State.FLYING: # Added check for FLYING state
 		current_state = State.WALKING
 		walk_time = 0
-		if enemy_sprite: enemy_sprite.modulate = Color(0.8, 1, 0.8) # Slight green tint when walking
+		if enemy_animation: 
+			enemy_animation.play("Enemy_base_walk")
 
 
 func process_walking(delta):
@@ -183,7 +189,7 @@ func process_walking(delta):
 
 	# Horizontal movement
 	if direction < 0:
-		if enemy_sprite: enemy_sprite.flip_h = true
+		if enemy_animation: enemy_animation.flip_h = true
 		
 	velocity.x = direction * walk_speed
 	
@@ -196,7 +202,8 @@ func process_walking(delta):
 		current_state = State.FLYING
 		velocity.y = flap_force  # Initial flap to get airborne
 		# Update animation to flying (would use proper animation in full implementation)
-		if enemy_sprite: enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
+		if enemy_animation: 
+			enemy_animation.play("Enemy_base_fly")
 
 	move_and_slide()
 
@@ -204,7 +211,8 @@ func process_walking(delta):
 	if not is_on_floor():
 		current_state = State.FLYING
 		# Update animation to flying
-		if enemy_sprite: enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
+		if enemy_animation: 
+			enemy_animation.play("Enemy_base_fly")
 
 func check_ground_ahead():
 	# Use the pre-configured raycast
@@ -231,7 +239,7 @@ func _on_combat_area_area_entered(area):
 		# If both enemies are walking, just change directions
 		if current_state == State.WALKING and "current_state" in other_enemy and other_enemy.current_state == State.WALKING:
 			direction *= -1
-			if enemy_sprite: enemy_sprite.flip_h = (direction < 0)
+			if enemy_animation: enemy_animation.flip_h = (direction < 0)
 		else:
 			# For flying enemies, use the bounce behavior
 			var bounce_direction = sign(global_position.x - other_enemy.global_position.x)
@@ -244,8 +252,8 @@ func process_egg(delta):
 	velocity.x = 0
 	move_and_slide()
 
-	# Check if landed on platform
-	if is_on_floor():
+	# Check if landed on platform and is stationary
+	if is_on_floor() and abs(velocity.y) < 1.0:
 		if hatch_timer and not hatch_timer.is_stopped(): # Check if timer exists and not already started
 			hatch_timer.start()
 		current_state = State.HATCHING
@@ -280,7 +288,7 @@ func defeat(player_index: int, award_score := true):
 
 	current_state = State.EGG
 	
-	if enemy_sprite: enemy_sprite.visible = false
+	if enemy_animation: enemy_animation.visible = false
 	if egg_sprite: egg_sprite.visible = true
 	# Change sprite to egg (would use animation in full implementation)
 
@@ -328,10 +336,11 @@ func collect_egg(player_index):
 	queue_free()
 
 func _on_vulnerable_area_area_entered(player_index: int, area):
-	"""Handles being stomped by the player."""
+	# Handles being stomped by the player.
 	# Check if the entering area is the player's stomp area
 	if area.is_in_group("player_stomp_areas"):
 		# Check if the parent is actually the player
+		print("STOMP!!")
 		var player = area.get_parent()
 		if player and player.is_in_group("players"):
 			# Player successfully stomped this enemy
@@ -342,9 +351,9 @@ func _on_hatch_timer_timeout():
 	if current_state != State.HATCHING: return # Only hatch if in hatching state
 
 	current_state = State.FLYING
-	if enemy_sprite: 
-		enemy_sprite.modulate = Color(1, 1, 1)  # Reset color
-		enemy_sprite.visible = true
+	if enemy_animation: 
+		enemy_animation.play("Enemy_spawn")
+		enemy_animation.visible = true
 	if egg_sprite: 
 		egg_sprite.visible = false
 	
@@ -377,8 +386,8 @@ func handle_bounce(bounce_direction, bounce_vel_x, bounce_vel_y):
 
 	# Reverse internal direction variable
 	direction = bounce_direction # Set direction based on bounce
-	if enemy_sprite:
-		enemy_sprite.flip_h = (direction < 0)
+	if enemy_animation:
+		enemy_animation.flip_h = (direction < 0)
 
 	# IMPORTANT: Do NOT change move_speed or walk_speed here.
 	# The velocity change handles the immediate bounce effect.

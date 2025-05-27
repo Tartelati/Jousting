@@ -7,6 +7,7 @@ enum GameState {MAIN_MENU, PLAYING, PAUSED, GAME_OVER}
 
 var current_state = GameState.MAIN_MENU
 var current_level = null
+var hud_instance = null
 var main_menu_scene = preload("res://scenes/ui/main_menu.tscn")
 var game_over_scene = preload("res://scenes/ui/game_over.tscn")
 var main_game_scene = preload("res://scenes/main_game.tscn") # Added
@@ -88,6 +89,8 @@ func spawn_players(player_index: int, position: Vector2):
 	player.global_position = position
 	active_level.add_child(player)
 	player_nodes.append(player)
+	if hud_instance:
+		hud_instance.show_player_hud(player_index)
 
 func setup_new_gameplay_scene(player_index: int, main_game_node):
 	# This function is called by the main_game scene itself once it's ready.
@@ -118,7 +121,7 @@ func setup_new_gameplay_scene(player_index: int, main_game_node):
 	spawn_players(1, Vector2(200, 467)) # Adjust spawn position as needed
 	
 	# Create and add HUD
-	var hud_instance = hud_scene.instantiate()
+	hud_instance = hud_scene.instantiate()
 	ui_container.add_child(hud_instance)
 	
 	# Find WaveManager within the newly added level
