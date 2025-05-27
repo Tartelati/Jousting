@@ -33,7 +33,6 @@ var current_speed_level : int = 0
 @export var respawn_delay: float = 2.0
 
 # --- Node References (Update paths as needed in the editor) ---
-#@onready var sprite: Sprite2D = $Sprite2D
 @onready var walking_audio = $WalkingAudioPlayer # Assumes AudioStreamPlayer node exists
 @onready var flying_audio = $FlyingAudioPlayer # Assumes AudioStreamPlayer node exists
 @onready var flap_sound = $FlapSound # Keep existing flap sound reference

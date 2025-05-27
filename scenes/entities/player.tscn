@@ -23,7 +23,7 @@ size = Vector2(45.5, 24)
 radius = 18.0
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_d4qa6"]
-size = Vector2(23, 8)
+size = Vector2(32.5, 10)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_b6tgf"]
 atlas = ExtResource("6_c5rqy")
@@ -212,14 +212,14 @@ collision_layer = 32
 collision_mask = 64
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StompArea"]
-position = Vector2(-1, 23)
+position = Vector2(-5, 21)
 shape = SubResource("RectangleShape2D_d4qa6")
 debug_color = Color(0, 0.539836, 0.959078, 0.42)
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 texture_filter = 1
 sprite_frames = SubResource("SpriteFrames_ss7kx")
-animation = &"P2_Flap2"
+animation = &"P1_Fly"
 metadata/_aseprite_wizard_interface_config_ = {
 "animation_section": true,
 "layer_section": false,

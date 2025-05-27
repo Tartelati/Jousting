@@ -15,7 +15,7 @@ var max_lives = 5
 var points = {
 	"enemy_basic": 100,
 	"enemy_hunter": 200,
-	"enemy_bounder": 150,
+	"shadow_lord": 150,
 	"pterodactyl": 1000,
 	"egg_collect": 50,
 	"wave_complete": 100

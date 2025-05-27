@@ -13,7 +13,7 @@ var wave_in_progress = false
 # Enemy scenes
 var enemy_basic_scene = preload("res://scenes/entities/enemy_base.tscn")
 var enemy_hunter_scene = preload("res://scenes/entities/enemy_hunter.tscn")
-var enemy_bounder_scene = preload("res://scenes/entities/enemy_bounder.tscn")
+var shadow_lord_scene = preload("res://scenes/entities/shadow_lord.tscn")
 
 # Spawn parameters
 var spawn_timer = 0
@@ -181,7 +181,7 @@ func spawn_enemy():
 		return
 	
 	# Determine enemy type based on wave number and randomness
-	var enemy_type = randi() % 3  # 0 = basic, 1 = hunter, 2 = bounder
+	var enemy_type = randi() % 3  # 0 = basic, 1 = hunter, 2 = shadow_lord
 	
 	# Higher waves have more advanced enemies
 	if current_wave < 3:
@@ -193,7 +193,7 @@ func spawn_enemy():
 	match enemy_type:
 		0: enemy = enemy_basic_scene.instantiate()
 		1: enemy = enemy_hunter_scene.instantiate()
-		2: enemy = enemy_bounder_scene.instantiate()
+		2: enemy = shadow_lord_scene.instantiate()
 		_:
 			printerr("Invalid enemy type in spawn_enemy")
 			return # Don't spawn if type is invalid
@@ -206,15 +206,9 @@ func spawn_enemy():
 		if point is Marker2D and point.has_method("can_spawn"):
 			if point.can_spawn():
 				available_spawn_points.append(point)
-		# else: # Handle the case where spawn_points might contain Vector2 (fallback logic)
-			# For simplicity, assume Vector2 points are always available if used
-			# available_spawn_points.append(point) 
-			# Note: The Vector2 fallback logic might need review if used alongside Marker2D points.
-			# It's better if all spawn points are Marker2D with the script attached.
 
 	# 2. Check if any spawn points are available
 	if available_spawn_points.size() == 0:
-		# print("WaveManager: No available spawn points (player might be blocking all). Skipping spawn.")
 		return # Skip spawning this cycle
 
 	# 3. Choose a random spawn point from the *available* ones

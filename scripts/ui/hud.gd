@@ -33,6 +33,15 @@ func _ready():
 	for i in life_indicators.keys():
 		_on_lives_changed(i, ScoreManager.get_lives(i))
 
+
+func show_player_hud(player_index: int):
+	var lives_node_name = "P%dHudLives" % player_index
+	var score_node_name = "P%dHudScore" % player_index
+	if has_node(lives_node_name):
+		get_node(lives_node_name).visible = true
+	if has_node(score_node_name):
+		get_node(score_node_name).visible = true
+
 func update_lives(player_index: int, lives: int):
 	if life_indicators.has(player_index):
 		for i in range(life_indicators[player_index].size()):

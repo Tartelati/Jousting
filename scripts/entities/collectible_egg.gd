@@ -6,7 +6,7 @@ const COLLECT_POINTS = 50 # Or reference ScoreManager.points.egg_collect if defi
 # Preload enemy scenes for hatching
 var enemy_basic_scene = preload("res://scenes/entities/enemy_base.tscn")
 var enemy_hunter_scene = preload("res://scenes/entities/enemy_hunter.tscn")
-var enemy_bounder_scene = preload("res://scenes/entities/enemy_bounder.tscn")
+var shadow_lord_scene = preload("res://scenes/entities/shadow_lord.tscn")
 # Add other enemy types if needed
 
 @onready var hatch_timer: Timer = $Timer
@@ -90,7 +90,7 @@ func _on_hatch_timer_timeout():
 	print("[DEBUG Hatch %s] Marked as collected (hatched)." % name) # DEBUG 2
 
 	# Choose random enemy type
-	var enemy_type_index = randi() % 3 # 0=base, 1=hunter, 2=bounder
+	var enemy_type_index = randi() % 3 # 0=base, 1=hunter, 2=shadow_lord
 	var enemy_scene = null
 	print("[DEBUG Hatch %s] Random index: %d" % [name, enemy_type_index]) # DEBUG 3
 	
@@ -102,8 +102,8 @@ func _on_hatch_timer_timeout():
 			enemy_scene = enemy_hunter_scene
 			print("[DEBUG Hatch %s] Matched type 1 (Hunter)" % name) # DEBUG 4b
 		2: 
-			enemy_scene = enemy_bounder_scene
-			print("[DEBUG Hatch %s] Matched type 2 (Bounder)" % name) # DEBUG 4c
+			enemy_scene = shadow_lord_scene
+			print("[DEBUG Hatch %s] Matched type 2 (Shadow Lord)" % name) # DEBUG 4c
 		_: 
 			printerr("[DEBUG Hatch %s] Invalid random enemy type index!" % name) # DEBUG Error
 			print("[DEBUG Hatch %s] Queueing free due to invalid type." % name) # DEBUG Error

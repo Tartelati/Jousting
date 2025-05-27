@@ -10,7 +10,7 @@ func _ready():
 	move_speed = 100
 	
 	# Set sprite color to distinguish enemy type
-	enemy_sprite.texture = load(sprite_path)  # Use the loaded texture on the existing sprite
+	enemy_animation.texture = load(sprite_path)  # Use the loaded texture on the existing sprite
 
 # Override the flying process for this specific enemy type
 func process_flying(delta):
