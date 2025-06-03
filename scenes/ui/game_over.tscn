@@ -58,3 +58,13 @@ text = "Play Again"
 [node name="MainMenuButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 text = "Main Menu"
+
+[node name="NameEntry" type="LineEdit" parent="VBoxContainer"]
+visible = false
+layout_mode = 2
+text = "Type your name: "
+
+[node name="SubmitNameButton" type="Button" parent="VBoxContainer"]
+visible = false
+layout_mode = 2
+text = "Submit"

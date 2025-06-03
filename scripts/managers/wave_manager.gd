@@ -13,7 +13,7 @@ var wave_in_progress = false
 # Enemy scenes
 var enemy_basic_scene = preload("res://scenes/entities/enemy_base.tscn")
 var enemy_hunter_scene = preload("res://scenes/entities/enemy_hunter.tscn")
-var shadow_lord_scene = preload("res://scenes/entities/shadow_lord.tscn")
+var shadowlord_scene = preload("res://scenes/entities/shadowlord.tscn")
 
 # Spawn parameters
 var spawn_timer = 0
@@ -23,31 +23,16 @@ var spawn_points = []
 
 func _ready():
 # Find all spawn points in the level
-	var spawn_points_node = get_parent().get_node_or_null("SpawnPoints") # Use get_node_or_null
-	if spawn_points_node:
-		for point in spawn_points_node.get_children():
-			if point is Marker2D:
-				spawn_points.append(point)
-	
-	# If no spawn points were found, create some default positions
-	if spawn_points.size() == 0:
-		print("Warning: No spawn points found. Using default positions.")
-		# Get viewport size correctly for a Node
-		if is_inside_tree():
-			var viewport_size = get_viewport().get_visible_rect().size
-			# Top spawn positions
-			for i in range(5):
-				var x_pos = viewport_size.x * (i + 1) / 6
-				spawn_points.append(Vector2(x_pos, 50))
-			
-			# Side spawn positions
-			for i in range(3):
-				var y_pos = viewport_size.y * (i + 1) / 4
-				spawn_points.append(Vector2(50, y_pos))  # Adjusted left side spawn slightly inwards
-				spawn_points.append(Vector2(viewport_size.x - 50, y_pos))  # Adjusted right side spawn slightly inwards
-		else:
-			printerr("WaveManager _ready: Node not in tree, cannot get viewport size for default spawns.")
-
+	spawn_points.clear()
+	var parent = get_parent()
+	if parent:
+		_find_spawn_points_recursive(parent)
+		
+func _find_spawn_points_recursive(node):
+	for child in node.get_children():
+		if child.is_in_group("SpawnPoints"):
+			spawn_points.append(child)
+		_find_spawn_points_recursive(child)
 
 func _process(delta):
 	if wave_in_progress and not is_egg_wave and enemies_remaining > 0: # Only spawn enemies in non-egg waves
@@ -193,7 +178,7 @@ func spawn_enemy():
 	match enemy_type:
 		0: enemy = enemy_basic_scene.instantiate()
 		1: enemy = enemy_hunter_scene.instantiate()
-		2: enemy = shadow_lord_scene.instantiate()
+		2: enemy = shadowlord_scene.instantiate()
 		_:
 			printerr("Invalid enemy type in spawn_enemy")
 			return # Don't spawn if type is invalid
@@ -260,9 +245,6 @@ func _start_egg_wave():
 func wave_finished():
 	wave_in_progress = false
 	emit_signal("wave_completed", current_wave)
-	
-	# Add bonus points for completing the wave
-	get_node("/root/ScoreManager").add_score(current_wave * 100)
 	
 	# Start next wave after a delay
 	await get_tree().create_timer(3.0).timeout

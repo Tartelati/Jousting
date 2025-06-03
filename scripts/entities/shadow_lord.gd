@@ -10,10 +10,11 @@ func _ready():
 	move_speed = 130
 	
 	# Set sprite color to distinguish enemy type
-	enemy_sprite.texture = load(sprite_path)  # Use the loaded texture on the existing sprite
+	enemy_animation.texture = load(sprite_path)  # Use the loaded texture on the existing sprite
 
 # Override the flying process for this specific enemy type
 func process_flying(delta):
+	enemy_animation.play("fly")
 	# Hunter actively seeks the player
 	# Find target if none
 	if target == null:
@@ -37,7 +38,7 @@ func process_flying(delta):
 		elif target.position.x > position.x + 20:
 			direction = 1
 		
-		enemy_sprite.flip_h = (direction < 0)
+		enemy_animation.flip_h = (direction < 0)
 	else:
 		# Random flapping if no target
 		if randf() < 0.03:
@@ -46,7 +47,7 @@ func process_flying(delta):
 		# Random direction changes
 		if randf() < 0.01:
 			direction *= -1
-			enemy_sprite.flip_h = (direction < 0)
+			enemy_animation.flip_h = (direction < 0)
 	
 	# Horizontal movement
 	velocity.x = direction * move_speed

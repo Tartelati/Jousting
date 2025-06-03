@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+var player_index := 1
+
 # Only show in development builds
 func _ready():
 	# Check if we're running from the editor
@@ -9,6 +11,9 @@ func _ready():
 		$DebugPanel.visible = false
 		# Optional: Remove entirely from release builds
 		# queue_free()
+
+func set_player_index(idx):
+	player_index = idx
 
 func _on_defeat_all_pressed():
 	# Find all enemies
@@ -20,24 +25,24 @@ func _on_defeat_all_pressed():
 	for enemy in enemies:
 		# Check if the instance is still valid before trying to access it
 		if not is_instance_valid(enemy):
-			continue 
+			continue
 			
 		if enemy.has_method("defeat"):
-			enemy.defeat()
+			enemy.defeat(player_index)
 			# Keep track of enemies that *should* become collectible eggs
 			if enemy.has_method("collect_egg"):
-				defeated_enemies.append(enemy) 
+				defeated_enemies.append(enemy)
 		else: # Fallback if no defeat method
 			enemy.queue_free()
 
 	# Pass 2: Collect eggs after a delay
 	if defeated_enemies.size() > 0:
 		# Small delay to allow state transition (defeat -> egg)
-		await get_tree().create_timer(0.1).timeout 
+		await get_tree().create_timer(0.1).timeout
 		
 		for enemy_ref in defeated_enemies:
 			# IMPORTANT: Check if the instance is STILL valid after the delay
-			if is_instance_valid(enemy_ref): 
+			if is_instance_valid(enemy_ref):
 				# Check if it's actually in the EGG state before collecting
 				# Accessing state might require checking if the property exists first if scripts differ
 				var can_collect = false
@@ -52,7 +57,7 @@ func _on_defeat_all_pressed():
 						can_collect = true
 
 				if can_collect and enemy_ref.has_method("collect_egg"):
-					enemy_ref.collect_egg()
+					enemy_ref.collect_egg(player_index)
 			# else: # Optional debug
 				# print("DEBUG: Enemy %s was freed or not in EGG state before collect_egg could be called." % enemy_ref.name)
 

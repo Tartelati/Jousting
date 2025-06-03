@@ -13,8 +13,20 @@
 [ext_resource type="Script" uid="uid://ciopo0w5fybtt" path="res://scripts/entities/spawn_point.gd" id="10_morta"]
 [ext_resource type="Script" uid="uid://cb8uooe1yjyuj" path="res://scripts/managers/wave_manager.gd" id="12_imdmy"]
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_l4xu8"]
+radius = 109.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_imdmy"]
+radius = 96.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_p7rbk"]
+radius = 93.0054
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_dq8h5"]
 size = Vector2(979, 5)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_morta"]
+radius = 121.004
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_imdmy"]
 size = Vector2(483, 7)
@@ -24,18 +36,6 @@ size = Vector2(864, 13)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ioey5"]
 size = Vector2(800, 48)
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_imdmy"]
-radius = 96.0
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_morta"]
-radius = 121.004
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_p7rbk"]
-radius = 93.0054
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_l4xu8"]
-radius = 109.0
 
 [node name="Level" type="Node2D"]
 
@@ -59,6 +59,16 @@ texture = ExtResource("2_p7rbk")
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Platforms/platform1"]
 polygon = PackedVector2Array(-114, -146, 117, -145, 105, -127, 90, -124, -13, -117, -60, -119, -100, -126, -104, -135)
+
+[node name="SpawnPoint4" type="Marker2D" parent="Platforms/platform1"]
+position = Vector2(-28, -171)
+script = ExtResource("10_morta")
+
+[node name="PlayerDetectionZone" type="Area2D" parent="Platforms/platform1/SpawnPoint4"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/platform1/SpawnPoint4/PlayerDetectionZone"]
+position = Vector2(-3, -23)
+shape = SubResource("CircleShape2D_l4xu8")
 
 [node name="platform2" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 collision_layer = 2
@@ -90,6 +100,18 @@ polygon = PackedVector2Array(-432, 12, -244, 12, -248, 21, -257, 29, -262, 38, -
 [node name="CollisionPolygon2D2" type="CollisionPolygon2D" parent="Platforms/platform3"]
 polygon = PackedVector2Array(306, 12, 431, 12, 430, 30, 369, 29, 349, 34, 311, 34, 311, 26, 307, 22)
 
+[node name="SpawnPoint1" type="Marker2D" parent="Platforms/platform3"]
+position = Vector2(-325, -16)
+script = ExtResource("10_morta")
+
+[node name="PlayerDetectionZone" type="Area2D" parent="Platforms/platform3/SpawnPoint1"]
+position = Vector2(0, 3)
+collision_layer = 128
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/platform3/SpawnPoint1/PlayerDetectionZone"]
+position = Vector2(-1, -20)
+shape = SubResource("CircleShape2D_imdmy")
+
 [node name="platform4" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 position = Vector2(-7, 0)
 collision_layer = 2
@@ -102,6 +124,16 @@ texture = ExtResource("5_p3ew5")
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Platforms/platform4"]
 polygon = PackedVector2Array(145, -6, 311, -6, 306, 4, 300, 8, 289, 20, 276, 30, 258, 30, 246, 26, 222, 24, 200, 21, 198, 18, 166, 15, 154, 7)
+
+[node name="SpawnPoint3" type="Marker2D" parent="Platforms/platform4"]
+position = Vector2(243, -33)
+script = ExtResource("10_morta")
+
+[node name="PlayerDetectionZone" type="Area2D" parent="Platforms/platform4/SpawnPoint3"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/platform4/SpawnPoint3/PlayerDetectionZone"]
+position = Vector2(-1, -27)
+shape = SubResource("CircleShape2D_p7rbk")
 
 [node name="platform5" type="StaticBody2D" parent="Platforms" groups=["Platform"]]
 position = Vector2(-116, 87)
@@ -127,6 +159,16 @@ shape = SubResource("RectangleShape2D_dq8h5")
 position = Vector2(-57, 35)
 collision_layer = 2
 collision_mask = 13
+
+[node name="SpawnPoint2" type="Marker2D" parent="Platforms/GroundBase"]
+position = Vector2(22, 143)
+script = ExtResource("10_morta")
+
+[node name="PlayerDetectionZone" type="Area2D" parent="Platforms/GroundBase/SpawnPoint2"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/GroundBase/SpawnPoint2/PlayerDetectionZone"]
+position = Vector2(0, 14)
+shape = SubResource("CircleShape2D_morta")
 
 [node name="Sprite2D" type="Sprite2D" parent="Platforms/GroundBase"]
 texture_filter = 1
@@ -166,48 +208,8 @@ position = Vector2(0, 275)
 shape = SubResource("RectangleShape2D_ioey5")
 
 [node name="SpawnPoints" type="Node2D" parent="."]
+visible = false
 position = Vector2(400, 300)
-
-[node name="SpawnPoint1" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(-323, 5)
-script = ExtResource("10_morta")
-
-[node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint1"]
-collision_layer = 128
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="SpawnPoints/SpawnPoint1/PlayerDetectionZone"]
-position = Vector2(-1, -27)
-shape = SubResource("CircleShape2D_imdmy")
-
-[node name="SpawnPoint2" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(-2, 150)
-script = ExtResource("10_morta")
-
-[node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint2"]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="SpawnPoints/SpawnPoint2/PlayerDetectionZone"]
-position = Vector2(-20, 43)
-shape = SubResource("CircleShape2D_morta")
-
-[node name="SpawnPoint3" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(236, -21)
-script = ExtResource("10_morta")
-
-[node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint3"]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="SpawnPoints/SpawnPoint3/PlayerDetectionZone"]
-position = Vector2(-1, -27)
-shape = SubResource("CircleShape2D_p7rbk")
-
-[node name="SpawnPoint4" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(-8, -162)
-script = ExtResource("10_morta")
-
-[node name="PlayerDetectionZone" type="Area2D" parent="SpawnPoints/SpawnPoint4"]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="SpawnPoints/SpawnPoint4/PlayerDetectionZone"]
-position = Vector2(-3, -23)
-shape = SubResource("CircleShape2D_l4xu8")
 
 [node name="WaveManager" type="Node" parent="."]
 script = ExtResource("12_imdmy")
