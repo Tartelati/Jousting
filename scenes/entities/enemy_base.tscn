@@ -1,4 +1,4 @@
-[gd_scene load_steps=34 format=3 uid="uid://cba2m06mfhdpm"]
+[gd_scene load_steps=47 format=3 uid="uid://cba2m06mfhdpm"]
 
 [ext_resource type="Script" uid="uid://v56hqa6big8u" path="res://scripts/entities/enemy_base.gd" id="1_ltmif"]
 [ext_resource type="Texture2D" uid="uid://bhobw0eyciqr6" path="res://assets/sprites/Enemy_base_no_knight.png" id="2_1odx1"]
@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://djq00gykhvul0" path="res://assets/sprites/enemy_base_fly.png" id="7_m6p80"]
 [ext_resource type="Texture2D" uid="uid://dv4hb8genclag" path="res://assets/sprites/Enemy_walk_base-sheet.png" id="8_d7q81"]
 [ext_resource type="Texture2D" uid="uid://pwilajo6y6a2" path="res://assets/sprites/enemy_spawn.png" id="9_d7q81"]
+[ext_resource type="Texture2D" uid="uid://syw677xdityf" path="res://assets/sprites/egg_hatching-sheet.png" id="10_34mgb"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ltmif"]
 radius = 20.0
@@ -30,21 +31,49 @@ region = Rect2(0, 0, 49, 48)
 atlas = ExtResource("7_m6p80")
 region = Rect2(49, 0, 49, 48)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_qfss6"]
-atlas = ExtResource("8_d7q81")
-region = Rect2(0, 0, 49, 61)
+[sub_resource type="AtlasTexture" id="AtlasTexture_m2vsr"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(0, 0, 32, 32)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_00h8e"]
-atlas = ExtResource("8_d7q81")
-region = Rect2(49, 0, 49, 61)
+[sub_resource type="AtlasTexture" id="AtlasTexture_n17fe"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(32, 0, 32, 32)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_nkpbs"]
-atlas = ExtResource("8_d7q81")
-region = Rect2(98, 0, 49, 61)
+[sub_resource type="AtlasTexture" id="AtlasTexture_wdbdb"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(64, 0, 32, 32)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_a4usq"]
-atlas = ExtResource("8_d7q81")
-region = Rect2(147, 0, 49, 61)
+[sub_resource type="AtlasTexture" id="AtlasTexture_ngbtx"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_p5gih"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(128, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_w652k"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(160, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tl5wc"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(192, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_x20rp"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(224, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kejer"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(256, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_as5ya"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(288, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ebrnv"]
+atlas = ExtResource("10_34mgb")
+region = Rect2(320, 0, 32, 32)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_vuql5"]
 atlas = ExtResource("9_d7q81")
@@ -98,6 +127,22 @@ region = Rect2(550, 0, 50, 61)
 atlas = ExtResource("9_d7q81")
 region = Rect2(600, 0, 50, 61)
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_qfss6"]
+atlas = ExtResource("8_d7q81")
+region = Rect2(0, 0, 49, 61)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_00h8e"]
+atlas = ExtResource("8_d7q81")
+region = Rect2(49, 0, 49, 61)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nkpbs"]
+atlas = ExtResource("8_d7q81")
+region = Rect2(98, 0, 49, 61)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_a4usq"]
+atlas = ExtResource("8_d7q81")
+region = Rect2(147, 0, 49, 61)
+
 [sub_resource type="SpriteFrames" id="SpriteFrames_vuql5"]
 animations = [{
 "frames": [{
@@ -116,32 +161,45 @@ animations = [{
 "texture": SubResource("AtlasTexture_0pcg1")
 }],
 "loop": true,
-"name": &"Enemy_base_fly",
+"name": &"fly",
 "speed": 5.0
 }, {
 "frames": [{
 "duration": 1.0,
-"texture": SubResource("AtlasTexture_qfss6")
+"texture": SubResource("AtlasTexture_m2vsr")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_n17fe")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wdbdb")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ngbtx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_p5gih")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_w652k")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_tl5wc")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_x20rp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kejer")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_as5ya")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ebrnv")
 }],
 "loop": true,
-"name": &"Enemy_base_idle",
-"speed": 5.0
-}, {
-"frames": [{
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_qfss6")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_00h8e")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_nkpbs")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_a4usq")
-}],
-"loop": true,
-"name": &"Enemy_base_walk",
+"name": &"hatching",
 "speed": 5.0
 }, {
 "frames": [{
@@ -184,10 +242,30 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_invk0")
 }],
+"loop": false,
+"name": &"spawn",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qfss6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_00h8e")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_nkpbs")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_a4usq")
+}],
 "loop": true,
-"name": &"Enemy_spawn",
+"name": &"walk",
 "speed": 5.0
 }]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_34mgb"]
+size = Vector2(22, 6)
 
 [node name="EnemyBody" type="CharacterBody2D"]
 collision_layer = 4
@@ -241,12 +319,21 @@ collision_layer = 64
 collision_mask = 32
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="VulnerableArea"]
-position = Vector2(0.5, -8.5)
+position = Vector2(-1, -15)
 shape = SubResource("RectangleShape2D_xadvl")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_vuql5")
-animation = &"Enemy_base_fly"
+animation = &"fly"
+
+[node name="StompArea" type="Area2D" parent="."]
+collision_layer = 32
+collision_mask = 64
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StompArea"]
+position = Vector2(-2, 15)
+shape = SubResource("RectangleShape2D_34mgb")
+debug_color = Color(0, 0.539836, 0.959078, 0.42)
 
 [connection signal="area_entered" from="CombatArea" to="." method="_on_combat_area_area_entered"]
 [connection signal="body_entered" from="EggArea" to="." method="_on_egg_area_body_entered"]

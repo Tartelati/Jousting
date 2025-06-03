@@ -9,6 +9,7 @@ var is_player_nearby: bool = false
 @onready var detection_zone: Area2D = get_child(0) if get_child_count() > 0 and get_child(0) is Area2D else null
 
 func _ready():
+	add_to_group("SpawnPoints")
 	if not detection_zone:
 		printerr("SpawnPoint %s: No Area2D found as the first child!" % name)
 		return

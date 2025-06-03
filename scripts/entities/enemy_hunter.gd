@@ -1,7 +1,6 @@
 extends "res://scripts/entities/enemy_base.gd"
 
 var target = null
-var sprite_path = "res://assets/sprites/enemy_hunter-placeholder.png"  # Renamed to sprite_path
 
 
 func _ready():
@@ -9,11 +8,10 @@ func _ready():
 	points_value = 200
 	move_speed = 100
 	
-	# Set sprite color to distinguish enemy type
-	enemy_animation.texture = load(sprite_path)  # Use the loaded texture on the existing sprite
 
 # Override the flying process for this specific enemy type
 func process_flying(delta):
+	enemy_animation.play("fly")
 	screen_wrapping()
 	
 	# Hunter actively seeks the player
@@ -25,7 +23,7 @@ func process_flying(delta):
 	
 	# Apply gravity
 	velocity.y += gravity * delta
-	
+	 
 	# Flap to maintain height and chase player
 	if target != null and is_instance_valid(target):
 		# Flap more when below the player
@@ -38,7 +36,7 @@ func process_flying(delta):
 			direction = -1
 		elif target.position.x > position.x + 20:
 			direction = 1
-			enemy_sprite.flip_h = (direction < 0)
+			enemy_animation.flip_h = (direction < 0)
 	else:
 		# Random flapping if no target
 		if randf() < 0.03:
@@ -46,7 +44,7 @@ func process_flying(delta):
 		# Random direction changes
 		if randf() < 0.01:
 			direction *= -1
-			enemy_sprite.flip_h = (direction < 0)
+			enemy_animation.flip_h = (direction < 0)
 	
 	# Horizontal movement
 	velocity.x = direction * move_speed

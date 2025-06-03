@@ -139,11 +139,17 @@ func setup_new_gameplay_scene(player_index: int, main_game_node):
 	else:
 		printerr("Setup: WaveManager node not found in the loaded level scene!")
 	
+	if wave_manager and hud_instance: 
+		wave_manager.connect("wave_started", Callable(hud_instance, "_on_wave_started"))
+	
 	# Start background music
 	SoundManager.play_music("gameplay") # Use autoload directly
 	
 	current_state = GameState.PLAYING
 	print("Setup complete: Game Started Successfully") # Debug print
+	
+	# Clear player_nodes to remove references to old, freed players
+	player_nodes.clear()
 
 func pause_game():
 	if current_state == GameState.PLAYING:

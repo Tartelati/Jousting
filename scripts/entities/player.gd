@@ -3,7 +3,7 @@ extends CharacterBody2D
 @export var player_index: int = 1
 
 # --- States Enum ---
-enum State { IDLE, WALKING, FLYING, BRAKING } # Added BRAKING state
+enum State { IDLE, WALKING, FLYING, BRAKING, DEFEATED } # Added BRAKING state
 
 # --- State Variables ---
 var current_state : State = State.IDLE
@@ -41,11 +41,16 @@ var current_speed_level : int = 0
 @onready var combat_area: Area2D = $CombatArea # Keep existing combat area reference
 @onready var collection_area: Area2D = $CollectionArea # Keep existing collection area reference
 @onready var stomp_area: Area2D = $StompArea # Keep existing stomp area reference
+@onready var vulnerable_area: Area2D = $VulnerableArea
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
 # --- Internal Variables ---
-var is_alive = true
+var is_respawning: bool = false
+var defeated_fly_direction : int = 1
+var defeated_fly_time : float = 0.0
+var is_invincible := false
+var is_alive := true
 var brake_timer : float = 0.0
 var direction_during_brake : int = 0
 var hold_change_timer: float = 0.0 # Timer for hold input speed changes
@@ -58,15 +63,13 @@ func _ready():
 	set_state(State.IDLE) # Initialize state properly
 	animated_sprite.play("P%d_Idle" % player_index)
 
-	# Connect signals (ensure these are connected in editor or uncomment if needed)
-	if combat_area:
-		combat_area.connect("area_entered", _on_combat_area_area_entered)
 	if collection_area:
 		collection_area.add_to_group("player_collectors")
-		collection_area.connect("area_entered", _on_collection_area_area_entered)
 	if stomp_area:
 		stomp_area.add_to_group("player_stomp_areas")
-		stomp_area.connect("area_entered", _on_stomp_area_area_entered)
+	if vulnerable_area:
+		vulnerable_area.add_to_group("player_vulnerable_areas")
+		vulnerable_area.connect("area_entered", _on_vulnerable_area_area_entered)
 
 # --- State Management Helper ---
 func set_state(new_state: State):
@@ -110,6 +113,18 @@ func get_input_actions():
 # --- Main Physics Loop ---
 func _physics_process(delta):
 	if not is_alive:
+		if current_state == State.DEFEATED:
+			defeated_fly_time += delta
+			# Sine wave: amplitude 30px, period 1.5s
+			var sine_offset = 30.0 * sin(defeated_fly_time * 4.0)
+			global_position.y += sine_offset * delta
+			move_and_slide()
+			# Check if player has left the screen horizontally
+			var viewport_rect = get_viewport_rect().size
+			if (defeated_fly_direction == 1 and global_position.x > viewport_rect.x + 50) or \
+				(defeated_fly_direction == -1 and global_position.x < -50):
+				is_respawning = true
+				call_deferred("_start_respawn_timer")
 		return
 
 	# 1. Gather Input
@@ -151,9 +166,11 @@ func _physics_process(delta):
 	# 8. Screen Wrapping (moved after move_and_slide to use updated position)
 	screen_wrapping()
 
+func _start_respawn_timer():
+	await get_tree().create_timer(2.0).timeout
+	respawn()
 
 # --- State Logic Functions ---
-
 func handle_idle_state(delta, direction_input, flap_input_pressed):
 	# Stop horizontal movement completely in idle
 	velocity.x = move_toward(velocity.x, 0, 5000 * delta) # Apply high friction
@@ -401,7 +418,7 @@ func handle_collisions():
 			break
 
 		# Check for wall bumps while walking
-		if current_state == State.WALKING and (collider.is_in_group("Platform") or collider.is_in_group("players") or collider.is_in_group("Enemy")):
+		if current_state == State.WALKING and (collider.is_in_group("Platform") or collider.is_in_group("players") or collider.is_in_group("enemies")):
 			if abs(collision.get_normal().x) > 0.7: # Hit a vertical wall
 				print("Player hit wall while walking")
 				animated_sprite.flip_h = !animated_sprite.flip_h # Change direction
@@ -524,7 +541,7 @@ func _on_combat_area_area_entered(area):
 	# Player vs Enemy Collision
 	if area.is_in_group("enemy_combat_areas"):
 		var enemy = area.get_parent()
-		if not enemy or not enemy.is_in_group("Enemy"): return # Use Enemy group
+		if not enemy or not enemy.is_in_group("enemies"): return # Use Enemy group
 
 		# Skip if enemy is in egg/hatching state
 		if "current_state" in enemy and "State" in enemy and \
@@ -600,6 +617,16 @@ func _on_stomp_area_area_entered(area):
 		velocity.y = joust_bounce_velocity # Apply bounce on successful stomp
 		# Enemy handles its own defeat via its _on_vulnerable_area_area_entered signal
 
+func _on_vulnerable_area_area_entered(area):
+	if not is_alive or is_invincible:
+		return
+		
+	if area.is_in_group("enemy_stomp_areas"):
+		var enemy = area.get_parent()
+		if not enemy or not enemy.is_in_group("enemies"): return
+
+		print("Player was stomped by enemy!")
+		die() # Or lose_life(player_index)
 
 func _on_collection_area_area_entered(area):
 	if not is_alive: return
@@ -607,10 +634,10 @@ func _on_collection_area_area_entered(area):
 	# Collect Eggs
 	if area.is_in_group("egg_collection_zones"):
 		var parent = area.get_parent()
-		if parent and parent.is_in_group("Enemy") and "current_state" in parent and "State" in parent and parent.has_method("collect_egg"):
+		if parent and parent.is_in_group("enemies") and "current_state" in parent and "State" in parent and parent.has_method("collect_egg"):
 			if parent.current_state == parent.State.EGG or parent.current_state == parent.State.HATCHING:
 				print("Player collected egg")
-				parent.collect_egg()
+				parent.collect_egg(player_index)
 
 	# Add logic for other collectibles here
 
@@ -618,26 +645,49 @@ func _on_collection_area_area_entered(area):
 # --- Death and Respawn ---
 
 func die():
-	if not is_alive: return
+	if not is_alive or is_invincible: return
 	is_alive = false
-	if death_sound: death_sound.play()
-	velocity = Vector2.ZERO
-	set_physics_process(false) # Stop processing physics
+	set_state(State.DEFEATED)
+	
+	# Play defeated animation
+	animated_sprite.play("P%d_defeated" % player_index)
+	
+	# Disable collisions (optional: or set collision mask/layer to 0)
+	set_collision_layer(0)
+	set_collision_mask(0)
+	
+	# Set fly-off velocity (randomize direction for variety if you want)
+	var fly_direction = -1 if global_position.x > get_viewport_rect().size.x / 2 else 1
+	defeated_fly_time = 0.0
+	velocity = Vector2(fly_direction * 300, 0)
 
 	# Notify game manager (ensure ScoreManager exists and has lose_life)
 	var score_manager = get_node_or_null("/root/ScoreManager")
 	if score_manager and score_manager.has_method("lose_life"):
-		score_manager.lose_life()
+		score_manager.lose_life(player_index)
 	else:
 		print("Error: ScoreManager or lose_life method not found!")
 
-	await get_tree().create_timer(respawn_delay).timeout
-	respawn()
-
 func respawn():
 	is_alive = true
-	# Reset position (e.g., to center or spawn point)
-	position = Vector2(get_viewport_rect().size.x / 2, get_viewport_rect().size.y / 2)
+	is_invincible = true
+	set_state(State.IDLE)
+	# Find valid spawn point only ONCE
+	var spawn_point = null
+	var spawn_points = get_tree().get_nodes_in_group("SpawnPoints")
+	if spawn_points.size() > 0:
+		spawn_point = spawn_points[randi() % spawn_points.size()]
+	if spawn_point:
+		global_position = spawn_point.global_position
+	else:
+		global_position = Vector2(get_viewport_rect().size.x / 2, get_viewport_rect().size.y - 100)
+   
 	velocity = Vector2.ZERO
-	set_state(State.IDLE) # Respawn in idle state
+	set_collision_layer(1) # Restore to normal
+	set_collision_mask(2)
+	animated_sprite.play("P%d_spawn" % player_index)
 	set_physics_process(true) # Resume physics processing
+
+	await get_tree().create_timer(2.0).timeout
+	is_invincible = false
+	is_respawning = false
