@@ -86,7 +86,7 @@ func _physics_process(delta):
 	screen_wrapping()
 	
 	if previous_state != current_state:
-		print("Enemy %s state changed: %s -> %s" % [name, str(previous_state), str(current_state)])
+		#print("Enemy %s state changed: %s -> %s" % [name, str(previous_state), str(current_state)])
 		previous_state = current_state
 
 	if is_spawning:
@@ -103,7 +103,7 @@ func _physics_process(delta):
 		State.WALKING:
 			process_walking(delta)
 			if enemy_animation and enemy_animation.animation != "walk":
-				print("Enemy %s: Switching to walk animation" % name)
+				#print("Enemy %s: Switching to walk animation" % name)
 				enemy_animation.play("walk")
 			# Ensure egg area is disabled in walking state
 			if egg_area: egg_area.monitoring = false

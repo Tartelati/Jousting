@@ -117,14 +117,15 @@ func _physics_process(delta):
 			defeated_fly_time += delta
 			# Sine wave: amplitude 30px, period 1.5s
 			var sine_offset = 30.0 * sin(defeated_fly_time * 4.0)
-			global_position.y += sine_offset * delta
+			velocity.y += sine_offset * delta
 			move_and_slide()
 			# Check if player has left the screen horizontally
 			var viewport_rect = get_viewport_rect().size
 			if (defeated_fly_direction == 1 and global_position.x > viewport_rect.x + 50) or \
 				(defeated_fly_direction == -1 and global_position.x < -50):
-				is_respawning = true
-				call_deferred("_start_respawn_timer")
+					if not is_respawning:
+						is_respawning = true
+						call_deferred("_start_respawn_timer")
 		return
 
 	# 1. Gather Input
@@ -167,6 +168,7 @@ func _physics_process(delta):
 	screen_wrapping()
 
 func _start_respawn_timer():
+	print("[DEBUG] _start_respawn_timer called")
 	await get_tree().create_timer(2.0).timeout
 	respawn()
 
@@ -646,6 +648,7 @@ func _on_collection_area_area_entered(area):
 
 func die():
 	if not is_alive or is_invincible: return
+	print("[DEBUG] die called")
 	is_alive = false
 	set_state(State.DEFEATED)
 	
@@ -669,6 +672,7 @@ func die():
 		print("Error: ScoreManager or lose_life method not found!")
 
 func respawn():
+	print("[DEBUG] respawn called")
 	is_alive = true
 	is_invincible = true
 	set_state(State.IDLE)
