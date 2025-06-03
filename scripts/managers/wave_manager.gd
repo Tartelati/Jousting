@@ -14,6 +14,7 @@ var wave_in_progress = false
 var enemy_basic_scene = preload("res://scenes/entities/enemy_base.tscn")
 var enemy_hunter_scene = preload("res://scenes/entities/enemy_hunter.tscn")
 var shadowlord_scene = preload("res://scenes/entities/shadowlord.tscn")
+var spawn_manager = preload("res://scripts/managers/spawn_manager.gd")
 
 # Spawn parameters
 var spawn_timer = 0
@@ -64,33 +65,51 @@ func start_wave(wave_number = -1):
 		current_wave = wave_number
 	else:
 		current_wave += 1
-		
+	
 	print("Starting Wave %d" % current_wave) # DEBUG
-		
+	
 	# --- Platform Management FIRST ---
-	# This ensures platforms are set correctly even for egg waves
 	_update_platform_states(current_wave)
 	# -------------------------
-		
+	
 	# --- Check for Egg Wave ---
 	if current_wave > 0 and current_wave % 5 == 0:
 		is_egg_wave = true
 		_start_egg_wave()
-		# Don't proceed with normal enemy setup for egg waves
 		emit_signal("wave_started", current_wave)
 		return
 	# --------------------------
 	
 	# --- Normal Enemy Wave Setup ---
-	# Calculate number of enemies for this wave
 	var num_enemies = enemies_per_wave_base + (current_wave - 1) * enemies_per_wave_increment
 	enemies_remaining = num_enemies
-	
-	# Adjust spawn interval based on wave number (gets faster in later waves)
 	spawn_interval = max(0.5, 1.5 - (current_wave - 1) * 0.1)
-	
-	wave_in_progress = true
-	emit_signal("wave_started", current_wave)
+
+	# Build spawn list for SpawnManager
+	var spawn_list = []
+	for i in range(num_enemies):
+		var enemy_type = randi() % 3
+		if current_wave < 3:
+			enemy_type = 0
+		elif current_wave < 5:
+			enemy_type = randi() % 2
+		var scene = enemy_basic_scene
+		if enemy_type == 1:
+			scene = enemy_hunter_scene
+		elif enemy_type == 2:
+			scene = shadowlord_scene
+		spawn_list.append({"scene": scene, "data": {}})
+
+	# Use autoloaded SpawnManager directly
+	if SpawnManager:
+		if not wave_in_progress:
+			wave_in_progress = true
+			emit_signal("wave_started", current_wave)
+		SpawnManager.queue_spawn_batch(spawn_list)
+	else:
+		printerr("WaveManager: SpawnManager autoload not found!")
+
+	# No longer wait for all spawns to complete before starting wave
 	
 
 func _update_platform_states(wave_num):
