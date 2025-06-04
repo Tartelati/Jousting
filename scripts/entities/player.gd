@@ -106,7 +106,7 @@ func get_input_actions():
 	elif player_index == 3:
 		return {"left": "p3_move_left", "right": "p3_move_right", "flap": "p3_flap"}
 	elif player_index == 4:
-		return {"left": "p3_move_left", "right": "p3_move_right", "flap": "p3_flap"}
+		return {"left": "p4_move_left", "right": "p4_move_right", "flap": "p4_flap"}
 	else:
 		return {"left": "move_left", "right": "move_right", "flap": "flap"} # fallback
 
@@ -126,6 +126,9 @@ func _physics_process(delta):
 					if not is_respawning:
 						is_respawning = true
 						call_deferred("_start_respawn_timer")
+		return
+
+	if is_respawning or is_invincible:
 		return
 
 	# 1. Gather Input
@@ -662,7 +665,9 @@ func die():
 	# Set fly-off velocity (randomize direction for variety if you want)
 	var fly_direction = -1 if global_position.x > get_viewport_rect().size.x / 2 else 1
 	defeated_fly_time = 0.0
+	defeated_fly_direction = fly_direction
 	velocity = Vector2(fly_direction * 300, 0)
+	animated_sprite.flip_h = fly_direction < 0
 
 	# Notify game manager (ensure ScoreManager exists and has lose_life)
 	var score_manager = get_node_or_null("/root/ScoreManager")
@@ -671,10 +676,17 @@ func die():
 	else:
 		print("Error: ScoreManager or lose_life method not found!")
 
+	# --- Fallback: Always respawn after N seconds if not already respawning ---
+	if not is_respawning:
+		is_respawning = true
+		await get_tree().create_timer(3.0).timeout
+		respawn()
+
 func respawn():
 	print("[DEBUG] respawn called")
 	is_alive = true
 	is_invincible = true
+	is_respawning = true
 	set_state(State.IDLE)
 	# Find valid spawn point only ONCE
 	var spawn_point = null
@@ -691,7 +703,15 @@ func respawn():
 	set_collision_mask(2)
 	animated_sprite.play("P%d_spawn" % player_index)
 	set_physics_process(true) # Resume physics processing
-
-	await get_tree().create_timer(2.0).timeout
-	is_invincible = false
-	is_respawning = false
+		# Disconnect previous to avoid duplicate connections
+	if animated_sprite.is_connected("animation_finished", _on_respawn_animation_finished):
+		animated_sprite.disconnect("animation_finished", _on_respawn_animation_finished)
+	animated_sprite.connect("animation_finished", _on_respawn_animation_finished)
+	
+# --- Animation Finished Callback for Respawn ---
+func _on_respawn_animation_finished(anim_name):
+	if anim_name == "P%d_spawn" % player_index:
+		is_invincible = false
+		is_respawning = false
+		# Optionally, transition to idle/walk animation here
+		animated_sprite.disconnect("animation_finished", _on_respawn_animation_finished)

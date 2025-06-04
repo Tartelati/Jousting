@@ -28,6 +28,7 @@ enum State {FLYING, WALKING, EGG, HATCHING, DEAD}
 
 # Internal State
 var current_state = State.FLYING
+var is_invincible := false
 var previous_state = null
 var direction = 1
 var walk_time = 0.0
@@ -53,6 +54,7 @@ func _ready():
 	ground_raycast.target_position = Vector2(0, ground_check_distance_down)
 	ground_raycast.enabled = true # Ensure it's enabled
 	
+	is_invincible = true
 	enemy_animation.play("spawn")
 	enemy_animation.connect("animation_finished", Callable(self, "_on_enemy_animation_finished"))
 	
@@ -79,6 +81,7 @@ func _ready():
 func _on_enemy_animation_finished():
 	if enemy_animation.animation == "spawn":
 		is_spawning = false
+		is_invincible = false
 		current_state = State.WALKING
 
 func _physics_process(delta):
