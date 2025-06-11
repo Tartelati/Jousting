@@ -6,7 +6,7 @@ const COLLECT_POINTS = 50 # Or reference ScoreManager.points.egg_collect if defi
 # Preload enemy scenes for hatching
 var enemy_basic_scene = preload("res://scenes/entities/enemy_base.tscn")
 var enemy_hunter_scene = preload("res://scenes/entities/enemy_hunter.tscn")
-var shadow_lord_scene = preload("res://scenes/entities/shadow_lord.tscn")
+var shadow_lord_scene = preload("res://scenes/entities/shadowlord.tscn")
 # Add other enemy types if needed
 
 @onready var hatch_timer: Timer = $Timer
