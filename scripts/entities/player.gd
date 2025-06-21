@@ -58,6 +58,8 @@ var brake_timer : float = 0.0
 var direction_during_brake : int = 0
 var hold_change_timer: float = 0.0 # Timer for hold input speed changes
 @export var hold_change_interval: float = 0.2 # Time interval for hold changes
+var prev_flap_pressed: bool = false # Track previous flap input state
+var flap_input_held: bool = false # Track if flap input is currently held
 
 # --- Initialization ---
 func _ready():
@@ -119,7 +121,7 @@ func get_input_actions():
 func _physics_process(delta):
 	# --- Input Handling ---
 	var direction_input = 0
-	var flap_input_pressed = false
+	var flap_input_just_pressed = false
 	var actions = get_input_actions()
 
 	if typeof(input_device) == TYPE_INT:
@@ -127,11 +129,15 @@ func _physics_process(delta):
 		var left = Input.is_joy_button_pressed(input_device, JOY_BUTTON_DPAD_LEFT)
 		var right = Input.is_joy_button_pressed(input_device, JOY_BUTTON_DPAD_RIGHT)
 		direction_input = int(right) - int(left)
-		flap_input_pressed = Input.is_joy_button_pressed(input_device, JOY_BUTTON_A)
+		var flap_now = Input.is_joy_button_pressed(input_device, JOY_BUTTON_A)
+		flap_input_just_pressed = flap_now and not prev_flap_pressed
+		flap_input_held = flap_now
+		prev_flap_pressed = flap_now
 	else:
 		# Keyboard: Use Input Map actions
 		direction_input = Input.get_axis(actions["left"], actions["right"])
-		flap_input_pressed = Input.is_action_just_pressed(actions["flap"])
+		flap_input_just_pressed = Input.is_action_just_pressed(actions["flap"])
+		flap_input_held = Input.is_action_pressed(actions["flap"])
 
 	if not is_alive:
 		if current_state == State.DEFEATED:
@@ -164,11 +170,11 @@ func _physics_process(delta):
 	# 3. Handle State Logic
 	match current_state:
 		State.IDLE:
-			handle_idle_state(delta, direction_input, flap_input_pressed)
+			handle_idle_state(delta, direction_input, flap_input_just_pressed)
 		State.WALKING:
-			handle_walking_state(delta, direction_input, flap_input_pressed, actions)
+			handle_walking_state(delta, direction_input, flap_input_just_pressed, actions)
 		State.FLYING:
-			handle_flying_state(delta, direction_input, flap_input_pressed, actions)
+			handle_flying_state(delta, direction_input, flap_input_just_pressed, flap_input_held, actions)
 		State.BRAKING:
 			handle_braking_state(delta, direction_input, actions)
 
@@ -281,7 +287,7 @@ func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
 	# State remains WALKING (conceptually, falling after walking)
 	# until flap is pressed or landing occurs.
 
-func handle_flying_state(delta, direction_input, flap_input_pressed, actions):
+func handle_flying_state(delta, direction_input, flap_input_pressed, local_flap_input_held, actions):
 	# Store original facing direction and movement direction
 	var was_facing_right = not animated_sprite.flip_h
 	var original_move_direction = sign(velocity.x)
@@ -291,7 +297,7 @@ func handle_flying_state(delta, direction_input, flap_input_pressed, actions):
 		animated_sprite.play("P%d_Fly" % player_index)
 	
 	# Flap animation triggered if flap input pressed or just pressed
-	if Input.is_action_just_released(actions["flap"]) or Input.is_action_pressed(actions["flap"]):
+	if local_flap_input_held:
 		animated_sprite.play("P%d_Flap2" % player_index)
 	else:
 		animated_sprite.play("P%d_Fly" % player_index)
@@ -680,7 +686,7 @@ func die():
 	set_collision_layer(0)
 	set_collision_mask(0)
 	
-	# Set fly-off velocity (randomize direction for variety if you want)
+	# Set fly-off velocity 
 	var fly_direction = -1 if global_position.x > get_viewport_rect().size.x / 2 else 1
 	defeated_fly_time = 0.0
 	defeated_fly_direction = fly_direction

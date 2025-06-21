@@ -1,0 +1,41 @@
+[gd_scene load_steps=7 format=3 uid="uid://dyn404gmn0igp"]
+
+[ext_resource type="Script" uid="uid://bbtxc4cn44ws8" path="res://scripts/entities/rescue_bird.gd" id="1_mbivl"]
+[ext_resource type="Texture2D" uid="uid://dp2opiik8o01m" path="res://assets/sprites/enemy_naked_fly.png" id="2_hp0b7"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pu885"]
+atlas = ExtResource("2_hp0b7")
+region = Rect2(0, 0, 49, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_yy1wl"]
+atlas = ExtResource("2_hp0b7")
+region = Rect2(49, 0, 49, 48)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_cxkql"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pu885")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_yy1wl")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_lnco8"]
+
+[node name="RescueBird" type="CharacterBody2D"]
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_mbivl")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_cxkql")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+light_mask = 2
+visibility_layer = 0
+shape = SubResource("CircleShape2D_lnco8")
