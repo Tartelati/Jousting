@@ -408,6 +408,18 @@ size = Vector2(21, 16.5)
 [node name="PlayerBody" type="CharacterBody2D"]
 collision_mask = 135
 script = ExtResource("1_5u6hq")
+player_index = null
+speed_values = null
+flap_force = null
+max_fall_speed = null
+brake_duration_per_level = null
+joust_bounce_velocity = null
+side_collision_bounce_x = null
+side_collision_bounce_y = null
+collision_y_threshold = null
+screen_wrap_buffer = null
+respawn_delay = null
+hold_change_interval = null
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 visible = false
