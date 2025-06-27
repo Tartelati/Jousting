@@ -30,6 +30,28 @@ func _ready():
 		var debug_overlay = debug_overlay_scene.instantiate()
 		add_child(debug_overlay)
 
+func assign_player_inputs(num_players: int) -> Array:
+	var joypads = Input.get_connected_joypads()
+	var num_controllers = joypads.size()
+	var devices = []
+	if num_controllers == 0:
+		# No controllers: all players use keyboard
+		for i in range(num_players):
+			devices.append("keyboard")
+	elif num_controllers == 1:
+		if num_players == 1:
+			devices.append(joypads[0])
+		else:
+			devices.append("keyboard")
+			devices.append(joypads[0])
+	else:
+		for i in range(num_players):
+			if i < num_controllers:
+				devices.append(joypads[i])
+			else:
+				devices.append("keyboard")
+	return devices
+
 func _input(event):
 	if event.is_action_pressed("pause") and current_state == GameState.PLAYING:
 		pause_game()
@@ -80,6 +102,9 @@ func spawn_players(player_index: int, position: Vector2):
 	if not active_level:
 		printerr("No active level to spawn players in!")
 		return
+
+	var input_devices = assign_player_inputs(player_index)	
+
 	# Prevent duplicate players
 	for p in player_nodes:
 		if p.player_index == player_index:
@@ -87,6 +112,7 @@ func spawn_players(player_index: int, position: Vector2):
 	var player = player_scene.instantiate()
 	player.player_index = player_index
 	player.global_position = position
+	player.input_device = input_devices[player_index - 1]
 	active_level.add_child(player)
 	player_nodes.append(player)
 	if hud_instance:

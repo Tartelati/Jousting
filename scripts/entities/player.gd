@@ -7,11 +7,11 @@ enum State { IDLE, WALKING, FLYING, BRAKING, DEFEATED } # Added BRAKING state
 
 # --- State Variables ---
 var current_state : State = State.IDLE
-var previous_state : State = State.IDLE # Track previous state for transitions
+var previous_state = State.IDLE # Track previous state for transitions
 
 # --- Movement Parameters ---
 @export_group("Movement")
-@export var speed_values : Array[float] = [0.0, 100.0, 200.0, 300.0] # Index 0 = Idle, 1-3 = Speed Levels
+@export var speed_values : Array[float] = [0.0, 100.0, 150.0, 200.0] # Index 0 = Idle, 1-3 = Speed Levels
 var current_speed_level : int = 0
 
 # Use project gravity by default, can be overridden in inspector
@@ -32,6 +32,8 @@ var current_speed_level : int = 0
 @export_group("Respawn")
 @export var respawn_delay: float = 2.0
 
+@export var input_device: Variant = "keyboard" # or a controller device id (int)
+
 # --- Node References (Update paths as needed in the editor) ---
 @onready var walking_audio = $WalkingAudioPlayer # Assumes AudioStreamPlayer node exists
 @onready var flying_audio = $FlyingAudioPlayer # Assumes AudioStreamPlayer node exists
@@ -46,6 +48,7 @@ var current_speed_level : int = 0
 
 
 # --- Internal Variables ---
+var defeated_time := 0.0
 var is_respawning: bool = false
 var defeated_fly_direction : int = 1
 var defeated_fly_time : float = 0.0
@@ -55,6 +58,8 @@ var brake_timer : float = 0.0
 var direction_during_brake : int = 0
 var hold_change_timer: float = 0.0 # Timer for hold input speed changes
 @export var hold_change_interval: float = 0.2 # Time interval for hold changes
+var prev_flap_pressed: bool = false # Track previous flap input state
+var flap_input_held: bool = false # Track if flap input is currently held
 
 # --- Initialization ---
 func _ready():
@@ -70,6 +75,8 @@ func _ready():
 	if vulnerable_area:
 		vulnerable_area.add_to_group("player_vulnerable_areas")
 		vulnerable_area.connect("area_entered", _on_vulnerable_area_area_entered)
+
+	print("[DEBUG] Player", player_index, "assigned input_device:", input_device, "(type:", typeof(input_device), ")")
 
 # --- State Management Helper ---
 func set_state(new_state: State):
@@ -112,9 +119,30 @@ func get_input_actions():
 
 # --- Main Physics Loop ---
 func _physics_process(delta):
+	# --- Input Handling ---
+	var direction_input = 0
+	var flap_input_just_pressed = false
+	var actions = get_input_actions()
+
+	if typeof(input_device) == TYPE_INT:
+		# Controller: Use D-pad buttons only
+		var left = Input.is_joy_button_pressed(input_device, JOY_BUTTON_DPAD_LEFT)
+		var right = Input.is_joy_button_pressed(input_device, JOY_BUTTON_DPAD_RIGHT)
+		direction_input = int(right) - int(left)
+		var flap_now = Input.is_joy_button_pressed(input_device, JOY_BUTTON_A)
+		flap_input_just_pressed = flap_now and not prev_flap_pressed
+		flap_input_held = flap_now
+		prev_flap_pressed = flap_now
+	else:
+		# Keyboard: Use Input Map actions
+		direction_input = Input.get_axis(actions["left"], actions["right"])
+		flap_input_just_pressed = Input.is_action_just_pressed(actions["flap"])
+		flap_input_held = Input.is_action_pressed(actions["flap"])
+
 	if not is_alive:
 		if current_state == State.DEFEATED:
 			defeated_fly_time += delta
+			defeated_time += delta
 			# Sine wave: amplitude 30px, period 1.5s
 			var sine_offset = 30.0 * sin(defeated_fly_time * 4.0)
 			velocity.y += sine_offset * delta
@@ -122,7 +150,7 @@ func _physics_process(delta):
 			# Check if player has left the screen horizontally
 			var viewport_rect = get_viewport_rect().size
 			if (defeated_fly_direction == 1 and global_position.x > viewport_rect.x + 50) or \
-				(defeated_fly_direction == -1 and global_position.x < -50):
+				(defeated_fly_direction == -1 and global_position.x < -50) or defeated_time > 3.0:
 					if not is_respawning:
 						is_respawning = true
 						call_deferred("_start_respawn_timer")
@@ -130,11 +158,6 @@ func _physics_process(delta):
 
 	if is_respawning or is_invincible:
 		return
-
-	# 1. Gather Input
-	var actions = get_input_actions()
-	var direction_input = Input.get_axis(actions["left"], actions["right"])
-	var flap_input_pressed = Input.is_action_just_pressed(actions["flap"])
 
 	# 2. Apply Gravity
 	if not is_on_floor() or current_state == State.FLYING:
@@ -147,11 +170,11 @@ func _physics_process(delta):
 	# 3. Handle State Logic
 	match current_state:
 		State.IDLE:
-			handle_idle_state(delta, direction_input, flap_input_pressed)
+			handle_idle_state(delta, direction_input, flap_input_just_pressed)
 		State.WALKING:
-			handle_walking_state(delta, direction_input, flap_input_pressed, actions)
+			handle_walking_state(delta, direction_input, flap_input_just_pressed, actions)
 		State.FLYING:
-			handle_flying_state(delta, direction_input, flap_input_pressed, actions)
+			handle_flying_state(delta, direction_input, flap_input_just_pressed, flap_input_held, actions)
 		State.BRAKING:
 			handle_braking_state(delta, direction_input, actions)
 
@@ -219,13 +242,13 @@ func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
 				hold_change_timer = hold_change_interval # Reset timer on initial press
 			else:
 				# --- Start Braking (Initial Press) ---
-				direction_during_brake = original_facing_direction
+				direction_during_brake = int(original_facing_direction)
 				current_speed_level = max(current_speed_level - 1, 0)
 				brake_timer = brake_duration_per_level
 				set_state(State.BRAKING)
 				velocity.x = direction_during_brake * speed_values[current_speed_level]
 				return # Exit handle_walking_state for this frame
-		elif Input.is_action_pressed("move_left") or Input.is_action_pressed("move_right"): # Check if holding
+		elif Input.is_action_pressed(actions["left"]) or Input.is_action_pressed(actions["right"]): # Check if holding
 			if input_matches_facing:
 				# --- Holding Logic (Acceleration) ---
 				hold_change_timer -= delta
@@ -256,7 +279,7 @@ func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
 	velocity.x = target_velocity_x # Instant speed change
 
 	# Reset hold timer if input direction changes or is released
-	if Input.is_action_just_released("move_left") or Input.is_action_just_released("move_right") or direction_input == 0:
+	if Input.is_action_just_released(actions["left"]) or Input.is_action_just_released(actions["right"]) or direction_input == 0:
 		hold_change_timer = hold_change_interval
 
 	# Check if fallen off an edge
@@ -264,7 +287,7 @@ func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
 	# State remains WALKING (conceptually, falling after walking)
 	# until flap is pressed or landing occurs.
 
-func handle_flying_state(delta, direction_input, flap_input_pressed, actions):
+func handle_flying_state(delta, direction_input, flap_input_pressed, local_flap_input_held, actions):
 	# Store original facing direction and movement direction
 	var was_facing_right = not animated_sprite.flip_h
 	var original_move_direction = sign(velocity.x)
@@ -274,7 +297,7 @@ func handle_flying_state(delta, direction_input, flap_input_pressed, actions):
 		animated_sprite.play("P%d_Fly" % player_index)
 	
 	# Flap animation triggered if flap input pressed or just pressed
-	if Input.is_action_just_released(actions["flap"]) or Input.is_action_pressed(actions["flap"]):
+	if local_flap_input_held:
 		animated_sprite.play("P%d_Flap2" % player_index)
 	else:
 		animated_sprite.play("P%d_Fly" % player_index)
@@ -650,6 +673,7 @@ func _on_collection_area_area_entered(area):
 # --- Death and Respawn ---
 
 func die():
+	defeated_time = 0.0
 	if not is_alive or is_invincible: return
 	print("[DEBUG] die called")
 	is_alive = false
@@ -662,7 +686,7 @@ func die():
 	set_collision_layer(0)
 	set_collision_mask(0)
 	
-	# Set fly-off velocity (randomize direction for variety if you want)
+	# Set fly-off velocity 
 	var fly_direction = -1 if global_position.x > get_viewport_rect().size.x / 2 else 1
 	defeated_fly_time = 0.0
 	defeated_fly_direction = fly_direction
@@ -676,11 +700,6 @@ func die():
 	else:
 		print("Error: ScoreManager or lose_life method not found!")
 
-	# --- Fallback: Always respawn after N seconds if not already respawning ---
-	if not is_respawning:
-		is_respawning = true
-		await get_tree().create_timer(3.0).timeout
-		respawn()
 
 func respawn():
 	print("[DEBUG] respawn called")
@@ -701,17 +720,37 @@ func respawn():
 	velocity = Vector2.ZERO
 	set_collision_layer(1) # Restore to normal
 	set_collision_mask(2)
-	animated_sprite.play("P%d_spawn" % player_index)
+	var anim_name = "P%d_spawn" % player_index
+	print("[DEBUG] Playing respawn animation:", anim_name)
+	print("[DEBUG] Available animations:", animated_sprite.sprite_frames.get_animation_names())
+	animated_sprite.play(anim_name)
 	set_physics_process(true) # Resume physics processing
 		# Disconnect previous to avoid duplicate connections
-	if animated_sprite.is_connected("animation_finished", _on_respawn_animation_finished):
-		animated_sprite.disconnect("animation_finished", _on_respawn_animation_finished)
-	animated_sprite.connect("animation_finished", _on_respawn_animation_finished)
+	# if animated_sprite.is_connected("animation_finished", _on_respawn_animation_finished):
+	# 	print("[DEBUG] Disconnecting previous animation_finished signal")
+	# 	animated_sprite.disconnect("animation_finished", _on_respawn_animation_finished)
+	# print("[DEBUG] Connecting animation_finished signal")
+	# animated_sprite.connect("animation_finished", _on_respawn_animation_finished)
+
+	# Fallback: Timer in case signal doesn't fire
+	var frame_count = animated_sprite.sprite_frames.get_frame_count(anim_name)
+	var fps = animated_sprite.sprite_frames.get_animation_speed(anim_name)
+	var anim_length = 0.0
+	if fps > 0:
+		anim_length = frame_count / fps
+	else:
+		anim_length = 0.5 # fallback if FPS is zero
+	await get_tree().create_timer(anim_length + 0.1).timeout
+	if is_respawning:
+		print("[DEBUG] Fallback: Forcing respawn end after animation duration")
+		_on_respawn_animation_finished(anim_name)
 	
 # --- Animation Finished Callback for Respawn ---
 func _on_respawn_animation_finished(anim_name):
+	print("[DEBUG] _on_respawn_animation_finished called with anim_name:", anim_name)
 	if anim_name == "P%d_spawn" % player_index:
 		is_invincible = false
 		is_respawning = false
+		print("[DEBUG] Respawn animation finished, player can move again")
 		# Optionally, transition to idle/walk animation here
 		animated_sprite.disconnect("animation_finished", _on_respawn_animation_finished)
