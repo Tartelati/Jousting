@@ -1,6 +1,7 @@
 extends CharacterBody2D
 
 @export var player_index: int = 1
+@export var debug_input: bool = false # Toggle for input debugging
 
 # --- States Enum ---
 enum State { IDLE, WALKING, FLYING, BRAKING, DEFEATED } # Added BRAKING state
@@ -32,7 +33,7 @@ var current_speed_level : int = 0
 @export_group("Respawn")
 @export var respawn_delay: float = 2.0
 
-@export var input_device: Variant = "keyboard" # or a controller device id (int)
+var device: int = -1 # Device ID: -1 for keyboard, 0+ for controllers
 
 # --- Node References (Update paths as needed in the editor) ---
 @onready var walking_audio = $WalkingAudioPlayer # Assumes AudioStreamPlayer node exists
@@ -58,8 +59,6 @@ var brake_timer : float = 0.0
 var direction_during_brake : int = 0
 var hold_change_timer: float = 0.0 # Timer for hold input speed changes
 @export var hold_change_interval: float = 0.2 # Time interval for hold changes
-var prev_flap_pressed: bool = false # Track previous flap input state
-var flap_input_held: bool = false # Track if flap input is currently held
 
 # --- Initialization ---
 func _ready():
@@ -67,6 +66,9 @@ func _ready():
 	add_to_group("players") # Keep player in group
 	set_state(State.IDLE) # Initialize state properly
 	animated_sprite.play("P%d_Idle" % player_index)
+	
+	# Validate input system on startup
+	validate_input_system()
 
 	if collection_area:
 		collection_area.add_to_group("player_collectors")
@@ -76,7 +78,33 @@ func _ready():
 		vulnerable_area.add_to_group("player_vulnerable_areas")
 		vulnerable_area.connect("area_entered", _on_vulnerable_area_area_entered)
 
-	print("[DEBUG] Player", player_index, "assigned input_device:", input_device, "(type:", typeof(input_device), ")")
+	print("[DEBUG] Player", player_index, "assigned device:", device)
+
+func setup_device(device_id: int):
+	device = device_id
+	var device_type = "Keyboard" if device == -1 else "Controller%d" % device
+	var actions = get_input_actions()
+	print("[DEBUG] Player%d assigned %s (device=%d): left='%s', right='%s', flap='%s'" % [player_index, device_type, device, actions["left"], actions["right"], actions["flap"]])
+	
+	# Validate MultiplayerInput is available
+	if not MultiplayerInput:
+		print("[ERROR] MultiplayerInput not found! Enable the multiplayer_input plugin in Project Settings.")
+
+# Helper function to validate input system health
+func validate_input_system() -> bool:
+	if not MultiplayerInput:
+		print("[ERROR] Player%d: MultiplayerInput plugin not available" % player_index)
+		return false
+	
+	var actions = get_input_actions()
+	for action_key in actions:
+		var action_name = actions[action_key]
+		if not InputMap.has_action(action_name):
+			print("[ERROR] Player%d: Input action '%s' not found in InputMap" % [player_index, action_name])
+			return false
+	
+	print("[INFO] Player%d: Input system validation passed" % player_index)
+	return true
 
 # --- State Management Helper ---
 func set_state(new_state: State):
@@ -117,27 +145,27 @@ func get_input_actions():
 	else:
 		return {"left": "move_left", "right": "move_right", "flap": "flap"} # fallback
 
+func get_input_this_frame() -> Dictionary:
+	var actions = get_input_actions()
+	var input_data = {
+		"direction": MultiplayerInput.get_axis(device, actions["left"], actions["right"]),
+		"flap_just_pressed": MultiplayerInput.is_action_just_pressed(device, actions["flap"]),
+		"flap_held": MultiplayerInput.is_action_pressed(device, actions["flap"])
+	}
+	
+	# Debug output (enable debug_input in inspector for testing)
+	if debug_input and (input_data["direction"] != 0 or input_data["flap_just_pressed"]):
+		print("[DEBUG] Player%d input: dir=%s, flap_press=%s (device=%d)" % [player_index, input_data["direction"], input_data["flap_just_pressed"], device])
+	
+	return input_data
+
 # --- Main Physics Loop ---
 func _physics_process(delta):
 	# --- Input Handling ---
-	var direction_input = 0
-	var flap_input_just_pressed = false
-	var actions = get_input_actions()
-
-	if typeof(input_device) == TYPE_INT:
-		# Controller: Use D-pad buttons only
-		var left = Input.is_joy_button_pressed(input_device, JOY_BUTTON_DPAD_LEFT)
-		var right = Input.is_joy_button_pressed(input_device, JOY_BUTTON_DPAD_RIGHT)
-		direction_input = int(right) - int(left)
-		var flap_now = Input.is_joy_button_pressed(input_device, JOY_BUTTON_A)
-		flap_input_just_pressed = flap_now and not prev_flap_pressed
-		flap_input_held = flap_now
-		prev_flap_pressed = flap_now
-	else:
-		# Keyboard: Use Input Map actions
-		direction_input = Input.get_axis(actions["left"], actions["right"])
-		flap_input_just_pressed = Input.is_action_just_pressed(actions["flap"])
-		flap_input_held = Input.is_action_pressed(actions["flap"])
+	var input_data = get_input_this_frame()
+	var direction_input = input_data["direction"]
+	var flap_input_just_pressed = input_data["flap_just_pressed"]
+	var flap_input_held = input_data["flap_held"]
 
 	if not is_alive:
 		if current_state == State.DEFEATED:
@@ -172,11 +200,11 @@ func _physics_process(delta):
 		State.IDLE:
 			handle_idle_state(delta, direction_input, flap_input_just_pressed)
 		State.WALKING:
-			handle_walking_state(delta, direction_input, flap_input_just_pressed, actions)
+			handle_walking_state(delta, direction_input, flap_input_just_pressed)
 		State.FLYING:
-			handle_flying_state(delta, direction_input, flap_input_just_pressed, flap_input_held, actions)
+			handle_flying_state(delta, direction_input, flap_input_just_pressed, flap_input_held)
 		State.BRAKING:
-			handle_braking_state(delta, direction_input, actions)
+			handle_braking_state(delta, direction_input)
 
 	# 4. Apply Movement and Handle Collisions
 	move_and_slide()
@@ -199,7 +227,7 @@ func _start_respawn_timer():
 	respawn()
 
 # --- State Logic Functions ---
-func handle_idle_state(delta, direction_input, flap_input_pressed):
+func handle_idle_state(delta, direction_input, flap_input_just_pressed):
 	# Stop horizontal movement completely in idle
 	velocity.x = move_toward(velocity.x, 0, 5000 * delta) # Apply high friction
 
@@ -208,12 +236,12 @@ func handle_idle_state(delta, direction_input, flap_input_pressed):
 		transition_to_walking(direction_input)
 
 	# Transition to Flying
-	elif flap_input_pressed:
+	elif flap_input_just_pressed:
 		transition_to_flying()
 
-func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
+func handle_walking_state(delta, direction_input, flap_input_just_pressed):
 	# Check for Flying Transition first
-	if flap_input_pressed:
+	if flap_input_just_pressed:
 		transition_to_flying()
 		return
 	
@@ -221,9 +249,10 @@ func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
 		set_state(State.FLYING)
 		return # Exit this function immediately since we're no longer walking
 
+	var actions = get_input_actions()
 	var walking_speed_animation = {1: 1, 2: 1.4, 3: 1.8}
-	var move_left_pressed = Input.is_action_just_pressed(actions["left"])
-	var move_right_pressed = Input.is_action_just_pressed(actions["right"])
+	var move_left_pressed = MultiplayerInput.is_action_just_pressed(device, actions["left"])
+	var move_right_pressed = MultiplayerInput.is_action_just_pressed(device, actions["right"])
 	var direction_just_pressed = move_left_pressed or move_right_pressed
 	var target_velocity_x = 0.0
 
@@ -248,7 +277,7 @@ func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
 				set_state(State.BRAKING)
 				velocity.x = direction_during_brake * speed_values[current_speed_level]
 				return # Exit handle_walking_state for this frame
-		elif Input.is_action_pressed(actions["left"]) or Input.is_action_pressed(actions["right"]): # Check if holding
+		elif MultiplayerInput.is_action_pressed(device, actions["left"]) or MultiplayerInput.is_action_pressed(device, actions["right"]): # Check if holding
 			if input_matches_facing:
 				# --- Holding Logic (Acceleration) ---
 				hold_change_timer -= delta
@@ -279,7 +308,7 @@ func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
 	velocity.x = target_velocity_x # Instant speed change
 
 	# Reset hold timer if input direction changes or is released
-	if Input.is_action_just_released(actions["left"]) or Input.is_action_just_released(actions["right"]) or direction_input == 0:
+	if MultiplayerInput.is_action_just_released(device, actions["left"]) or MultiplayerInput.is_action_just_released(device, actions["right"]) or direction_input == 0:
 		hold_change_timer = hold_change_interval
 
 	# Check if fallen off an edge
@@ -287,17 +316,19 @@ func handle_walking_state(delta, direction_input, flap_input_pressed, actions):
 	# State remains WALKING (conceptually, falling after walking)
 	# until flap is pressed or landing occurs.
 
-func handle_flying_state(delta, direction_input, flap_input_pressed, local_flap_input_held, actions):
+func handle_flying_state(delta, direction_input, flap_input_just_pressed, flap_input_held):
 	# Store original facing direction and movement direction
 	var was_facing_right = not animated_sprite.flip_h
 	var original_move_direction = sign(velocity.x)
+	
+	var actions = get_input_actions()
 	
 	# Fly animation if not floor / falling
 	if not is_on_floor():
 		animated_sprite.play("P%d_Fly" % player_index)
 	
 	# Flap animation triggered if flap input pressed or just pressed
-	if local_flap_input_held:
+	if flap_input_held:
 		animated_sprite.play("P%d_Flap2" % player_index)
 	else:
 		animated_sprite.play("P%d_Fly" % player_index)
@@ -316,7 +347,7 @@ func handle_flying_state(delta, direction_input, flap_input_pressed, local_flap_
 	# Else (no input and not moving horizontally), keep current facing direction
 
 	# 2. Handle Flap Input (Vertical force & Horizontal logic)
-	if flap_input_pressed:
+	if flap_input_just_pressed:
 		# Apply vertical force
 		velocity.y = flap_force
 		if flap_sound: flap_sound.play()
@@ -343,7 +374,7 @@ func handle_flying_state(delta, direction_input, flap_input_pressed, local_flap_
 			hold_change_timer = hold_change_interval # Reset timer
 
 	# 3. Handle Hold Logic (Only if Flapping AND Holding Direction)
-	elif Input.is_action_pressed(actions["flap"]) and direction_input != 0:
+	elif MultiplayerInput.is_action_pressed(device, actions["flap"]) and direction_input != 0:
 		# --- Holding Logic (Acceleration/Deceleration) ---
 		hold_change_timer -= delta
 		if hold_change_timer <= 0:
@@ -368,18 +399,20 @@ func handle_flying_state(delta, direction_input, flap_input_pressed, local_flap_
 			hold_change_timer = hold_change_interval # Reset timer after hold change
 
 	# 4. Reset Hold Timer if Flap Released or No Direction Input while Flapping
-	if Input.is_action_just_released(actions["flap"]) or (Input.is_action_pressed(actions["flap"]) and direction_input == 0):
+	if MultiplayerInput.is_action_just_released(device, actions["flap"]) or (MultiplayerInput.is_action_pressed(device, actions["flap"]) and direction_input == 0):
 		hold_change_timer = hold_change_interval
 
 
-func handle_braking_state(delta, direction_input, actions):
+func handle_braking_state(delta, direction_input):
 	# 1. If not on floor, immediately transition to flying
 	if not is_on_floor():
 		set_state(State.FLYING)
 		return
 	
-	# 2. If flap is pressde, immediately transition to flying
-	if Input.is_action_just_pressed(actions["flap"]):
+	var actions = get_input_actions()
+	
+	# 2. If flap is pressed, immediately transition to flying
+	if MultiplayerInput.is_action_just_pressed(device, actions["flap"]):
 		transition_to_flying()
 		return
 
@@ -395,7 +428,7 @@ func handle_braking_state(delta, direction_input, actions):
 		# Brake duration for this level finished
 		# Check if the opposite direction is *still held* using is_action_pressed
 		var opposite_direction_action = actions["left"] if direction_during_brake > 0 else actions["right"]
-		var opposite_direction_pressed = Input.is_action_pressed(opposite_direction_action)
+		var opposite_direction_pressed = MultiplayerInput.is_action_pressed(device, opposite_direction_action)
 
 		if opposite_direction_pressed:
 			if current_speed_level > 0:
@@ -407,7 +440,7 @@ func handle_braking_state(delta, direction_input, actions):
 			else:
 				# Braked to Speed 0, start walking in the new direction
 				# Use the actual input axis value to determine the new walking direction
-				var new_direction_input = Input.get_axis(actions["left"], actions["right"])
+				var new_direction_input = MultiplayerInput.get_axis(device, actions["left"], actions["right"])
 				transition_to_walking(new_direction_input)
 		else:
 			# Opposite key released during brake

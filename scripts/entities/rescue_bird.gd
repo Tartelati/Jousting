@@ -24,6 +24,12 @@ func _ready():
 
 
 func _physics_process(delta):
+	# Check if target enemy is still valid before doing anything
+	if not target_enemy or not is_instance_valid(target_enemy):
+		# Enemy was destroyed, clean up and exit
+		queue_free()
+		return
+	
 	# Move horizontally towards the target_x
 	position.x += direction * move_speed * delta
 
@@ -32,8 +38,7 @@ func _physics_process(delta):
 	position.y = target_enemy.global_position.y + sine_offset # Sine wave around enemy's y
 
 	# Check for collision with the target enemy
-	if target_enemy and is_instance_valid(target_enemy):
-		if abs(global_position.x - target_enemy.global_position.x) < 10:
-			# Rescue event: reset enemy to flying
-			target_enemy.rescue_from_hatching()
-			queue_free()
+	if abs(global_position.x - target_enemy.global_position.x) < 10:
+		# Rescue event: reset enemy to flying
+		target_enemy.rescue_from_hatching()
+		queue_free()
