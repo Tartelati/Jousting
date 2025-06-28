@@ -14,6 +14,7 @@ var wave_in_progress = false
 var enemy_basic_scene = preload("res://scenes/entities/enemy_base.tscn")
 var enemy_hunter_scene = preload("res://scenes/entities/enemy_hunter.tscn")
 var shadowlord_scene = preload("res://scenes/entities/shadowlord.tscn")
+var spawn_manager = preload("res://scripts/managers/spawn_manager.gd")
 
 # Spawn parameters
 var spawn_timer = 0
@@ -64,33 +65,51 @@ func start_wave(wave_number = -1):
 		current_wave = wave_number
 	else:
 		current_wave += 1
-		
+	
 	print("Starting Wave %d" % current_wave) # DEBUG
-		
+	
 	# --- Platform Management FIRST ---
-	# This ensures platforms are set correctly even for egg waves
 	_update_platform_states(current_wave)
 	# -------------------------
-		
+	
 	# --- Check for Egg Wave ---
 	if current_wave > 0 and current_wave % 5 == 0:
 		is_egg_wave = true
 		_start_egg_wave()
-		# Don't proceed with normal enemy setup for egg waves
 		emit_signal("wave_started", current_wave)
 		return
 	# --------------------------
 	
 	# --- Normal Enemy Wave Setup ---
-	# Calculate number of enemies for this wave
 	var num_enemies = enemies_per_wave_base + (current_wave - 1) * enemies_per_wave_increment
 	enemies_remaining = num_enemies
-	
-	# Adjust spawn interval based on wave number (gets faster in later waves)
 	spawn_interval = max(0.5, 1.5 - (current_wave - 1) * 0.1)
-	
-	wave_in_progress = true
-	emit_signal("wave_started", current_wave)
+
+	# Build spawn list for SpawnManager
+	var spawn_list = []
+	for i in range(num_enemies):
+		var enemy_type = randi() % 3
+		if current_wave < 3:
+			enemy_type = 0
+		elif current_wave < 5:
+			enemy_type = randi() % 2
+		var scene = enemy_basic_scene
+		if enemy_type == 1:
+			scene = enemy_hunter_scene
+		elif enemy_type == 2:
+			scene = shadowlord_scene
+		spawn_list.append({"scene": scene, "data": {}})
+
+	# Use autoloaded SpawnManager directly
+	if SpawnManager:
+		if not wave_in_progress:
+			wave_in_progress = true
+			emit_signal("wave_started", current_wave)
+		SpawnManager.queue_spawn_batch(spawn_list)
+	else:
+		printerr("WaveManager: SpawnManager autoload not found!")
+
+	# No longer wait for all spawns to complete before starting wave
 	
 
 func _update_platform_states(wave_num):
@@ -160,6 +179,34 @@ func _update_platform_states(wave_num):
 		if collision_shape_node.disabled == target_enabled:
 			collision_shape_node.disabled = not target_enabled
 
+		# NEW: Disable spawn points when platform is disabled
+		_update_platform_spawn_points(p, target_enabled)
+
+# NEW: Helper function to manage spawn points on platforms
+func _update_platform_spawn_points(platform_node: StaticBody2D, enabled: bool):
+	# Find spawn points by their specific names based on platform
+	var spawn_point_name = ""
+	match platform_node.name:
+		"platform1":
+			spawn_point_name = "SpawnPoint4"
+		"platform3": 
+			spawn_point_name = "SpawnPoint1"
+		"platform4":
+			spawn_point_name = "SpawnPoint3"
+		"GroundBase":
+			spawn_point_name = "SpawnPoint2"
+		_:
+			return # No spawn points on this platform
+	
+	var spawn_point = platform_node.get_node_or_null(spawn_point_name)
+	if spawn_point and spawn_point is Marker2D:
+		# Disable/enable the spawn point by setting its process mode
+		if enabled:
+			spawn_point.process_mode = Node.PROCESS_MODE_INHERIT
+			print("[DEBUG] Enabled spawn point: %s on platform: %s" % [spawn_point_name, platform_node.name])
+		else:
+			spawn_point.process_mode = Node.PROCESS_MODE_DISABLED
+			print("[DEBUG] Disabled spawn point: %s on platform: %s" % [spawn_point_name, platform_node.name])
 
 func spawn_enemy():
 	if enemies_remaining <= 0 or spawn_points.size() == 0:
@@ -189,11 +236,14 @@ func spawn_enemy():
 	for point in spawn_points:
 		# Check if it's a Marker2D with the spawn_point script attached
 		if point is Marker2D and point.has_method("can_spawn"):
-			if point.can_spawn():
+			# NEW: Also check if the spawn point is enabled (not disabled by platform management)
+			if point.process_mode != Node.PROCESS_MODE_DISABLED and point.can_spawn():
 				available_spawn_points.append(point)
+
 
 	# 2. Check if any spawn points are available
 	if available_spawn_points.size() == 0:
+		print("[DEBUG] No available spawn points (all disabled or blocked)")
 		return # Skip spawning this cycle
 
 	# 3. Choose a random spawn point from the *available* ones

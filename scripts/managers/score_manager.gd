@@ -1,9 +1,10 @@
 extends Node
 
 # Signals
-signal score_changed(player_index, new_score)
+signal score_changed(player_index: int, new_score: int)
 signal high_score_changed(new_high_score)
-signal lives_changed(player_index, new_lives)
+signal lives_changed(player_index: int, new_lives: int)
+signal bonus_awarded(player_index: int, bonus_amount: int, bonus_type: String)  # NEW
 
 # Properties
 var scores = {}
@@ -123,11 +124,24 @@ func lose_life(player_index: int):
 	if not lives.has(player_index):
 		lives[player_index] = 3
 	lives[player_index] -= 1
-	emit_signal("lives_changed", player_index, lives[player_index])
+	emit_signal("lives_changed", player_index, lives[player_index])	   
+	
+	# Only trigger game over if ALL players have no lives left
 	if lives[player_index] <= 0:
-		var game_manager = get_node_or_null("/root/GameManager")
-		if game_manager:
-			game_manager.game_over()
+		print("[DEBUG] ScoreManager: Player %d has no lives left" % player_index)
+		# Check if any other players still have lives
+		var any_players_alive = false
+		for other_player_index in lives.keys():
+			if other_player_index != player_index and lives[other_player_index] > 0:
+				any_players_alive = true
+				print("[DEBUG] ScoreManager: Player %d still has %d lives" % [other_player_index, lives[other_player_index]])
+				break
+
+		if not any_players_alive:
+			print("[DEBUG] ScoreManager: All players are out of lives, triggering game over")
+			var game_manager = get_node_or_null("/root/GameManager")
+			if game_manager:
+				game_manager.game_over()
 
 func gain_life(player_index: int):
 	if not lives.has(player_index):
@@ -145,3 +159,9 @@ func get_score(player_index: int) -> int:
 
 func get_lives(player_index: int) -> int:
 	return lives.get(player_index, 3)
+
+func add_bonus_score(player_index: int, bonus_amount: int, bonus_type: String = ""):
+	scores[player_index] += bonus_amount
+	emit_signal("score_changed", player_index, scores[player_index])
+	emit_signal("bonus_awarded", player_index, bonus_amount, bonus_type)
+	print("[ScoreManager] Player %d awarded %d bonus points (%s)" % [player_index, bonus_amount, bonus_type])
