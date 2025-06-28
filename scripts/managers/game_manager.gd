@@ -282,9 +282,14 @@ func setup_new_gameplay_scene(player_index: int, main_game_node):
 
 	print("Main Game Scene reported ready, proceeding with setup.")
 
-	# Reset score and lives
-	ScoreManager.reset_score(player_index)
-	ScoreManager.reset_lives(player_index)
+	# Reset ALL players' scores and lives
+	ScoreManager.reset_all_players()
+	
+	# Clear existing players to prevent duplicates
+	for player in player_nodes:
+		if player and is_instance_valid(player):
+			player.queue_free()
+	player_nodes.clear()
 
 	# Find the containers within the provided main_game_node
 	var current_scene_container = main_game_node.get_node_or_null("%CurrentScene")

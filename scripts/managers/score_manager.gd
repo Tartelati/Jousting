@@ -126,22 +126,29 @@ func lose_life(player_index: int):
 	lives[player_index] -= 1
 	emit_signal("lives_changed", player_index, lives[player_index])	   
 	
-	# Only trigger game over if ALL players have no lives left
+	# Only trigger game over if ALL active players have no lives left
 	if lives[player_index] <= 0:
 		print("[DEBUG] ScoreManager: Player %d has no lives left" % player_index)
-		# Check if any other players still have lives
+		
+		# Get all active players from GameManager instead of just lives.keys()
+		var game_manager = get_node_or_null("/root/GameManager")
+		if not game_manager:
+			return
+			
 		var any_players_alive = false
-		for other_player_index in lives.keys():
-			if other_player_index != player_index and lives[other_player_index] > 0:
-				any_players_alive = true
-				print("[DEBUG] ScoreManager: Player %d still has %d lives" % [other_player_index, lives[other_player_index]])
-				break
+		for player in game_manager.player_nodes:
+			if player and is_instance_valid(player):
+				var other_player_index = player.player_index
+				if other_player_index != player_index:
+					var other_player_lives = get_lives(other_player_index)
+					if other_player_lives > 0:
+						any_players_alive = true
+						print("[DEBUG] ScoreManager: Player %d still has %d lives" % [other_player_index, other_player_lives])
+						break
 
 		if not any_players_alive:
 			print("[DEBUG] ScoreManager: All players are out of lives, triggering game over")
-			var game_manager = get_node_or_null("/root/GameManager")
-			if game_manager:
-				game_manager.game_over()
+			game_manager.game_over()
 
 func gain_life(player_index: int):
 	if not lives.has(player_index):
@@ -165,3 +172,19 @@ func add_bonus_score(player_index: int, bonus_amount: int, bonus_type: String = 
 	emit_signal("score_changed", player_index, scores[player_index])
 	emit_signal("bonus_awarded", player_index, bonus_amount, bonus_type)
 	print("[ScoreManager] Player %d awarded %d bonus points (%s)" % [player_index, bonus_amount, bonus_type])
+
+func reset_all_players():
+	# Reset all existing player data
+	for player_index in scores.keys():
+		scores[player_index] = 0
+		lives[player_index] = 3
+		last_life_score[player_index] = 0
+		emit_signal("score_changed", player_index, 0)
+		emit_signal("lives_changed", player_index, 3)
+	
+	# Also clear the dictionaries completely for a fresh start
+	scores.clear()
+	lives.clear()
+	last_life_score.clear()
+	
+	print("[DEBUG] ScoreManager: All players reset")
