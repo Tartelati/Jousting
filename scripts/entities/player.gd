@@ -66,6 +66,9 @@ func _ready():
 	add_to_group("players") # Keep player in group
 	set_state(State.IDLE) # Initialize state properly
 	animated_sprite.play("P%d_Idle" % player_index)
+
+	# Group checks for debugging
+	debug_groups()
 	
 	# Validate input system on startup
 	validate_input_system()
@@ -689,6 +692,25 @@ func _on_vulnerable_area_area_entered(area):
 		print("Player was stomped by enemy!")
 		die() # Or lose_life(player_index)
 
+	# Check for player stomp areas (player vs player) 
+	elif area.is_in_group("player_stomp_areas"):
+		var other_player = area.get_parent()
+		if not other_player or not other_player.is_in_group("players"): return
+		if other_player == self: return # Don't stomp yourself
+
+		print("Player stomped another player!")
+		die()
+
+func debug_groups():
+	print("[DEBUG] Player%d Groups:" % player_index)
+	print("  - Self in 'players': ", is_in_group("players"))
+	if stomp_area:
+		print("  - StompArea in 'player_stomp_areas': ", stomp_area.is_in_group("player_stomp_areas"))
+	if vulnerable_area:
+		print("  - VulnerableArea in 'player_vulnerable_areas': ", vulnerable_area.is_in_group("player_vulnerable_areas"))
+	if collection_area:
+		print("  - CollectionArea in 'player_collectors': ", collection_area.is_in_group("player_collectors"))
+
 func _on_collection_area_area_entered(area):
 	if not is_alive: return
 
@@ -740,15 +762,16 @@ func respawn():
 	is_invincible = true
 	is_respawning = true
 	set_state(State.IDLE)
-	# Find valid spawn point only ONCE
-	var spawn_point = null
-	var spawn_points = get_tree().get_nodes_in_group("SpawnPoints")
-	if spawn_points.size() > 0:
-		spawn_point = spawn_points[randi() % spawn_points.size()]
+	# NEW: Use the same safe spawn logic as enemies
+	var spawn_point = find_safe_spawn_point()
 	if spawn_point:
 		global_position = spawn_point.global_position
+		print("[DEBUG] Player respawned at safe spawn point: %s" % spawn_point.name)
 	else:
+		# Fallback to center-bottom if no safe spawn points
 		global_position = Vector2(get_viewport_rect().size.x / 2, get_viewport_rect().size.y - 100)
+		print("[DEBUG] Player respawned at fallback position (no safe spawn points)")
+   
    
 	velocity = Vector2.ZERO
 	set_collision_layer(1) # Restore to normal
@@ -777,7 +800,25 @@ func respawn():
 	if is_respawning:
 		print("[DEBUG] Fallback: Forcing respawn end after animation duration")
 		_on_respawn_animation_finished(anim_name)
+
+# NEW: Helper function to find safe spawn points (same logic as enemies)
+func find_safe_spawn_point():
+	var all_spawn_points = get_tree().get_nodes_in_group("SpawnPoints")
+	var safe_spawn_points = []
 	
+	for point in all_spawn_points:
+		# Check if it's a Marker2D with the spawn_point script attached
+		if point is Marker2D and point.has_method("can_spawn"):
+			# Check if the spawn point is enabled (not disabled by platform management)
+			if point.process_mode != Node.PROCESS_MODE_DISABLED and point.can_spawn():
+				safe_spawn_points.append(point)
+	
+	if safe_spawn_points.size() > 0:
+		return safe_spawn_points[randi() % safe_spawn_points.size()]
+	else:
+		print("[DEBUG] No safe spawn points available for player respawn")
+		return null
+
 # --- Animation Finished Callback for Respawn ---
 func _on_respawn_animation_finished(anim_name):
 	print("[DEBUG] _on_respawn_animation_finished called with anim_name:", anim_name)

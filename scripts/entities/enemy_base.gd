@@ -10,6 +10,13 @@ enum State {FLYING, WALKING, EGG, HATCHING, DEAD}
 @export var max_walk_time: float = 3.0  # Max time walking before trying to fly
 @export var egg_fall_speed: float = 200.0
 
+@export_group("Egg Physics")
+@export var egg_bounce_damping: float = 0.7  # How much velocity is retained after bounce (0.0 = no bounce, 1.0 = perfect bounce)
+@export var egg_horizontal_damping: float = 0.8  # Horizontal velocity damping on ground bounce
+@export var egg_min_bounce_velocity: float = 50.0  # Minimum velocity needed to bounce
+@export var egg_settling_threshold: float = 10.0  # Velocity below which egg stops bouncing
+@export var air_catch_bonus_multiplier: float = 2.0  # Bonus multiplier for air catches
+
 @export_group("AI Behavior")
 @export var random_flap_chance: float = 0.02 # Chance per physics frame (flying)
 @export var random_dir_change_chance_flying: float = 0.005 # Chance per physics frame
@@ -32,6 +39,11 @@ var is_invincible := false
 var previous_state = null
 var direction = 1
 var walk_time = 0.0
+
+# NEW: Egg state variables
+var egg_has_touched_ground := false  # Track if egg has hit ground (for bonus)
+var egg_is_bouncing := false  # Track if egg is currently bouncing
+var egg_bounce_count := 0  # Track number of bounces
 
 # References
 @onready var hatch_timer = $HatchTimer
@@ -247,17 +259,40 @@ func _on_combat_area_area_entered(area):
 			velocity.y = enemy_bounce_velocity_y
 
 func process_egg(delta):
-	velocity.y = egg_fall_speed + 50
-	velocity.x = 50
+	# Apply gravity
+	velocity.y += gravity * delta
+	
+	# Apply horizontal damping over time (air resistance)
+	velocity.x = move_toward(velocity.x, 0, 20 * delta)
+	
 	move_and_slide()
-
-	# Check if landed on platform and is stationary
-	if is_on_floor() and abs(velocity.y) < 1.0:
-		if current_state != State.HATCHING:
-			current_state = State.HATCHING
-			if hatch_timer and  hatch_timer.is_stopped(): # Check if timer exists and not already started
-				hatch_timer.start()
+	
+	# Handle bouncing when hitting the ground
+	if is_on_floor():
+		if not egg_has_touched_ground:
+			egg_has_touched_ground = true
+			print("[DEBUG] Egg %s touched ground for first time" % name)
 		
+		# Check if we should bounce
+		if abs(velocity.y) > egg_min_bounce_velocity and egg_bounce_count < 5:  # Limit bounces
+			# Apply bounce
+			velocity.y = -velocity.y * egg_bounce_damping
+			velocity.x *= egg_horizontal_damping  # Reduce horizontal velocity on bounce
+			egg_is_bouncing = true
+			egg_bounce_count += 1
+			print("[DEBUG] Egg %s bounce #%d, new velocity: %s" % [name, egg_bounce_count, velocity])
+		else:
+			# Stop bouncing - egg has settled
+			if egg_is_bouncing:
+				egg_is_bouncing = false
+				velocity = Vector2.ZERO
+				print("[DEBUG] Egg %s settled after %d bounces" % [name, egg_bounce_count])
+				
+				# Start hatching timer
+				if hatch_timer and hatch_timer.is_stopped():
+					current_state = State.HATCHING
+					hatch_timer.start()
+	
 	# Enable Egg Collection when in Egg state
 	if egg_area:
 		egg_area.monitoring = true
@@ -275,14 +310,27 @@ func _on_egg_area_area_entered(area):
 		collect_egg(player_index)
 
 func defeat(player_index: int, award_score := true):
+	if is_spawning:
+		return # Don't defeat if spawning
+
 	if current_state == State.EGG or current_state == State.HATCHING or current_state == State.DEAD:
 		return # Already defeated or dead
 
 	current_state = State.EGG
+	is_spawning = false # Ensure we are not in spawning state
+	
+	# NEW: Initialize egg physics state
+	egg_has_touched_ground = false
+	egg_is_bouncing = false
+	egg_bounce_count = 0
+	
+	# Give the egg some initial horizontal velocity based on defeat direction
+	var defeat_horizontal_velocity = randf_range(-150, 150)  # Random horizontal momentum
+	velocity.x = defeat_horizontal_velocity
+	velocity.y = min(velocity.y, 100)  # Ensure egg falls at reasonable speed
 	
 	if enemy_animation: enemy_animation.visible = false
 	if egg_sprite: egg_sprite.visible = true
-	# Change sprite to egg (would use animation in full implementation)
 
 	# Disable combat area
 	if combat_area:
@@ -300,17 +348,25 @@ func defeat(player_index: int, award_score := true):
 	set_collision_mask_value(1, false) # Don't collide with player
 	set_collision_mask_value(2, true) # Do collide with environment.
 	
-	
 	# Signal to score manager to add points
 	if award_score:
 		ScoreManager.add_score(player_index, points_value)
 	
-	# print debug message
 	print("Enemy %s defeated" % name)
 
 func collect_egg(player_index):
-	if current_state == State.DEAD: return # Already collected/dead
+	if current_state == State.DEAD: return
 	current_state = State.DEAD
+	
+	var base_egg_score = 50
+	var is_air_catch = not egg_has_touched_ground
+	
+	# Add base score
+	ScoreManager.add_score(player_index, base_egg_score)
+	
+	# Add bonus if air catch
+	if is_air_catch:
+		ScoreManager.add_bonus_score(player_index, 100, "Air Catch")
 	
 	# Disable both areas
 	if combat_area:
@@ -318,9 +374,6 @@ func collect_egg(player_index):
 	if egg_area:
 		egg_area.set_deferred("monitoring", false)
 		
-	# Add more points for collecting egg
-	ScoreManager.add_score(player_index, points_value / 2) # Use ScoreManager directly
-	
 	# Play collection sound if available
 	if has_node("CollectionSound"):
 		$CollectionSound.play()
@@ -330,6 +383,9 @@ func collect_egg(player_index):
 	queue_free()
 
 func _on_vulnerable_area_area_entered(area):
+	if is_spawning:
+		return # Don't allow stomping while spawn
+
 	if area.is_in_group("player_stomp_areas"):
 		var player = area.get_parent()
 		var player_index = player.player_index if player and player.has_method("player_index") else 1

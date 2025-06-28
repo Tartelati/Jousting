@@ -270,7 +270,7 @@ texture = ExtResource("2_d4no6")
 position = Vector2(1, 10)
 shape = SubResource("CircleShape2D_ltmif")
 
-[node name="CombatArea" type="Area2D" parent="."]
+[node name="CombatArea" type="Area2D" parent="." groups=["enemy_combat_areas"]]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CombatArea"]
 position = Vector2(2, 8)
@@ -300,7 +300,7 @@ visible = false
 position = Vector2(1, 22)
 texture = ExtResource("3_x7n2y")
 
-[node name="VulnerableArea" type="Area2D" parent="."]
+[node name="VulnerableArea" type="Area2D" parent="." groups=["enemy_vulnerable_areas"]]
 collision_layer = 64
 collision_mask = 32
 
@@ -312,7 +312,7 @@ shape = SubResource("RectangleShape2D_s3v6w")
 sprite_frames = SubResource("SpriteFrames_2k2uf")
 animation = &"fly"
 
-[node name="StompArea" type="Area2D" parent="."]
+[node name="StompArea" type="Area2D" parent="." groups=["enemy_stomp_areas"]]
 collision_layer = 32
 collision_mask = 64
 

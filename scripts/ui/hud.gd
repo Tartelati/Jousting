@@ -23,9 +23,10 @@ func _ready():
 		if has_node(score_path):
 			score_labels[i] = get_node(score_path)
 
-	# Connect to ScoreManager signals (assuming ScoreManager emits per-player signals or you adapt this)
+	# Connect to ScoreManager signals
 	ScoreManager.connect("score_changed", _on_score_changed)
 	ScoreManager.connect("lives_changed", _on_lives_changed)
+	ScoreManager.connect("bonus_awarded", _on_bonus_awarded)  # NEW
 
 	# Initialize HUD for all players (if ScoreManager supports per-player data)
 	for i in score_labels.keys():
@@ -50,6 +51,21 @@ func update_lives(player_index: int, lives: int):
 func update_score(player_index: int, score: int):
 	if score_labels.has(player_index):
 		score_labels[player_index].text = str(score)
+
+func show_bonus_text(player_index: int, bonus_amount: int):
+	# Create a temporary label to show bonus points
+	var bonus_label = Label.new()
+	bonus_label.text = "BONUS +%d!" % bonus_amount
+	bonus_label.add_theme_color_override("font_color", Color.YELLOW)
+	# Position it near the player's score area
+	# Add animation to fade out after 2 seconds
+	add_child(bonus_label)
+	
+	# Animate the bonus text
+	var tween = create_tween()
+	tween.parallel().tween_property(bonus_label, "modulate:a", 0.0, 2.0)
+	tween.parallel().tween_property(bonus_label, "position:y", bonus_label.position.y - 50, 2.0)
+	tween.tween_callback(bonus_label.queue_free)
 
 # Example signal handlers for per-player updates
 func _on_score_changed(player_index: int, new_score: int):
@@ -78,3 +94,7 @@ func _on_wave_started(wave_number):
 	tween.tween_interval(1.0)
 	tween.tween_property(wave_notification, "modulate", Color(1, 1, 1, 0), 0.5)
 	tween.tween_callback(wave_notification.queue_free)
+
+# NEW: Handle bonus events
+func _on_bonus_awarded(player_index: int, bonus_amount: int, bonus_type: String):
+	show_bonus_text(player_index, bonus_amount)
