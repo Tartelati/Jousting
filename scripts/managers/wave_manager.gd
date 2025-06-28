@@ -179,6 +179,34 @@ func _update_platform_states(wave_num):
 		if collision_shape_node.disabled == target_enabled:
 			collision_shape_node.disabled = not target_enabled
 
+		# NEW: Disable spawn points when platform is disabled
+		_update_platform_spawn_points(p, target_enabled)
+
+# NEW: Helper function to manage spawn points on platforms
+func _update_platform_spawn_points(platform_node: StaticBody2D, enabled: bool):
+	# Find spawn points by their specific names based on platform
+	var spawn_point_name = ""
+	match platform_node.name:
+		"platform1":
+			spawn_point_name = "SpawnPoint4"
+		"platform3": 
+			spawn_point_name = "SpawnPoint1"
+		"platform4":
+			spawn_point_name = "SpawnPoint3"
+		"GroundBase":
+			spawn_point_name = "SpawnPoint2"
+		_:
+			return # No spawn points on this platform
+	
+	var spawn_point = platform_node.get_node_or_null(spawn_point_name)
+	if spawn_point and spawn_point is Marker2D:
+		# Disable/enable the spawn point by setting its process mode
+		if enabled:
+			spawn_point.process_mode = Node.PROCESS_MODE_INHERIT
+			print("[DEBUG] Enabled spawn point: %s on platform: %s" % [spawn_point_name, platform_node.name])
+		else:
+			spawn_point.process_mode = Node.PROCESS_MODE_DISABLED
+			print("[DEBUG] Disabled spawn point: %s on platform: %s" % [spawn_point_name, platform_node.name])
 
 func spawn_enemy():
 	if enemies_remaining <= 0 or spawn_points.size() == 0:
@@ -208,11 +236,14 @@ func spawn_enemy():
 	for point in spawn_points:
 		# Check if it's a Marker2D with the spawn_point script attached
 		if point is Marker2D and point.has_method("can_spawn"):
-			if point.can_spawn():
+			# NEW: Also check if the spawn point is enabled (not disabled by platform management)
+			if point.process_mode != Node.PROCESS_MODE_DISABLED and point.can_spawn():
 				available_spawn_points.append(point)
+
 
 	# 2. Check if any spawn points are available
 	if available_spawn_points.size() == 0:
+		print("[DEBUG] No available spawn points (all disabled or blocked)")
 		return # Skip spawning this cycle
 
 	# 3. Choose a random spawn point from the *available* ones
