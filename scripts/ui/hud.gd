@@ -52,13 +52,32 @@ func update_score(player_index: int, score: int):
 	if score_labels.has(player_index):
 		score_labels[player_index].text = str(score)
 
-func show_bonus_text(player_index: int, bonus_amount: int):
+func show_bonus_text(player_index: int, bonus_amount: int, world_position: Vector2 = Vector2.ZERO):
 	# Create a temporary label to show bonus points
 	var bonus_label = Label.new()
 	bonus_label.text = "BONUS +%d!" % bonus_amount
 	bonus_label.add_theme_color_override("font_color", Color.YELLOW)
-	# Position it near the player's score area
-	# Add animation to fade out after 2 seconds
+	bonus_label.add_theme_font_size_override("font_size", 24)
+
+	# Position the bonus text
+	var screen_position: Vector2
+	if world_position != Vector2.ZERO:
+		# Convert world position to screen position
+		var camera = get_viewport().get_camera_2d()
+		if camera:
+			screen_position = camera.to_screen_pos(world_position)
+		else:
+			# Fallback: assume no camera transformation
+			screen_position = world_position
+		
+		# Adjust position to center the text
+		screen_position.x -= bonus_label.get_theme_default_font().get_string_size(bonus_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, bonus_label.get_theme_font_size("font_size")).x / 2
+		screen_position.y -= 20  # Offset upward from the egg position
+	else:
+		# Fallback position if no world position provided
+		screen_position = Vector2(100, 100)
+	
+	bonus_label.position = screen_position
 	add_child(bonus_label)
 	
 	# Animate the bonus text
@@ -66,6 +85,9 @@ func show_bonus_text(player_index: int, bonus_amount: int):
 	tween.parallel().tween_property(bonus_label, "modulate:a", 0.0, 2.0)
 	tween.parallel().tween_property(bonus_label, "position:y", bonus_label.position.y - 50, 2.0)
 	tween.tween_callback(bonus_label.queue_free)
+
+	print("[HUD] Showing bonus text for Player %d: +%d points at world pos %s" % [player_index, bonus_amount, world_position])
+
 
 # Example signal handlers for per-player updates
 func _on_score_changed(player_index: int, new_score: int):
@@ -96,5 +118,5 @@ func _on_wave_started(wave_number):
 	tween.tween_callback(wave_notification.queue_free)
 
 # NEW: Handle bonus events
-func _on_bonus_awarded(player_index: int, bonus_amount: int, bonus_type: String):
-	show_bonus_text(player_index, bonus_amount)
+func _on_bonus_awarded(player_index: int, bonus_amount: int, bonus_type: String, world_position: Vector2 = Vector2.ZERO):
+	show_bonus_text(player_index, bonus_amount, world_position)

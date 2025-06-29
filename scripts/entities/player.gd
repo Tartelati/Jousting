@@ -707,7 +707,7 @@ func debug_groups():
 	if stomp_area:
 		print("  - StompArea in 'player_stomp_areas': ", stomp_area.is_in_group("player_stomp_areas"))
 	if vulnerable_area:
-		print("  - VulnerableArea in 'player_vulnerable_areas': ", vulnerable_area.is_in_group("player_vulnerable_areas"))
+		print("  - VulnerableArea in 'vulnerable_areas': ", vulnerable_area.is_in_group("player_vulnerable_areas"))
 	if collection_area:
 		print("  - CollectionArea in 'player_collectors': ", collection_area.is_in_group("player_collectors"))
 
@@ -728,103 +728,152 @@ func _on_collection_area_area_entered(area):
 # --- Death and Respawn ---
 
 func die():
-	defeated_time = 0.0
-	if not is_alive or is_invincible: return
-	print("[DEBUG] die called")
+	print("[DEBUG] Player%d die() called" % player_index)
+	
+	if not is_alive:
+		return # Already dead
+	
 	is_alive = false
 	set_state(State.DEFEATED)
 	
-	# Play defeated animation
-	animated_sprite.play("P%d_defeated" % player_index)
+	# Lose a life
+	ScoreManager.lose_life(player_index)
 	
-	# Disable collisions (optional: or set collision mask/layer to 0)
-	set_collision_layer(0)
-	set_collision_mask(0)
+	# Check if this player has any lives left
+	var remaining_lives = ScoreManager.get_lives(player_index)
+	print("[DEBUG] Player%d has %d lives remaining" % [player_index, remaining_lives])
 	
-	# Set fly-off velocity 
-	var fly_direction = -1 if global_position.x > get_viewport_rect().size.x / 2 else 1
-	defeated_fly_time = 0.0
-	defeated_fly_direction = fly_direction
-	velocity = Vector2(fly_direction * 300, 0)
-	animated_sprite.flip_h = fly_direction < 0
-
-	# Notify game manager (ensure ScoreManager exists and has lose_life)
-	var score_manager = get_node_or_null("/root/ScoreManager")
-	if score_manager and score_manager.has_method("lose_life"):
-		score_manager.lose_life(player_index)
+	if remaining_lives > 0:
+		# Player has lives left - respawn after delay
+		print("[DEBUG] Player%d will respawn (has lives left)" % player_index)
+		# Wait a moment before respawning
+		await get_tree().create_timer(2.0).timeout
+		respawn()
 	else:
-		print("Error: ScoreManager or lose_life method not found!")
+		# Player is permanently dead - no more respawns
+		print("[DEBUG] Player%d is permanently dead (no lives left)" % player_index)
+		set_permanently_dead()
 
+# NEW: Function to handle permanent death
+func set_permanently_dead():
+	print("[DEBUG] Player%d set to permanently dead" % player_index)
+	is_alive = false
+	set_state(State.DEFEATED)
+	
+	# Hide the player completely
+	visible = false
+	set_collision_layer_value(1, false)  # Remove from player collision layer
+	set_collision_mask_value(2, false)   # Stop colliding with environment
+	
+	# Disable all areas
+	if stomp_area:
+		stomp_area.monitoring = false
+		stomp_area.monitorable = false
+	if vulnerable_area:
+		vulnerable_area.monitoring = false  
+		vulnerable_area.monitorable = false
+	if collection_area:
+		collection_area.monitoring = false
+		collection_area.monitorable = false
+	
+	# Stop all input processing
+	set_physics_process(false)
+	set_process_input(false)
+	
+	print("[DEBUG] Player%d permanently disabled" % player_index)
 
 func respawn():
-	print("[DEBUG] respawn called")
+	# Check if player has lives before respawning
+	var remaining_lives = ScoreManager.get_lives(player_index)
+	if remaining_lives <= 0:
+		print("[DEBUG] Player%d cannot respawn - no lives left" % player_index)
+		set_permanently_dead()
+		return
+	
+	print("[DEBUG] Player%d respawn called (lives: %d)" % [player_index, remaining_lives])
 	is_alive = true
 	is_invincible = true
 	is_respawning = true
 	set_state(State.IDLE)
-	# NEW: Use the same safe spawn logic as enemies
+	
+	# Make player visible again
+	visible = true
+	
+	# Re-enable physics and input
+	set_physics_process(true)
+	set_process_input(true)
+	
+	# Find a safe spawn point
 	var spawn_point = find_safe_spawn_point()
 	if spawn_point:
 		global_position = spawn_point.global_position
-		print("[DEBUG] Player respawned at safe spawn point: %s" % spawn_point.name)
+		print("[DEBUG] Player%d respawned at safe spawn point: %s" % [player_index, spawn_point.name])
 	else:
 		# Fallback to center-bottom if no safe spawn points
 		global_position = Vector2(get_viewport_rect().size.x / 2, get_viewport_rect().size.y - 100)
-		print("[DEBUG] Player respawned at fallback position (no safe spawn points)")
-   
+		print("[DEBUG] Player%d respawned at fallback position (no safe spawn points)" % player_index)
    
 	velocity = Vector2.ZERO
-	set_collision_layer(1) # Restore to normal
-	set_collision_mask(2)
-	var anim_name = "P%d_spawn" % player_index
-	print("[DEBUG] Playing respawn animation:", anim_name)
-	print("[DEBUG] Available animations:", animated_sprite.sprite_frames.get_animation_names())
-	animated_sprite.play(anim_name)
-	set_physics_process(true) # Resume physics processing
-		# Disconnect previous to avoid duplicate connections
-	# if animated_sprite.is_connected("animation_finished", _on_respawn_animation_finished):
-	# 	print("[DEBUG] Disconnecting previous animation_finished signal")
-	# 	animated_sprite.disconnect("animation_finished", _on_respawn_animation_finished)
-	# print("[DEBUG] Connecting animation_finished signal")
-	# animated_sprite.connect("animation_finished", _on_respawn_animation_finished)
-
-	# Fallback: Timer in case signal doesn't fire
-	var frame_count = animated_sprite.sprite_frames.get_frame_count(anim_name)
-	var fps = animated_sprite.sprite_frames.get_animation_speed(anim_name)
-	var anim_length = 0.0
-	if fps > 0:
-		anim_length = frame_count / fps
+	
+	# Restore collision layers
+	set_collision_layer_value(1, true)  # Player layer
+	set_collision_mask_value(2, true)   # Environment collision
+	
+	# Re-enable all areas
+	if stomp_area:
+		stomp_area.monitoring = true
+		stomp_area.monitorable = true
+	if vulnerable_area:
+		vulnerable_area.monitoring = true
+		vulnerable_area.monitorable = true
+	if collection_area:
+		collection_area.monitoring = true
+		collection_area.monitorable = true
+	
+	# Handle respawn animation
+	var respawn_anim_name = "P%d_Respawn" % player_index  # Use player-specific animation name
+	if animated_sprite.sprite_frames.has_animation(respawn_anim_name):
+		animated_sprite.play(respawn_anim_name)
+		print("[DEBUG] Playing respawn animation: %s" % respawn_anim_name)
+		
+		# Connect to animation_finished signal if not already connected
+		if not animated_sprite.is_connected("animation_finished", Callable(self, "_on_respawn_animation_finished")):
+			animated_sprite.connect("animation_finished", Callable(self, "_on_respawn_animation_finished"))
+		
+		# Wait for the animation to finish (it will call _on_respawn_animation_finished)
 	else:
-		anim_length = 0.5 # fallback if FPS is zero
-	await get_tree().create_timer(anim_length + 0.1).timeout
-	if is_respawning:
-		print("[DEBUG] Fallback: Forcing respawn end after animation duration")
-		_on_respawn_animation_finished(anim_name)
+		# No respawn animation, finish respawn immediately
+		print("[DEBUG] No respawn animation found ('%s'), finishing respawn immediately" % respawn_anim_name)
+		_finish_respawn()
 
-# NEW: Helper function to find safe spawn points (same logic as enemies)
+func _on_respawn_animation_finished(anim_name: String):
+	print("[DEBUG] Animation '%s' finished for Player%d" % [anim_name, player_index])
+	if anim_name == ("P%d_Respawn" % player_index) and is_respawning:
+		_finish_respawn()
+
+func _finish_respawn():
+	print("[DEBUG] Player%d respawn finished" % player_index)
+	is_respawning = false
+	is_invincible = false
+	set_state(State.IDLE)
+	
+	# Disconnect the animation signal to prevent future conflicts
+	if animated_sprite.is_connected("animation_finished", Callable(self, "_on_respawn_animation_finished")):
+		animated_sprite.disconnect("animation_finished", Callable(self, "_on_respawn_animation_finished"))
+
 func find_safe_spawn_point():
-	var all_spawn_points = get_tree().get_nodes_in_group("SpawnPoints")
-	var safe_spawn_points = []
+	# Look for spawn points in the scene
+	var spawn_points = get_tree().get_nodes_in_group("player_spawn_points")
+	if spawn_points.size() == 0:
+		# Fallback: look for nodes with "spawn" in the name
+		var all_markers = get_tree().get_nodes_in_group("spawn_markers")
+		for marker in all_markers:
+			if "player" in marker.name.to_lower() or "spawn" in marker.name.to_lower():
+				spawn_points.append(marker)
 	
-	for point in all_spawn_points:
-		# Check if it's a Marker2D with the spawn_point script attached
-		if point is Marker2D and point.has_method("can_spawn"):
-			# Check if the spawn point is enabled (not disabled by platform management)
-			if point.process_mode != Node.PROCESS_MODE_DISABLED and point.can_spawn():
-				safe_spawn_points.append(point)
+	if spawn_points.size() > 0:
+		# Return a random spawn point
+		return spawn_points[randi() % spawn_points.size()]
 	
-	if safe_spawn_points.size() > 0:
-		return safe_spawn_points[randi() % safe_spawn_points.size()]
-	else:
-		print("[DEBUG] No safe spawn points available for player respawn")
-		return null
-
-# --- Animation Finished Callback for Respawn ---
-func _on_respawn_animation_finished(anim_name):
-	print("[DEBUG] _on_respawn_animation_finished called with anim_name:", anim_name)
-	if anim_name == "P%d_spawn" % player_index:
-		is_invincible = false
-		is_respawning = false
-		print("[DEBUG] Respawn animation finished, player can move again")
-		# Optionally, transition to idle/walk animation here
-		animated_sprite.disconnect("animation_finished", _on_respawn_animation_finished)
+	print("[DEBUG] No spawn points found for Player%d" % player_index)
+	return null

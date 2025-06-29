@@ -78,10 +78,14 @@ func _ready():
 	# Add areas to groups and connect signals
 	if combat_area:
 		combat_area.add_to_group("enemy_combat_areas") # Add area to group
+		combat_area.connect("area_entered", _on_combat_area_area_entered)
 	if vulnerable_area:
 		vulnerable_area.add_to_group("enemy_vulnerable_areas") # Add area to group
+		vulnerable_area.connect("area_entered", _on_vulnerable_area_area_entered)
 	if stomp_area:
 		stomp_area.add_to_group("enemy_stomp_areas")
+		# Note: stomp_area doesn't need signal connection - it's detected by players
+
 	
 	# Connect egg area signal and add it to group
 	if egg_area:
@@ -345,6 +349,11 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 	var base_upward_force = -150.0  # Base upward velocity
 	velocity.y = base_upward_force * player_speed_factor
 	
+	# FIX: For egg waves, don't apply velocity (eggs should just fall)
+	if player_velocity == Vector2.ZERO:
+		velocity.x = randf_range(-50, 50)  # Small random horizontal velocity
+		velocity.y = 0  # No initial vertical velocity for spawned eggs
+	
 	print("[DEBUG] Egg defeated with player velocity: %s, speed factor: %.2f, egg velocity: %s" % [player_velocity, player_speed_factor, velocity])
 	
 	if enemy_animation: enemy_animation.visible = false
@@ -365,9 +374,9 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 	set_collision_layer_value(4, true) # Turn on egg layer
 	set_collision_mask_value(1, false) # Don't collide with player
 	set_collision_mask_value(2, true) # Do collide with environment only
-	set_collision_mask_value(3, false) # NEW: Don't collide with other enemies
+	set_collision_mask_value(3, false) # Don't collide with other enemies
 	
-	# Signal to score manager to add points
+	# Signal to score manager to add points (only if awarded)
 	if award_score:
 		ScoreManager.add_score(player_index, points_value)
 	
@@ -379,13 +388,16 @@ func collect_egg(player_index):
 	
 	var base_egg_score = 50
 	var is_air_catch = not egg_has_touched_ground
-	
+
+	# Store the egg's world position before cleanup
+	var egg_world_position = global_position
+
 	# Add base score
 	ScoreManager.add_score(player_index, base_egg_score)
 	
 	# Add bonus if air catch
 	if is_air_catch:
-		ScoreManager.add_bonus_score(player_index, 100, "Air Catch")
+		ScoreManager.add_bonus_score(player_index, 100, "Air Catch", egg_world_position)
 	
 	# Disable both areas
 	if combat_area:
@@ -402,17 +414,23 @@ func collect_egg(player_index):
 	queue_free()
 
 func _on_vulnerable_area_area_entered(area):
+	print("[DEBUG] %s vulnerable area entered by: %s" % [name, area.name])
+	
 	if is_spawning:
+		print("[DEBUG] %s is spawning, ignoring stomp" % name)
 		return # Don't allow stomping while spawn
 
 	if area.is_in_group("player_stomp_areas"):
 		var player = area.get_parent()
 		var player_index = player.player_index if player and player.has_method("player_index") else 1
+		print("[DEBUG] %s being stomped by Player%d" % [name, player_index])
 		print("STOMP!!")
 		if player and player.is_in_group("players"):
 			# NEW: Pass player's velocity to defeat function
 			defeat(player_index, true, player.velocity)
 			player.velocity.y = player.joust_bounce_velocity
+	else:
+		print("[DEBUG] %s vulnerable area entered by non-player-stomp area: %s (groups: %s)" % [name, area.name, area.get_groups()])
 
 func _on_hatch_timer_timeout():
 	print("[DEBUG] Hatch timer timeout for %s (current state: %s)" % [name, current_state])
