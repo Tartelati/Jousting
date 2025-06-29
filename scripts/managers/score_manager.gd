@@ -4,7 +4,7 @@ extends Node
 signal score_changed(player_index: int, new_score: int)
 signal high_score_changed(new_high_score)
 signal lives_changed(player_index: int, new_lives: int)
-signal bonus_awarded(player_index: int, bonus_amount: int, bonus_type: String)  # NEW
+signal bonus_awarded(player_index: int, bonus_amount: int, bonus_type: String, world_position: Vector2)  # NEW with world position
 
 # Properties
 var scores = {}
@@ -167,11 +167,11 @@ func get_score(player_index: int) -> int:
 func get_lives(player_index: int) -> int:
 	return lives.get(player_index, 3)
 
-func add_bonus_score(player_index: int, bonus_amount: int, bonus_type: String = ""):
+func add_bonus_score(player_index: int, bonus_amount: int, bonus_type: String = "", world_position: Vector2 = Vector2.ZERO):
 	scores[player_index] += bonus_amount
 	emit_signal("score_changed", player_index, scores[player_index])
-	emit_signal("bonus_awarded", player_index, bonus_amount, bonus_type)
-	print("[ScoreManager] Player %d awarded %d bonus points (%s)" % [player_index, bonus_amount, bonus_type])
+	emit_signal("bonus_awarded", player_index, bonus_amount, bonus_type, world_position)
+	print("[ScoreManager] Player %d awarded %d bonus points (%s) at %s" % [player_index, bonus_amount, bonus_type, world_position])
 
 func reset_all_players():
 	# Reset all existing player data

@@ -36,7 +36,7 @@ func _find_spawn_points_recursive(node):
 		_find_spawn_points_recursive(child)
 
 func _process(delta):
-	if wave_in_progress and not is_egg_wave and enemies_remaining > 0: # Only spawn enemies in non-egg waves
+	if wave_in_progress and not is_egg_wave and enemies_remaining > 0:
 		# Handle enemy spawning
 		spawn_timer += delta
 		if spawn_timer >= spawn_interval:
@@ -47,15 +47,15 @@ func _process(delta):
 	if wave_in_progress:
 		var enemies_in_scene = get_tree().get_nodes_in_group("enemies").size()
 		if is_egg_wave:
-			# Egg wave ends when no collectible eggs AND no enemies (hatched or otherwise) are left
-			var eggs_in_scene = get_tree().get_nodes_in_group("enemies").size()
-			if eggs_in_scene == 0 and enemies_in_scene == 0:
-				print("Egg wave complete condition met.") # DEBUG
+			# FIX 2: Egg wave ends when no enemies are left in the scene (they get removed when collected)
+			print("[DEBUG] Egg wave check - enemies in scene: %d" % enemies_in_scene)
+			if enemies_in_scene == 0:
+				print("Egg wave complete - all eggs collected or hatched!")
 				wave_finished()
 		else:
 			# Normal wave ends when enemies_remaining is 0 AND no enemies are left in the scene
 			if enemies_remaining == 0 and enemies_in_scene == 0:
-				print("Normal wave complete condition met.") # DEBUG
+				print("Normal wave complete condition met.")
 				wave_finished()
 
 
@@ -273,7 +273,7 @@ func _start_egg_wave():
 		return
 
 	var num_eggs_to_spawn = randi_range(15, 25)
-	print("[DEBUG] Number of eggs to spawn: %d" % num_eggs_to_spawn) # Ensure we don't exceed the number of available spawn points
+	print("[DEBUG] Number of eggs to spawn: %d" % num_eggs_to_spawn)
 
 	for i in range(num_eggs_to_spawn):
 		var random_marker = egg_spawn_markers.pick_random()
@@ -283,14 +283,17 @@ func _start_egg_wave():
 		# Instantiate the enemy_base scene
 		var enemy_body = enemy_basic_scene.instantiate()
 		if enemy_body:
-			enemy_body.global_position = random_marker.global_position # Set position of the egg
-			get_parent().add_child(enemy_body) # Add egg to the level
-			enemy_body.call_deferred("defeat", false)
+			enemy_body.global_position = random_marker.global_position
+			get_parent().add_child(enemy_body)
+			
+			# FIX 1: Properly call defeat with a valid player_index and no score award
+			enemy_body.call_deferred("defeat", 1, false, Vector2.ZERO)
+			
 			print("[DEBUG] Set enemy state to EGG for: %s" % enemy_body.name)
 		else:
-			print("[ERROR] Could not set EGG state for: %s" % enemy_body.name)
-		#
-		print("[DEBUG WaveManager _start_egg_wave] Added egg instance: %s to group 'enemies' at %s" % [enemy_body.name, enemy_body.global_position]) # DEBUG Updated
+			print("[ERROR] Could not create enemy body")
+
+	print("[DEBUG WaveManager _start_egg_wave] Spawned %d eggs for wave %d" % [num_eggs_to_spawn, current_wave])
 
 func wave_finished():
 	wave_in_progress = false
