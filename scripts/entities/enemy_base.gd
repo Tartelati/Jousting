@@ -423,10 +423,17 @@ func _on_vulnerable_area_area_entered(area):
 	if area.is_in_group("player_stomp_areas"):
 		var player = area.get_parent()
 		var player_index = player.player_index if player and player.has_method("player_index") else 1
+		
+		# New position check: player must be higher to stomp enemy
+		var position_tolerance = 20.0  # Allow some tolerance for player position
+		if player.global_position.y > global_position.y + position_tolerance:
+			print("[DEBUG] Player%d is not high enough to stomp %s" % [player_index, name])
+			return # Not high enough to stomp
+		
 		print("[DEBUG] %s being stomped by Player%d" % [name, player_index])
 		print("STOMP!!")
 		if player and player.is_in_group("players"):
-			# NEW: Pass player's velocity to defeat function
+			# Pass player's velocity to defeat function
 			defeat(player_index, true, player.velocity)
 			player.velocity.y = player.joust_bounce_velocity
 	else:
