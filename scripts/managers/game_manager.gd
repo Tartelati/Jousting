@@ -1,6 +1,11 @@
 extends Node
 
-var player_scene = preload("res://scenes/entities/player.tscn")
+var player_scenes = [
+	preload("res://scenes/entities/player1.tscn"),
+	preload("res://scenes/entities/player2.tscn"),
+	preload("res://scenes/entities/player3.tscn"), 
+	preload("res://scenes/entities/player4.tscn")
+]	
 var player_nodes = [] # Store references to player instances
 
 enum GameState {MAIN_MENU, PLAYING, PAUSED, GAME_OVER}
@@ -183,6 +188,7 @@ func spawn_players(num_players: int, spawn_positions: Array = []):
 	# Spawn the requested number of players
 	for i in range(num_players):
 		var player_index = i + 1
+		var player_scene = player_scenes[player_index - 1]
 		var player = player_scene.instantiate()
 		player.player_index = player_index
 		player.global_position = positions[i]
@@ -225,6 +231,7 @@ func spawn_single_player(player_index: int, position: Vector2 = Vector2.ZERO):
 		var default_positions = [Vector2(200, 467), Vector2(600, 467), Vector2(400, 467), Vector2(800, 467)]
 		spawn_position = default_positions[player_index - 1] if player_index <= 4 else Vector2(400, 467)
 	
+	var player_scene = player_scenes[player_index - 1]
 	var player = player_scene.instantiate()
 	player.player_index = player_index
 	player.global_position = spawn_position
@@ -261,6 +268,7 @@ func spawn_single_player_with_device(player_index: int, device_id: int, position
 		var default_positions = [Vector2(200, 467), Vector2(600, 467), Vector2(400, 467), Vector2(800, 467)]
 		spawn_position = default_positions[player_index - 1] if player_index <= 4 else Vector2(400, 467)
 	
+	var player_scene = player_scenes[player_index - 1]
 	var player = player_scene.instantiate()
 	player.player_index = player_index
 	player.global_position = spawn_position

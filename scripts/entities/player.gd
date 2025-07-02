@@ -45,6 +45,8 @@ var device: int = -1 # Device ID: -1 for keyboard, 0+ for controllers
 @onready var collection_area: Area2D = $CollectionArea # Keep existing collection area reference
 @onready var stomp_area: Area2D = $StompArea # Keep existing stomp area reference
 @onready var vulnerable_area: Area2D = $VulnerableArea
+@onready var walking_collision = $WalkingCollisionShape2D
+@onready var flying_collision = $FlyingCollisionShape2D
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
@@ -120,18 +122,26 @@ func set_state(new_state: State):
 	# Logic executed ONLY on entering a state
 	match new_state:
 		State.IDLE:
+			walking_collision.disabled = false
+			flying_collision.disabled = true
 			stop_audio()
 			animated_sprite.play("P%d_Idle" % player_index)
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.WALKING:
+			walking_collision.disabled = false
+			flying_collision.disabled = true
 			play_walking_audio()
 			animated_sprite.play("P%d_Walk" % player_index)
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.FLYING:
+			walking_collision.disabled = true
+			flying_collision.disabled = false
 			play_flying_audio()
 			animated_sprite.play("P%d_Fly" % player_index)
 			hold_change_timer = hold_change_interval # Reset hold timer
 		State.BRAKING:
+			walking_collision.disabled = false
+			flying_collision.disabled = true
 			# Keep walking audio playing during brake
 			animated_sprite.play("P%d_Brake" % player_index)
 			hold_change_timer = hold_change_interval # Reset hold timer
@@ -688,6 +698,13 @@ func _on_vulnerable_area_area_entered(area):
 	if area.is_in_group("enemy_stomp_areas"):
 		var enemy = area.get_parent()
 		if not enemy or not enemy.is_in_group("enemies"): return
+
+		# NEW position check: enemy must be higher than player in order to stomp
+		var position_tolerance = 20.0 # Allow some tolerance for slight misalignment
+		if enemy.global_position.y > global_position.y + position_tolerance:
+			print("[DEBUG] Enemy not high enough to stomp player (Enemy Y: %.1f, Player Y: %.1f)" % [enemy.global_position.y, global_position.y])
+			return
+
 
 		print("Player was stomped by enemy!")
 		die() # Or lose_life(player_index)
