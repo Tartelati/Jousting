@@ -359,15 +359,25 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 	if enemy_animation: enemy_animation.visible = false
 	if egg_sprite: egg_sprite.visible = true
 
-	# Disable combat area
+	# Disable combat area IMMEDIATELY
 	if combat_area:
-		combat_area.set_deferred("monitoring", false)
-		combat_area.set_deferred("monitorable", false)
+		combat_area.monitoring = false
+		combat_area.monitorable = false
 	
-	# Enable egg area for collection
+	# Disable stomp area IMMEDIATELY (this was missing!)
+	if stomp_area:
+		stomp_area.monitoring = false
+		stomp_area.monitorable = false
+	
+	# Disable vulnerable area IMMEDIATELY
+	if vulnerable_area:
+		vulnerable_area.monitoring = false
+		vulnerable_area.monitorable = false
+	
+	# Enable egg area for collection IMMEDIATELY
 	if egg_area:
-		egg_area.set_deferred("monitoring", true)
-		egg_area.set_deferred("monitorable", true)
+		egg_area.monitoring = true
+		egg_area.monitorable = true
 	
 	# Change collision layers for the main body
 	set_collision_layer_value(3, false) # Turn off enemy layer
@@ -399,11 +409,19 @@ func collect_egg(player_index):
 	if is_air_catch:
 		ScoreManager.add_bonus_score(player_index, 100, "Air Catch", egg_world_position)
 	
-	# Disable both areas
+	# Disable all areas IMMEDIATELY
 	if combat_area:
-		combat_area.set_deferred("monitoring", false)
+		combat_area.monitoring = false
+		combat_area.monitorable = false
 	if egg_area:
-		egg_area.set_deferred("monitoring", false)
+		egg_area.monitoring = false
+		egg_area.monitorable = false
+	if stomp_area:
+		stomp_area.monitoring = false
+		stomp_area.monitorable = false
+	if vulnerable_area:
+		vulnerable_area.monitoring = false
+		vulnerable_area.monitorable = false
 		
 	# Play collection sound if available
 	if has_node("CollectionSound"):

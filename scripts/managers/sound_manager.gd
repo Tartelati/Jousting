@@ -29,7 +29,7 @@ var sfx_paths = {
 # Music paths
 var music_paths = {
 	"menu": "res://assets/sounds/music/mainmenumusic_placeholder.ogg",
-	#"gameplay": "res://assets/sounds/music/gameplay_music.ogg",
+	"gameplay": "res://assets/sounds/music/LaLouille Music/Mixdown-Projet-6.ogg",
 	#"game_over": "res://assets/sounds/music/game_over_music.ogg"
 }
 

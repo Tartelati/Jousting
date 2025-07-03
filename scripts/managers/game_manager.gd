@@ -88,16 +88,16 @@ func _process(_delta):
 		# Add periodic debug output every 2 seconds to show system status
 		if Engine.get_process_frames() % 120 == 0:  # Every 2 seconds at 60fps
 			var assigned_devices = get_assigned_devices()
-			print("[DEBUG] GameManager: Active players: %d, Connected joypads: %s" % [player_nodes.size(), joypads])
-			print("[DEBUG] GameManager: Game state: %s, Can join: %s" % [GameState.keys()[current_state], current_state == GameState.PLAYING and player_nodes.size() < 4])
-			print("[DEBUG] GameManager: Player details:")
+			#print("[DEBUG] GameManager: Active players: %d, Connected joypads: %s" % [player_nodes.size(), joypads])
+			#print("[DEBUG] GameManager: Game state: %s, Can join: %s" % [GameState.keys()[current_state], current_state == GameState.PLAYING and player_nodes.size() < 4])
+			#print("[DEBUG] GameManager: Player details:")
 			for i in range(player_nodes.size()):
 				var p = player_nodes[i]
 				if p and is_instance_valid(p):
 					print("  - Player%d: device=%d, position=%s" % [p.player_index, p.device, p.global_position])
 				else:
 					print("  - Player slot %d: invalid/null" % [i + 1])
-			print("[DEBUG] GameManager: Assigned devices: ", assigned_devices)
+			#print("[DEBUG] GameManager: Assigned devices: ", assigned_devices)
 		
 		for controller_id in joypads:
 			# Additional debug: Check if MultiplayerInput detects the button press
