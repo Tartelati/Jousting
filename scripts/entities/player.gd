@@ -595,75 +595,6 @@ func screen_wrapping():
 	elif global_position.x > viewport_rect.x + screen_wrap_buffer:
 		global_position.x = -screen_wrap_buffer
 
-
-# --- Combat / Interaction Logic ---
-
-func _on_combat_area_area_entered(area):
-	if not is_alive: return
-
-	# Player vs Enemy Collision
-	if area.is_in_group("enemy_combat_areas"):
-		var enemy = area.get_parent()
-		if not enemy or not enemy.is_in_group("enemies"): return # Use Enemy group
-
-		# Skip if enemy is in egg/hatching state
-		if "current_state" in enemy and "State" in enemy and \
-			(enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING):
-			return
-
-		# --- Joust Logic ---
-		var enemy_velocity_y = enemy.velocity.y if "velocity" in enemy else 0.0
-		var relative_velocity_y = velocity.y - enemy_velocity_y
-
-		if relative_velocity_y > collision_y_threshold: # Player moving down relative to enemy
-			# Check if stomp area is overlapping enemy vulnerable area
-			var is_stomping = false
-			if stomp_area:
-				for overlapping_area in stomp_area.get_overlapping_areas():
-					if overlapping_area.is_in_group("enemy_vulnerable_areas") and overlapping_area.get_parent() == enemy:
-						is_stomping = true
-						break
-			if not is_stomping:
-				print("Player lost joust")
-				die()
-			# else: Stomp success handled by _on_stomp_area_area_entered
-
-		elif relative_velocity_y < -collision_y_threshold: # Player moving up relative to enemy
-			# Player wins joust - bounce handled by _on_stomp_area_area_entered
-			print("Player won joust (velocity check)")
-			# velocity.y = joust_bounce_velocity # Bounce is applied in stomp handler
-
-		else:
-			# --- Side Collision / Bounce ---
-			print("Side collision player vs enemy")
-			var direction_to_enemy = sign(global_position.x - enemy.global_position.x)
-			if direction_to_enemy == 0: direction_to_enemy = 1
-
-			# Player bounces
-			velocity.x = direction_to_enemy * side_collision_bounce_x
-			velocity.y = side_collision_bounce_y
-			animated_sprite.flip_h = velocity.x < 0
-			current_speed_level = max(current_speed_level - 1, 0)
-			if current_speed_level == 0:
-				transition_to_idle()
-			else: # Need to ensure state is correct if bounced while flying/idle
-				if current_state == State.FLYING: # If bounced while flying, stay flying? Or force walk?
-					pass # Keep flying state, velocity updated
-				else: # If bounced while idle or walking
-					transition_to_walking(sign(velocity.x))
-
-
-			# Tell enemy to handle bounce
-			if enemy.has_method("handle_bounce"):
-				enemy.handle_bounce(-direction_to_enemy, side_collision_bounce_x, side_collision_bounce_y)
-
-			if collision_sound: collision_sound.play()
-
-	# Player vs Platform Collision (Handled by handle_collisions using move_and_slide results)
-	# elif area.is_in_group("Platform"):
-	#	 pass # Wall bump logic is now in handle_collisions
-
-
 func _on_stomp_area_area_entered(area):
 	if not is_alive: return
 
@@ -684,13 +615,32 @@ func _on_vulnerable_area_area_entered(area):
 	if not is_alive or is_invincible:
 		return
 		
+	print("[DEBUG VULNERABLE] Player%d vulnerable area entered by: %s (groups: %s)" % [player_index, area.name, area.get_groups()])
+
+
 	if area.is_in_group("enemy_stomp_areas"):
 		var enemy = area.get_parent()
 		if not enemy or not enemy.is_in_group("enemies"): return
 
+		print("[DEBUG VULNERABLE] Enemy %s trying to stomp Player%d" % [enemy.name, player_index])
+		print("[DEBUG VULNERABLE] Enemy state: %s" % enemy.current_state)
+		print("[DEBUG VULNERABLE] Enemy stomp area monitoring: %s, monitorable: %s" % [
+			area.monitoring, area.monitorable
+		])
+
+		# NEW: Only allow stomping if enemy is in FLYING state
+		if "current_state" in enemy and "State" in enemy:
+			if enemy.current_state != enemy.State.FLYING:
+				print("[DEBUG VULNERABLE] Enemy not in FLYING state - cannot stomp")
+				return
+		else:
+			print("[DEBUG VULNERABLE] Enemy missing state info - cannot stomp")
+			return
+
 		# NEW position check: enemy must be higher than player in order to stomp
 		var position_tolerance = 20.0 # Allow some tolerance for slight misalignment
 		if enemy.global_position.y > global_position.y + position_tolerance:
+			print("[DEBUG VULNERABLE] Enemy not high enough to stomp (enemy Y: %.1f, player Y: %.1f)" % [enemy.global_position.y, global_position.y])
 			return
 
 
@@ -719,14 +669,23 @@ func debug_groups():
 func _on_collection_area_area_entered(area):
 	if not is_alive: return
 
+	print("[DEBUG COLLECTION] Player%d collection area entered by: %s (groups: %s)" % [player_index, area.name, area.get_groups()])
+
 	# Collect Eggs
 	if area.is_in_group("egg_collection_zones"):
 		var parent = area.get_parent()
-		if parent and parent.is_in_group("enemies") and "current_state" in parent and "State" in parent and parent.has_method("collect_egg"):
-			if parent.current_state == parent.State.EGG or parent.current_state == parent.State.HATCHING:
-				print("Player collected egg")
-				parent.collect_egg(player_index)
+		print("[DEBUG COLLECTION] Found egg area, parent: %s" % (parent.name if parent else "null"))
 
+		if parent and parent.is_in_group("enemies") and "current_state" in parent and "State" in parent and parent.has_method("collect_egg"):
+			print("[DEBUG COLLECTION] Parent is valid enemy with state: %s" % parent.current_state)
+
+			if parent.current_state == parent.State.EGG or parent.current_state == parent.State.HATCHING:
+				print("[DEBUG COLLECTION] *** Player%d collecting egg %s ***" % [player_index, parent.name])
+				parent.collect_egg(player_index)
+			else:
+				print("[DEBUG COLLECTION] Enemy not in egg state, ignoring collection")
+		else:
+			print("[DEBUG COLLECTION] Parent is not a valid enemy")
 	# Add logic for other collectibles here
 
 
@@ -763,12 +722,6 @@ func die():
 		collection_area.monitoring = false
 		collection_area.monitorable = false
 
-	# Set up defeated fly-off parameters (for _physics_process to use)
-	defeated_fly_direction = -1 if global_position.x > get_viewport_rect().size.x / 2 else 1
-	defeated_fly_time = 0.0
-	defeated_time = 0.0  # Reset defeated time
-	velocity = Vector2(defeated_fly_direction * 200, 0) # Initial fly-off velocity
-
 	# Reset respawn flag
 	is_respawning = false
 
@@ -804,7 +757,7 @@ func set_permanently_dead():
 		stomp_area.monitoring = false
 		stomp_area.monitorable = false
 	if vulnerable_area:
-		vulnerable_area.monitoring = false  
+		vulnerable_area.monitoring = false
 		vulnerable_area.monitorable = false
 	if collection_area:
 		collection_area.monitoring = false
@@ -876,7 +829,7 @@ func respawn():
 		var duration = frame_count / fps if fps > 0 else 2.6  # fallback to 2.6 seconds
 		
 		# Start fallback timer - call _finish_respawn after animation duration
-		get_tree().create_timer(duration + 0.1).timeout.connect(func(): 
+		get_tree().create_timer(duration + 0.1).timeout.connect(func():
 			if is_respawning:
 				print("[DEBUG] Fallback timer triggered - finishing respawn")
 				_finish_respawn()

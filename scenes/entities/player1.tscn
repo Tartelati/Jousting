@@ -1,4 +1,4 @@
-[gd_scene load_steps=39 format=3 uid="uid://b72cmuhsp6dty"]
+[gd_scene load_steps=38 format=3 uid="uid://b72cmuhsp6dty"]
 
 [ext_resource type="Script" uid="uid://cbusgpsbm2fr1" path="res://scripts/entities/player.gd" id="1_l2mvf"]
 [ext_resource type="Texture2D" uid="uid://cnoa4wpcsl3u2" path="res://assets/sprites/player1.png" id="2_v7i6e"]
@@ -14,9 +14,6 @@
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_08t41"]
 radius = 21.0
 height = 42.0
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_5u6hq"]
-size = Vector2(45.5, 24)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_5u6hq"]
 radius = 18.0
@@ -231,14 +228,6 @@ texture = ExtResource("2_v7i6e")
 position = Vector2(4, 9)
 shape = SubResource("CapsuleShape2D_08t41")
 
-[node name="CombatArea" type="Area2D" parent="."]
-collision_mask = 5
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CombatArea"]
-position = Vector2(3.25, 5)
-shape = SubResource("RectangleShape2D_5u6hq")
-debug_color = Color(0.70389, 0.380383, 0.792011, 0.42)
-
 [node name="FlapSound" type="AudioStreamPlayer2D" parent="."]
 stream = ExtResource("3_mrloc")
 
@@ -269,7 +258,7 @@ debug_color = Color(0, 0.539836, 0.959078, 0.42)
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 texture_filter = 1
 sprite_frames = SubResource("SpriteFrames_ss7kx")
-animation = &"P1_Idle"
+animation = &"P1_Brake"
 metadata/_aseprite_wizard_interface_config_ = {
 "animation_section": true,
 "layer_section": false,
@@ -304,7 +293,6 @@ shape = SubResource("RectangleShape2D_73kkf")
 position = Vector2(0, -18)
 shape = SubResource("RectangleShape2D_l2mvf")
 
-[connection signal="area_entered" from="CombatArea" to="." method="_on_combat_area_area_entered"]
 [connection signal="area_entered" from="CollectionArea" to="." method="_on_collection_area_area_entered"]
 [connection signal="area_entered" from="StompArea" to="." method="_on_stomp_area_area_entered"]
 [connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_finished"]

@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3 uid="uid://dsendljleind2"]
+[gd_scene load_steps=44 format=3 uid="uid://dsendljleind2"]
 
 [ext_resource type="Script" uid="uid://ducdlluljkdd0" path="res://scripts/entities/enemy_hunter.gd" id="1_oldxl"]
 [ext_resource type="Texture2D" uid="uid://do5muu1wcybte" path="res://assets/sprites/enemy_shadow-lord-placeholder.png" id="2_d4no6"]
@@ -11,9 +11,6 @@
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ltmif"]
 radius = 20.025
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_ukxwl"]
-size = Vector2(50, 16.5)
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_s3v6w"]
 height = 22.0
@@ -270,13 +267,6 @@ texture = ExtResource("2_d4no6")
 position = Vector2(1, 10)
 shape = SubResource("CircleShape2D_ltmif")
 
-[node name="CombatArea" type="Area2D" parent="." groups=["enemy_combat_areas"]]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CombatArea"]
-position = Vector2(2, 8)
-shape = SubResource("RectangleShape2D_ukxwl")
-debug_color = Color(0.83233, 0.176248, 0.849744, 0.42)
-
 [node name="HatchTimer" type="Timer" parent="."]
 wait_time = 5.0
 one_shot = true
@@ -291,13 +281,13 @@ one_shot = true
 collision_layer = 16
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="EggArea"]
-position = Vector2(1, 21)
+position = Vector2(0, 20)
 shape = SubResource("CapsuleShape2D_s3v6w")
 debug_color = Color(0.631305, 0.516451, 0.327184, 0.42)
 
 [node name="EggSprite" type="Sprite2D" parent="."]
 visible = false
-position = Vector2(1, 22)
+position = Vector2(1, 18)
 texture = ExtResource("3_x7n2y")
 
 [node name="VulnerableArea" type="Area2D" parent="." groups=["enemy_vulnerable_areas"]]
@@ -310,7 +300,7 @@ shape = SubResource("RectangleShape2D_s3v6w")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_2k2uf")
-animation = &"fly"
+animation = &"walk"
 
 [node name="StompArea" type="Area2D" parent="." groups=["enemy_stomp_areas"]]
 collision_layer = 32

@@ -70,7 +70,9 @@ func start_wave(wave_number = -1):
 	
 	# --- Platform Management FIRST ---
 	_update_platform_states(current_wave)
-	# -------------------------
+	# --- NEW: Lava Management ---
+	_update_lava_state(current_wave)
+	# --------------------------------
 	
 	# --- Check for Egg Wave ---
 	if current_wave > 0 and current_wave % 5 == 0:
@@ -139,23 +141,19 @@ func _update_platform_states(wave_num):
 
 		# Find Sprite and Collision nodes more robustly
 		var sprite_node = null
-		var collision_shape_node = null # Can be Polygon or Shape
+		var collision_nodes = []  # ← Changed to array to hold ALL collision shapes
 
 		for child in p.get_children():
-			if child is Sprite2D and not sprite_node: # Find first Sprite2D
+			if child is Sprite2D and not sprite_node:
 				sprite_node = child
-			elif child is CollisionPolygon2D and not collision_shape_node: # Find first CollisionPolygon2D
-				collision_shape_node = child
-			elif child is CollisionShape2D and not collision_shape_node: # Fallback to CollisionShape2D
-				collision_shape_node = child
-			# Break early if both found
-			if sprite_node and collision_shape_node:
-				break
+			elif child is CollisionPolygon2D or child is CollisionShape2D:
+				collision_nodes.append(child)  # ← Add ALL collision shapes
+
 		
 		# Check if BOTH nodes were found
 		if not is_instance_valid(sprite_node):
 			continue
-		if not is_instance_valid(collision_shape_node):
+		if collision_nodes.size() == 0:
 			continue
 
 		# --- Determine Target State ---
@@ -168,19 +166,168 @@ func _update_platform_states(wave_num):
 				target_enabled = false
 			elif p.name == "platform2" and wave_num >= 4:
 				target_enabled = false
+			elif p.name == "BurnableBridge":
+				# NEW: More complex burnable bridge logic
+				# Disappears on wave 3, then randomly after wave 5 resets
+				if wave_num == 3:
+					target_enabled = false
+				elif wave_num > 5 and wave_num % 5 != 0:  # Not on reset waves
+					# Random chance to disappear on non-reset waves after wave 5
+					var random_disappear_chance = 0.3  # 30% chance
+					if randf() < random_disappear_chance:
+						target_enabled = false
+						print("[DEBUG] BurnableBridge randomly disappearing on wave %d" % wave_num)
+
+
 		# -----------------------------
 				
-		# --- Apply State ---
-		# Apply visibility to the StaticBody itself (or sprite if preferred )
+		# --- Apply State with Animation ---
 		if p.visible != target_enabled:
-			p.visible = target_enabled
-			
-		# Apply collision state (disabled = true means NO collision)
-		if collision_shape_node.disabled == target_enabled:
-			collision_shape_node.disabled = not target_enabled
+			if target_enabled:
+				# Platform reappearing (instant for now)
+				_show_platform_instantly(p, collision_nodes)
+			else:
+				# Platform disappearing (animated)
+				_hide_platform_animated(p, collision_nodes)
 
 		# NEW: Disable spawn points when platform is disabled
 		_update_platform_spawn_points(p, target_enabled)
+
+# NEW: Lava management system
+func _update_lava_state(wave_num):
+	var parent_node = get_parent()
+	if not parent_node:
+		return
+		
+	var lava_node = parent_node.get_node_or_null("Lava")
+	if not lava_node:
+		print("[WARNING] Lava node not found!")
+		return
+	
+	print("[DEBUG] Updating lava for wave %d" % wave_num)
+	
+	# Reset all on wave 5, 10, 15, etc.
+	var reset_all = (wave_num > 0 and wave_num % 5 == 0)
+	
+	if reset_all:
+		print("[DEBUG] Reset wave - hiding lava")
+		_hide_lava_instantly(lava_node)
+	elif wave_num == 1:
+		print("[DEBUG] Wave 1 - hiding lava")
+		_hide_lava_instantly(lava_node)
+	elif wave_num == 2:
+		print("[DEBUG] Wave 2 - rising lava")
+		_show_lava_rising(lava_node)
+	# For wave 3+, lava stays visible (no changes needed)
+
+# NEW: Hide lava instantly
+func _hide_lava_instantly(lava_node: Area2D):
+	print("[DEBUG] Hiding lava instantly")
+	
+	# Disable lava collision immediately
+	var collision_shape = lava_node.get_node_or_null("CollisionShape2D")
+	if collision_shape:
+		collision_shape.disabled = true
+	
+	# Hide lava sprite
+	var sprite = lava_node.get_node_or_null("Sprite2D")
+	if sprite:
+		sprite.visible = false
+		sprite.position.y = 400  # Reset to bottom position for next rise
+
+# NEW: Show lava with rising animation
+func _show_lava_rising(lava_node: Area2D):
+	print("[DEBUG] Starting lava rise animation")
+	
+	var sprite = lava_node.get_node_or_null("Sprite2D")
+	var collision_shape = lava_node.get_node_or_null("CollisionShape2D")
+	
+	if not sprite or not collision_shape:
+		print("[ERROR] Lava sprite or collision not found!")
+		return
+	
+	# Start from bottom of screen
+	sprite.visible = true
+	sprite.position.y = 400  # Bottom position
+	
+	# Create rising animation
+	var tween = create_tween()
+	
+	# Rise up to final position over 3 seconds
+	var final_y_position = 281  # From scene file
+	tween.tween_property(sprite, "position:y", final_y_position, 3.0)
+	
+	# Enable collision when animation is halfway done
+	await get_tree().create_timer(1.5).timeout
+	collision_shape.disabled = false
+	print("[DEBUG] Lava collision enabled")
+	
+	await tween.finished
+	print("[DEBUG] Lava rise animation complete")
+
+# Add missing shake function for platform animation
+func _shake_platform(platform: StaticBody2D, shake_value: float):
+	if not platform:
+		return
+		
+	# Create small random shake
+	var shake_intensity = 3.0 * shake_value
+	var random_offset = Vector2(
+		randf_range(-shake_intensity, shake_intensity),
+		randf_range(-shake_intensity, shake_intensity)
+	)
+	
+	# Apply shake offset to original position
+	# Note: You might need to store original_position as a class variable
+	platform.position += random_offset
+
+# SIMPLIFIED: Animated platform hiding (no shake)
+func _hide_platform_animated(platform: StaticBody2D, collision_nodes: Array):
+	print("[DEBUG] Animating platform %s disappearance" % platform.name)
+	
+	# Disable collision IMMEDIATELY so players can't stand on invisible platforms
+	for collision_node in collision_nodes:
+		collision_node.disabled = true
+		print("[DEBUG] Platform %s: Disabled collision %s" % [platform.name, collision_node.name])
+	
+	# Store original position for restoration later
+	var original_position = platform.position
+	
+	# Create tween for the animation
+	var tween = create_tween()
+	tween.set_parallel(true)  # Allow multiple animations simultaneously
+	
+	# Animation 1: Move platform downward
+	var target_position = original_position + Vector2(0, 100)  # Move down 100 pixels
+	tween.tween_property(platform, "position", target_position, 1.5)
+	
+	# Animation 2: Fade out platform
+	tween.tween_property(platform, "modulate", Color(1, 1, 1, 0), 1.5)
+	
+	# Animation 3: Scale down slightly for extra effect
+	tween.tween_property(platform, "scale", Vector2(0.8, 0.8), 1.5)
+	
+	# After animation completes, hide the platform completely
+	await tween.finished
+	platform.visible = false
+	platform.position = original_position  # Reset position for potential reappearance
+	platform.scale = Vector2(1, 1)  # Reset scale
+	platform.modulate = Color(1, 1, 1, 1)  # Reset alpha
+	print("[DEBUG] Platform %s animation complete - now hidden" % platform.name)
+
+# NEW: Instant platform showing (for reset waves)
+func _show_platform_instantly(platform: StaticBody2D, collision_nodes: Array):
+	print("[DEBUG] Showing platform %s instantly" % platform.name)
+	
+	# Make visible immediately
+	platform.visible = true
+	platform.modulate = Color(1, 1, 1, 1)  # Full opacity
+	platform.scale = Vector2(1, 1)  # Normal scale
+	
+	# Re-enable collision
+	for collision_node in collision_nodes:
+		collision_node.disabled = false
+		print("[DEBUG] Platform %s: Enabled collision %s" % [platform.name, collision_node.name])
 
 # NEW: Helper function to manage spawn points on platforms
 func _update_platform_spawn_points(platform_node: StaticBody2D, enabled: bool):
@@ -287,7 +434,7 @@ func _start_egg_wave():
 			get_parent().add_child(enemy_body)
 			
 			# FIX 1: Properly call defeat with a valid player_index and no score award
-			enemy_body.call_deferred("defeat", 1, false, Vector2.ZERO)
+			enemy_body.call_deferred("spawn_as_egg")
 			
 			print("[DEBUG] Set enemy state to EGG for: %s" % enemy_body.name)
 		else:
