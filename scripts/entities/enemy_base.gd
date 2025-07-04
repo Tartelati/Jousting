@@ -22,6 +22,7 @@ enum State {FLYING, WALKING, EGG, HATCHING, DEAD}
 @export var random_dir_change_chance_flying: float = 0.005 # Chance per physics frame
 @export var random_dir_change_chance_walking: float = 0.01 # Chance per physics frame
 @export var random_fly_chance_walking: float = 0.01 # Chance per physics frame
+@export var min_fly_height: float = 218.0  # ← NEW: Minimum Y position for flying (above lava)
 
 @export_group("Collision & Interaction")
 @export var points_value: int = 100
@@ -113,6 +114,10 @@ func _physics_process(delta):
 		velocity = Vector2.ZERO
 		return
 	
+	# NEW: Add player head check for walking enemies
+	if current_state == State.WALKING:
+		check_for_standing_on_player()
+
 	match current_state:
 		State.FLYING:
 			process_flying(delta)
@@ -170,14 +175,47 @@ func screen_wrapping():
 		global_position.x = buffer
 	# No need to change velocity, keep momentum
 
+# NEW: Check if walking enemy is standing on a player (should stomp them)
+func check_for_standing_on_player():
+	if not is_on_floor():
+		return
+	
+	# Check what we're standing on
+	for i in range(get_slide_collision_count()):
+		var collision = get_slide_collision(i)
+		if not collision: continue
+		
+		var collider = collision.get_collider()
+		if not collider or not collider.is_in_group("players"):
+			continue
+			
+		var player = collider
+		if not player.is_alive:
+			continue
+			
+		# Check if we're actually on top of the player (not side collision)
+		var collision_normal = collision.get_normal()
+		if collision_normal.y < -0.7:  # Normal pointing upward (we're on top)
+			print("[DEBUG] Walking enemy %s is standing on player %s - triggering stomp" % [name, player.name])
+			player.die()
+			return
+
 func process_flying(delta):
 	enemy_animation.play("fly")
 	# Apply gravity
 	velocity.y += gravity * delta
 
-	# Random flapping
-	if randf() < random_flap_chance:
-		velocity.y = flap_force
+	# NEW: Safety check - don't fly too low (avoid lava)
+	if global_position.y > min_fly_height:
+		# Force upward movement when too low
+		velocity.y = flap_force * 1.5  # Extra strong flap to get to safety
+		print("[DEBUG] Enemy %s too low (y=%.1f), forcing upward!" % [name, global_position.y])
+	else:
+		# Normal flying behavior when at safe height
+		# Random flapping
+		if randf() < random_flap_chance:
+			velocity.y = flap_force
+
 
 	# Horizontal movement
 	velocity.x = direction * move_speed
@@ -192,12 +230,18 @@ func process_flying(delta):
 
 	move_and_slide()
 
-	# Transition to walking state if on floor and vertical velocity is small (not falling/bouncing)
+	# NEW: Modified landing logic - only land if above safe height
 	if is_on_floor() and abs(velocity.y) < 1.0 and current_state == State.FLYING:
-		current_state = State.WALKING
-		walk_time = 0
-		if enemy_animation:
-			enemy_animation.play("walk")
+		# Only transition to walking if we're at a safe height
+		if global_position.y <= min_fly_height:
+			current_state = State.WALKING
+			walk_time = 0
+			if enemy_animation:
+				enemy_animation.play("walk")
+		else:
+			# Too low to land safely - keep flying
+			velocity.y = flap_force  # Flap to stay airborne
+			print("[DEBUG] Enemy %s avoided landing at unsafe height (y=%.1f)" % [name, global_position.y])
 
 
 func process_walking(delta):
@@ -316,20 +360,32 @@ func process_egg(delta):
 
 # New function for area-based egg collection
 func _on_egg_area_area_entered(area):
-	# Get player_index from the area or its parent
+	print("[DEBUG EGG COLLECT] Egg %s area entered by: %s (groups: %s)" % [name, area.name, area.get_groups()])
+	
 	var player = area.get_parent()
 	var player_index = player.player_index if player and player.has_method("player_index") else 1
+	
+	print("[DEBUG EGG COLLECT] Player: %s, player_index: %d" % [player.name if player else "null", player_index])
+	print("[DEBUG EGG COLLECT] Current state: %s" % current_state)
+	
 	if (current_state == State.EGG or current_state == State.HATCHING) and area.is_in_group("player_collectors"):
-		print("Egg collected by player's collection area!")
+		print("[DEBUG EGG COLLECT] *** COLLECTING EGG %s ***" % name)
 		collect_egg(player_index)
+	else:
+		print("[DEBUG EGG COLLECT] Collection conditions not met")
 
 func defeat(player_index: int, award_score := true, player_velocity: Vector2 = Vector2.ZERO):
+	print("[DEBUG DEFEAT] Enemy %s defeat() called - player_index: %d" % [name, player_index])
+
 	if is_spawning:
+		print("[DEBUG DEFEAT] Enemy %s is spawning - ignoring defeat" % name)
 		return # Don't defeat if spawning
 
 	if current_state == State.EGG or current_state == State.HATCHING or current_state == State.DEAD:
+		print("[DEBUG DEFEAT] Enemy %s already defeated (state: %s)" % [name, current_state])
 		return # Already defeated or dead
 
+	print("[DEBUG DEFEAT] Enemy %s changing to EGG state" % name)
 	current_state = State.EGG
 	is_spawning = false # Ensure we are not in spawning state
 	
@@ -359,26 +415,34 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 	if enemy_animation: enemy_animation.visible = false
 	if egg_sprite: egg_sprite.visible = true
 
+	print("[DEBUG DEFEAT] Enemy %s disabling areas..." % name)
+
 	# Disable combat area IMMEDIATELY
 	if combat_area:
+		print("[DEBUG DEFEAT] Disabling combat area for %s" % name)
 		combat_area.monitoring = false
 		combat_area.monitorable = false
 	
 	# Disable stomp area IMMEDIATELY (this was missing!)
 	if stomp_area:
+		print("[DEBUG DEFEAT] Disabling stomp area for %s" % name)
 		stomp_area.monitoring = false
 		stomp_area.monitorable = false
 	
 	# Disable vulnerable area IMMEDIATELY
 	if vulnerable_area:
+		print("[DEBUG DEFEAT] Disabling vulnerable area for %s" % name)
 		vulnerable_area.monitoring = false
 		vulnerable_area.monitorable = false
 	
 	# Enable egg area for collection IMMEDIATELY
 	if egg_area:
+		print("[DEBUG DEFEAT] Enabling egg area for %s" % name)
 		egg_area.monitoring = true
 		egg_area.monitorable = true
-	
+
+	print("[DEBUG DEFEAT] Enemy %s defeat complete - now in EGG state" % name)	
+
 	# Change collision layers for the main body
 	set_collision_layer_value(3, false) # Turn off enemy layer
 	set_collision_layer_value(4, true) # Turn on egg layer
@@ -393,7 +457,13 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 	print("Enemy %s defeated" % name)
 
 func collect_egg(player_index):
-	if current_state == State.DEAD: return
+	print("[DEBUG EGG COLLECT] collect_egg() called for %s by player %d" % [name, player_index])
+	
+	if current_state == State.DEAD: 
+		print("[DEBUG EGG COLLECT] Already dead - ignoring collection")
+		return
+		
+	print("[DEBUG EGG COLLECT] Setting %s to DEAD state" % name)
 	current_state = State.DEAD
 	
 	var base_egg_score = 50
@@ -409,26 +479,27 @@ func collect_egg(player_index):
 	if is_air_catch:
 		ScoreManager.add_bonus_score(player_index, 100, "Air Catch", egg_world_position)
 	
+	print("[DEBUG EGG COLLECT] Disabling all areas for %s..." % name)
+	
 	# Disable all areas IMMEDIATELY
 	if combat_area:
+		print("[DEBUG EGG COLLECT] Disabling combat area")
 		combat_area.monitoring = false
 		combat_area.monitorable = false
 	if egg_area:
+		print("[DEBUG EGG COLLECT] Disabling egg area")
 		egg_area.monitoring = false
 		egg_area.monitorable = false
 	if stomp_area:
+		print("[DEBUG EGG COLLECT] Disabling stomp area")
 		stomp_area.monitoring = false
 		stomp_area.monitorable = false
 	if vulnerable_area:
+		print("[DEBUG EGG COLLECT] Disabling vulnerable area")
 		vulnerable_area.monitoring = false
 		vulnerable_area.monitorable = false
-		
-	# Play collection sound if available
-	if has_node("CollectionSound"):
-		$CollectionSound.play()
-		# Wait for sound to finish before removing
-		await $CollectionSound.finished
-	   
+	
+	print("[DEBUG EGG COLLECT] All areas disabled for %s, queuing free..." % name)
 	queue_free()
 
 func _on_vulnerable_area_area_entered(area):
@@ -467,6 +538,7 @@ func _on_hatch_timer_timeout():
 		if egg_sprite:
 			egg_sprite.visible = false # Hide egg sprite
 		enemy_animation.visible = true
+		enemy_animation.position.y += 18
 		enemy_animation.play("hatching") # Play hatching animation
 		# Don't reconnect if already connected
 		if not enemy_animation.is_connected("animation_finished", Callable(self, "_on_enemy_animation_finished")):
@@ -487,18 +559,21 @@ func spawn_rescue_bird():
 	var spawn_x = 0.0
 	var target_x = global_position.x
 
-	if global_position.x < viewport_size.x / 2:
-		# Spawn from left
+	# Calculate distance to each side
+	var distance_to_left = global_position.x
+	var distance_to_right = viewport_size.x - global_position.x
+	
+	# Spawn from the farthest side
+	if distance_to_left > distance_to_right:
+		# Egg is closer to right side, spawn bird from left
 		spawn_x = -50
 		rescue_bird.direction = 1
-		print("[DEBUG] Rescue bird direction set to 1 (left to right)")
-
+		print("[DEBUG] Egg closer to right side - rescue bird spawning from left (distance_to_left: %.1f, distance_to_right: %.1f)" % [distance_to_left, distance_to_right])
 	else:
-		# Spawn from right
+		# Egg is closer to left side, spawn bird from right
 		spawn_x = viewport_size.x + 50
 		rescue_bird.direction = -1
-		print("[DEBUG] Rescue bird direction set to -1 (right to left)")
-
+		print("[DEBUG] Egg closer to left side - rescue bird spawning from right (distance_to_left: %.1f, distance_to_right: %.1f)" % [distance_to_left, distance_to_right])
 
 	rescue_bird.global_position = Vector2(spawn_x, spawn_y)
 	rescue_bird.target_x = target_x
@@ -513,8 +588,11 @@ func rescue_from_hatching():
 		current_state = State.FLYING
 		enemy_animation.play("fly") # Switch back to flying animation
 
-		if enemy_animation: enemy_animation.visible = true
-		if egg_sprite: egg_sprite.visible = false	
+		if enemy_animation: 
+			enemy_animation.position.y -= 18 # Reset position adjustment
+			enemy_animation.visible = true
+		if egg_sprite: 
+			egg_sprite.visible = false	
 
 		# Reset collision layers, etc. (reuse your previous hatching logic)
 		set_collision_layer_value(3, true) # Turn on enemy layer
@@ -534,3 +612,51 @@ func rescue_from_hatching():
 			stomp_area.set_collision_layer_value(6, true) # Layer 6 (default for stomp)
 			stomp_area.set_collision_mask_value(7, true)  # Mask 7 (default for vulnerable)
 			stomp_area.monitoring = true
+
+
+# NEW: Special function for egg wave spawning (bypasses spawn protection)
+func spawn_as_egg():
+	print("[DEBUG EGG SPAWN] Spawning %s directly as egg" % name)
+	
+	# Force stop spawning state and animation
+	is_spawning = false
+	is_invincible = false
+	current_state = State.EGG
+	
+	# Initialize egg physics state
+	egg_has_touched_ground = false
+	egg_is_bouncing = false
+	egg_bounce_count = 0
+	
+	# Set egg appearance
+	if enemy_animation: 
+		enemy_animation.visible = false
+		enemy_animation.stop()
+	if egg_sprite: 
+		egg_sprite.visible = true
+
+	# Set egg physics (small random velocity for variety)
+	velocity.x = randf_range(-30, 30)  # Small random horizontal velocity
+	velocity.y = randf_range(0, 50)    # Small downward velocity
+	
+	# Set collision layers for egg
+	set_collision_layer_value(3, false) # Turn off enemy layer
+	set_collision_layer_value(4, true) # Turn on egg layer
+	set_collision_mask_value(1, false) # Don't collide with player body
+	set_collision_mask_value(2, true) # Do collide with environment
+	set_collision_mask_value(3, false) # Don't collide with other enemies
+	
+	# Disable all combat areas
+	if stomp_area:
+		stomp_area.monitoring = false
+		stomp_area.monitorable = false
+	if vulnerable_area:
+		vulnerable_area.monitoring = false
+		vulnerable_area.monitorable = false
+	
+	# Enable egg collection
+	if egg_area:
+		egg_area.monitoring = true
+		egg_area.monitorable = true
+	
+	print("[DEBUG EGG SPAWN] %s successfully spawned as egg" % name)

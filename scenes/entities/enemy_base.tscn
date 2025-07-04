@@ -1,4 +1,4 @@
-[gd_scene load_steps=47 format=3 uid="uid://cba2m06mfhdpm"]
+[gd_scene load_steps=46 format=3 uid="uid://cba2m06mfhdpm"]
 
 [ext_resource type="Script" uid="uid://v56hqa6big8u" path="res://scripts/entities/enemy_base.gd" id="1_ltmif"]
 [ext_resource type="Texture2D" uid="uid://bhobw0eyciqr6" path="res://assets/sprites/Enemy_base_no_knight.png" id="2_1odx1"]
@@ -13,9 +13,6 @@
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ltmif"]
 radius = 20.0
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_1odx1"]
-size = Vector2(48.375, 18)
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_dtjhs"]
 height = 22.0
@@ -301,13 +298,6 @@ texture = ExtResource("2_1odx1")
 position = Vector2(0, 11)
 shape = SubResource("CircleShape2D_ltmif")
 
-[node name="CombatArea" type="Area2D" parent="." groups=["enemy_combat_areas"]]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CombatArea"]
-position = Vector2(3.8125, 9)
-shape = SubResource("RectangleShape2D_1odx1")
-debug_color = Color(0.785444, 0.325868, 0.726191, 0.42)
-
 [node name="HatchTimer" type="Timer" parent="."]
 wait_time = 3.0
 one_shot = true
@@ -322,16 +312,17 @@ stream = ExtResource("4_xadvl")
 stream = ExtResource("5_m6p80")
 
 [node name="EggArea" type="Area2D" parent="."]
+position = Vector2(0, 15)
 collision_layer = 16
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="EggArea"]
-position = Vector2(1, 21)
+position = Vector2(0, 3)
 shape = SubResource("CapsuleShape2D_dtjhs")
 debug_color = Color(0.631305, 0.516451, 0.327184, 0.42)
 
 [node name="EggSprite" type="Sprite2D" parent="."]
 visible = false
-position = Vector2(1, 22)
+position = Vector2(0, 19)
 texture = ExtResource("3_qag7e")
 
 [node name="VulnerableArea" type="Area2D" parent="." groups=["enemy_vulnerable_areas"]]
@@ -344,7 +335,7 @@ shape = SubResource("RectangleShape2D_xadvl")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_vuql5")
-animation = &"waving"
+animation = &"walk"
 
 [node name="StompArea" type="Area2D" parent="." groups=["enemy_stomp_areas"]]
 collision_layer = 32
@@ -355,6 +346,5 @@ position = Vector2(-2, 13)
 shape = SubResource("RectangleShape2D_34mgb")
 debug_color = Color(0, 0.539836, 0.959078, 0.42)
 
-[connection signal="area_entered" from="CombatArea" to="." method="_on_combat_area_area_entered"]
 [connection signal="body_entered" from="EggArea" to="." method="_on_egg_area_body_entered"]
 [connection signal="area_entered" from="VulnerableArea" to="." method="_on_vulnerable_area_area_entered"]
