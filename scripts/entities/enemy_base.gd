@@ -395,22 +395,23 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 	egg_bounce_count = 0
 	
 	# NEW: Calculate egg velocity based on player's speed and direction
-	var player_speed_factor = player_velocity.length() / 200.0  # Normalize player speed (200 = typical max speed)
-	player_speed_factor = max(0.5, min(player_speed_factor, 2.0))  # Clamp between 0.5x and 2.0x
-	
-	# Apply player's horizontal momentum to egg
-	velocity.x = player_velocity.x * 0.7  # 70% of player's horizontal velocity
-	
-	# Apply upward velocity based on player's speed (faster = more upward force)
-	var base_upward_force = -150.0  # Base upward velocity
-	velocity.y = base_upward_force * player_speed_factor
-	
-	# FIX: For egg waves, don't apply velocity (eggs should just fall)
-	if player_velocity == Vector2.ZERO:
+	if player_velocity != Vector2.ZERO:
+		# Player stomped this enemy - apply momentum-based velocity
+		var player_speed_factor = player_velocity.length() / 200.0  # Normalize player speed (200 = typical max speed)
+		player_speed_factor = max(0.8, min(player_speed_factor, 2.5))  # Clamp between 0.8x and 2.5x for better bouncing
+		
+		# Apply player's horizontal momentum to egg (increased for more bounce)
+		velocity.x = player_velocity.x * 0.9  # 90% of player's horizontal velocity
+		
+		# Apply stronger upward velocity based on player's speed (ensures good bouncing)
+		var base_upward_force = -200.0  # Increased base upward velocity
+		velocity.y = base_upward_force * player_speed_factor
+		
+		print("[DEBUG] Egg defeated with player velocity: %s, speed factor: %.2f, egg velocity: %s" % [player_velocity, player_speed_factor, velocity])
+	else:
+		# For egg waves or other spawning, give small random velocity
 		velocity.x = randf_range(-50, 50)  # Small random horizontal velocity
-		velocity.y = 0  # No initial vertical velocity for spawned eggs
-	
-	print("[DEBUG] Egg defeated with player velocity: %s, speed factor: %.2f, egg velocity: %s" % [player_velocity, player_speed_factor, velocity])
+		velocity.y = randf_range(-30, 0)   # Small upward velocity to ensure at least one bounce
 	
 	if enemy_animation: enemy_animation.visible = false
 	if egg_sprite: egg_sprite.visible = true
