@@ -5,10 +5,10 @@ var player_index := 1
 # Only show in development builds
 func _ready():
 	# Check if we're running from the editor
-	if OS.has_feature("editor") or OS.is_debug_build():
-		$DebugPanel.visible = true
-	else:
+	if OS.has_feature("production"):
 		$DebugPanel.visible = false
+	else:
+		$DebugPanel.visible = true
 		# Optional: Remove entirely from release builds
 		# queue_free()
 
