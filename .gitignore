@@ -20,6 +20,7 @@ mono_crash.*
 *.swo
 
 # Build outputs
+Builds/
 export_presets.cfg
 
 # Temporary files
