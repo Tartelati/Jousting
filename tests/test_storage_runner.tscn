@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqxvhqxvhqxvh"]
+
+[ext_resource type="Script" path="res://tests/unit/test_high_score_storage.gd" id="1_storage_test"]
+
+[node name="TestStorageRunner" type="Node"]
+script = ExtResource("1_storage_test")

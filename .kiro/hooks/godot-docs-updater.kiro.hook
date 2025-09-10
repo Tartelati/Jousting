@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+  "name": "Godot Documentation Updater",
+  "description": "Listens to GDScript files, assets, and project configuration changes in a Godot game project and automatically updates documentation in README.md and markdown files to reflect code changes and new assets",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.gd",
+      "*.tscn",
+      "*.tres",
+      "assets/**/*",
+      "project.godot",
+      "*.md",
+      "addons/**/*",
+      "scenes/**/*",
+      "scripts/**/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Source files or assets have been modified in this Godot game project. Please analyze the changes and update the documentation accordingly. Focus on:\n\n1. If GDScript files (*.gd) changed: Update code documentation, API references, and usage examples\n2. If scene files (*.tscn) or resource files (*.tres) changed: Document new scenes, components, or game mechanics\n3. If assets were added/modified: Document new sprites, sounds, fonts, or other game assets and their purpose\n4. If project configuration changed: Update setup or configuration documentation\n5. If addon files changed: Document new features or integrations\n\nUpdate the README.md file and any relevant markdown documentation files to reflect these changes. Ensure the documentation stays current with the codebase and helps other developers understand the project structure and new features."
+  }
+}
