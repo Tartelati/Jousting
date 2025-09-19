@@ -124,8 +124,22 @@ func validate_high_score_entry(entry: Dictionary) -> ValidationResult:
 	
 	# Set version if missing
 	if not entry.has("version"):
-		sanitized.version = "1.0.0"
-		result.warnings.append("Missing version, defaulting to 1.0.0")
+		sanitized.version = "1.1.0"
+		result.warnings.append("Missing version, defaulting to 1.1.0")
+	else:
+		# Validate version format
+		if not _is_valid_version_string(str(entry.version)):
+			result.warnings.append("Invalid version format, keeping as-is for migration tracking")
+	
+	# Handle migration-related fields
+	if entry.has("migration_source"):
+		sanitized.migration_source = str(entry.migration_source)
+	
+	if entry.has("migration_timestamp"):
+		if not (entry.migration_timestamp is int) or entry.migration_timestamp < 0:
+			result.warnings.append("Invalid migration timestamp")
+		else:
+			sanitized.migration_timestamp = entry.migration_timestamp
 	
 	result.sanitized_data = sanitized
 	result.valid = result.errors.is_empty()
@@ -174,6 +188,22 @@ func _is_valid_date_string(date_str: String) -> bool:
 	regex.compile("^\\d{4}-\\d{2}-\\d{2}$")
 	return regex.search(date_str) != null
 
+func _is_valid_version_string(version_str: String) -> bool:
+	"""Check if version string is in valid format (X.Y.Z or migration format)"""
+	# Allow standard version format (X.Y.Z)
+	var version_regex = RegEx.new()
+	version_regex.compile("^\\d+\\.\\d+(\\.\\d+)?$")
+	if version_regex.search(version_str) != null:
+		return true
+	
+	# Allow migration format (migrated_from_X)
+	var migration_regex = RegEx.new()
+	migration_regex.compile("^migrated_from_")
+	if migration_regex.search(version_str) != null:
+		return true
+	
+	return false
+
 func _generate_session_id() -> String:
 	"""Generate a unique session identifier"""
 	var time = Time.get_unix_time_from_system()
@@ -190,10 +220,44 @@ func validate_score_submission(player_name: String, score: int, player_index: in
 		"date": Time.get_date_string_from_system(),
 		"timestamp": Time.get_unix_time_from_system(),
 		"session_id": _generate_session_id(),
-		"version": "1.0.0"
+		"version": "1.1.0"
 	}
 	
 	return validate_high_score_entry(entry)
+
+# Migration-specific validation methods
+func validate_migrated_entry(entry: Dictionary, source_version: String) -> ValidationResult:
+	"""Validate an entry that has been migrated from an older version"""
+	var result = validate_high_score_entry(entry)
+	
+	# Add migration-specific validation
+	if not entry.has("migration_source"):
+		result.sanitized_data.migration_source = source_version
+		result.warnings.append("Added migration source: %s" % source_version)
+	
+	if not entry.has("migration_timestamp"):
+		result.sanitized_data.migration_timestamp = Time.get_unix_time_from_system()
+		result.warnings.append("Added migration timestamp")
+	
+	# Update version to indicate migration
+	if not result.sanitized_data.version.begins_with("migrated_from_"):
+		result.sanitized_data.version = "migrated_from_%s" % source_version
+	
+	return result
+
+func validate_migration_compatibility(old_version: String, new_version: String) -> bool:
+	"""Check if migration from old version to new version is supported"""
+	# Define supported migration paths
+	var supported_migrations = {
+		"legacy": ["1.0", "1.1"],
+		"1.0": ["1.1"],
+		"1.1": []  # Current version, no migration needed
+	}
+	
+	if not supported_migrations.has(old_version):
+		return false
+	
+	return new_version in supported_migrations[old_version]
 
 func is_score_improvement(new_score: int, existing_scores: Array[Dictionary], player_name: String) -> bool:
 	"""Check if the new score is an improvement over existing scores for the same player"""

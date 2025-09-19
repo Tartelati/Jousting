@@ -63,6 +63,9 @@ func run_tests():
 	
 	# Migration tests
 	test_legacy_format_migration()
+	test_version_detection()
+	test_migration_backup_creation()
+	test_save_file_location_discovery()
 	
 	print("=== HighScoreStorage Tests Complete ===\n")
 
@@ -350,6 +353,80 @@ func test_legacy_format_migration():
 	assert_equal(loaded_scores.size(), 2, "Should migrate legacy scores")
 	assert_equal(loaded_scores[0].name, "LegacyPlayer", "Should preserve legacy data")
 	assert_equal(loaded_scores[1].score, 12000, "Should preserve legacy scores")
+	
+	# Verify enhanced fields were added
+	assert_true(loaded_scores[0].has("date"), "Should add date field during migration")
+	assert_true(loaded_scores[0].has("timestamp"), "Should add timestamp field during migration")
+	assert_true(loaded_scores[0].has("version"), "Should add version field during migration")
+	
+	cleanup()
+
+func test_version_detection():
+	"""Test version detection for different file formats"""
+	setup()
+	
+	# Test current version detection
+	var current_data = {"version": "1.1", "magic": "HSCORE", "scores": []}
+	var detected = storage._detect_file_version(current_data)
+	assert_equal(detected, "1.1", "Should detect current version")
+	
+	# Test v1.0 detection
+	var v1_0_data = {"magic": "HSCORE", "timestamp": 123, "scores": []}
+	detected = storage._detect_file_version(v1_0_data)
+	assert_equal(detected, "1.0", "Should detect v1.0 format")
+	
+	# Test legacy detection
+	var legacy_array = [{"name": "Test", "score": 100}]
+	detected = storage._detect_file_version(legacy_array)
+	assert_equal(detected, "legacy", "Should detect legacy array format")
+	
+	cleanup()
+
+func test_migration_backup_creation():
+	"""Test that migration creates backup files"""
+	setup()
+	
+	# Create legacy file
+	var legacy_data = [{"name": "BackupTest", "score": 5000}]
+	var file = FileAccess.open(test_save_path, FileAccess.WRITE)
+	file.store_var(legacy_data)
+	file.close()
+	
+	# Load should create migration backup
+	var loaded_scores = storage.load_high_scores()
+	
+	# Check backup was created
+	var backup_path = test_save_path.get_basename() + "_pre_migration_legacy.backup"
+	assert_true(FileAccess.file_exists(backup_path), "Should create migration backup")
+	
+	# Cleanup backup
+	if FileAccess.file_exists(backup_path):
+		DirAccess.remove_absolute(backup_path)
+	
+	cleanup()
+
+func test_save_file_location_discovery():
+	"""Test finding save files in alternate locations"""
+	setup()
+	
+	# Test with no files
+	var found_path = storage.find_save_file_in_common_locations()
+	assert_equal(found_path, "", "Should return empty string when no files found")
+	
+	# Create file in alternate location
+	var alt_path = "user://highscores.save"
+	var test_data = [{"name": "AltTest", "score": 3000}]
+	var file = FileAccess.open(alt_path, FileAccess.WRITE)
+	file.store_var(test_data)
+	file.close()
+	
+	# Should find the alternate file
+	found_path = storage.find_save_file_in_common_locations()
+	assert_equal(found_path, alt_path, "Should find file in alternate location")
+	
+	# Cleanup alternate file
+	if FileAccess.file_exists(alt_path):
+		DirAccess.remove_absolute(alt_path)
 	
 	cleanup()
 

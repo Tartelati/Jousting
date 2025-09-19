@@ -59,12 +59,51 @@ text = "Play Again"
 layout_mode = 2
 text = "Main Menu"
 
-[node name="NameEntry" type="LineEdit" parent="VBoxContainer"]
+[node name="HighScoreContainer" type="VBoxContainer" parent="VBoxContainer"]
 visible = false
 layout_mode = 2
-text = "Type your name: "
 
-[node name="SubmitNameButton" type="Button" parent="VBoxContainer"]
-visible = false
+[node name="HighScoreMessage" type="Label" parent="VBoxContainer/HighScoreContainer"]
 layout_mode = 2
-text = "Submit"
+text = "🎉 NEW HIGH SCORE! 🎉"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(1, 0.8, 0, 1)
+
+[node name="NamePrompt" type="Label" parent="VBoxContainer/HighScoreContainer"]
+layout_mode = 2
+text = "Enter your name:"
+horizontal_alignment = 1
+
+[node name="NameEntry" type="LineEdit" parent="VBoxContainer/HighScoreContainer"]
+layout_mode = 2
+placeholder_text = "Your name here..."
+max_length = 20
+alignment = 1
+
+[node name="ValidationMessage" type="Label" parent="VBoxContainer/HighScoreContainer"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+
+[node name="CharacterCount" type="Label" parent="VBoxContainer/HighScoreContainer"]
+layout_mode = 2
+text = "0/20 characters"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+
+[node name="ButtonContainer" type="HBoxContainer" parent="VBoxContainer/HighScoreContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="SubmitNameButton" type="Button" parent="VBoxContainer/HighScoreContainer/ButtonContainer"]
+layout_mode = 2
+text = "Submit Score"
+disabled = false
+
+[node name="SkipButton" type="Button" parent="VBoxContainer/HighScoreContainer/ButtonContainer"]
+layout_mode = 2
+text = "Skip"
