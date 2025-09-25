@@ -16,6 +16,7 @@ This document provides an overview of all documentation available for the Joust 
 ### Multiplayer Systems
 - **[improved-controller-system.md](improved-controller-system.md)** - Controller assignment and dynamic player joining
 - **[dynamic-joining-fix-summary.md](dynamic-joining-fix-summary.md)** - Dynamic player joining implementation details
+- **[multi-player-high-score-implementation-summary.md](multi-player-high-score-implementation-summary.md)** - Multi-player high score handling system implementation details
 - **[dynamic-joining-test-guide.md](dynamic-joining-test-guide.md)** - Testing guide for multiplayer features
 
 ### Implementation Guides
@@ -139,6 +140,7 @@ assets/
 - ✅ Enhanced name entry and validation UI with real-time feedback
 - ✅ High score display and formatting system with responsive UI components
 - ✅ User feedback and notification system with animated visual effects
+- ✅ Multi-player high score handling with sequential name entry and player-specific validation
 
 ### Recently Completed
 - ✅ **High Score Save System Enhancement** - All major components complete
