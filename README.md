@@ -13,7 +13,7 @@ Jousting is a 2D platformer game developed using GDScript, the scripting languag
 - Enemy AI and challenging levels
 - Retro-inspired graphics and sound effects
 - Multiplayer support (up to 4 players)
-- High score system with persistent storage
+- Enhanced high score system with robust persistence, validation, and user feedback
 - Dynamic player joining and controller support
 
 ## Game Systems
@@ -22,8 +22,11 @@ Jousting is a 2D platformer game developed using GDScript, the scripting languag
 The game features a comprehensive scoring system that tracks player performance across multiple sessions:
 
 - **Real-time Scoring**: Points awarded for defeating enemies, collecting eggs, and completing waves
-- **High Score Persistence**: Scores are automatically saved to local storage and persist across game sessions
+- **Enhanced High Score System**: Robust persistence with data validation, backup/recovery, and migration support
+- **User Feedback**: Animated notifications for achievements, personal bests, and save confirmations
 - **Multi-player Support**: Independent score tracking for up to 4 players simultaneously
+- **Name Entry**: Real-time validation with character filtering and user-friendly error messages
+- **High Score Display**: Formatted display with current session highlighting and responsive UI
 - **Bonus System**: Special bonuses for air catches and other skilled maneuvers
 
 ### Player Movement System
@@ -53,11 +56,12 @@ A comprehensive high score persistence system has been implemented with robust f
 - **✅ ScoreManager Integration**: Complete integration with HighScoreStorage and HighScoreValidator, including enhanced submission methods, automatic saving, error handling, and comprehensive testing
 - **✅ Data Migration System**: Migration system with version tracking, backward compatibility, and save file recovery
 - **✅ Enhanced Name Entry UI**: Complete enhanced name entry and validation UI with real-time feedback, character filtering, and comprehensive testing
+- **✅ High Score Display System**: Complete formatted high score display with proper number formatting, date display, current session highlighting, and responsive UI components
 - **✅ Player Name Entry**: Validation and sanitization of player names for high scores
 - **✅ Error Handling**: Graceful degradation when storage is unavailable, with comprehensive error recovery
 - **✅ Session Tracking**: Unique session IDs and current session score marking
-- **✅ Multi-player Integration**: Support for multiple players achieving high scores in single sessions
-- **Configuration Management**: Customizable settings for score limits and storage locations (in progress)
+- **✅ Multi-player High Score System**: Complete multi-player high score handling with sequential name entry, player-specific validation, and comprehensive testing
+- **✅ User Feedback and Notification System**: Complete notification system with animated feedback, success/error messages, personal best highlighting, and comprehensive testing
 
 ## Getting Started
 

@@ -27,6 +27,12 @@ func _ready():
 	score_manager = get_node("/root/ScoreManager")
 	validator = HighScoreValidator.new()
 	
+	# Check if this is a multi-player session
+	if _is_multi_player_session():
+		_switch_to_multi_player_game_over()
+		return
+	
+	# Single player processing
 	# Calculate final score and determine qualifying player
 	_calculate_final_score()
 	
@@ -228,13 +234,21 @@ func _show_success_feedback(player_name: String, rank: int):
 	# Update the high score display
 	high_score_label.text = "High Score: %s" % _format_score(_get_current_high_score())
 	
-	# Could add a success animation or message here
+	# Show success notification through ScoreManager
+	var success_message = "✅ High Score Saved!\n%s ranked #%d" % [player_name, rank]
+	if score_manager.has_method("show_high_score_feedback"):
+		score_manager.show_high_score_feedback(success_message, "success")
+	
 	_animate_success()
 
 func _show_error_feedback(error_message: String):
 	"""Show error message to user"""
 	validation_message.text = error_message
 	validation_message.modulate = Color.RED
+	
+	# Show error notification through ScoreManager
+	if score_manager.has_method("show_high_score_feedback"):
+		score_manager.show_high_score_feedback("❌ " + error_message, "error")
 	
 	# Flash the validation message
 	var tween = create_tween()
@@ -287,3 +301,34 @@ func _on_restart_pressed():
 
 func _on_main_menu_pressed():
 	emit_signal("main_menu")
+
+# MULTI-PLAYER DETECTION AND SWITCHING
+
+func _is_multi_player_session() -> bool:
+	"""Check if this is a multi-player session with multiple active players"""
+	var active_players = 0
+	for player_index in score_manager.scores.keys():
+		if score_manager.scores[player_index] > 0:
+			active_players += 1
+	
+	return active_players > 1
+
+func _switch_to_multi_player_game_over():
+	"""Switch to the multi-player game over UI"""
+	# Load the multi-player game over scene
+	var multi_player_scene = preload("res://scenes/ui/multi_player_game_over.tscn")
+	var multi_player_instance = multi_player_scene.instantiate()
+	
+	# Connect signals
+	multi_player_instance.connect("restart", _on_restart_pressed)
+	multi_player_instance.connect("main_menu", _on_main_menu_pressed)
+	
+	# Replace this scene with the multi-player version
+	var parent = get_parent()
+	if parent:
+		parent.add_child(multi_player_instance)
+		queue_free()
+	else:
+		# Fallback: add to scene tree
+		get_tree().current_scene.add_child(multi_player_instance)
+		queue_free()

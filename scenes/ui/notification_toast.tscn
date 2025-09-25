@@ -1,0 +1,46 @@
+[gd_scene load_steps=3 format=3 uid="uid://bqm8xvn2qxqxq"]
+
+[ext_resource type="Script" path="res://scripts/ui/notification_toast.gd" id="1_notification_toast"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0.3, 0.3, 0.3, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_left = 8
+corner_radius_bottom_right = 8
+border_width_left = 2
+border_width_right = 2
+border_width_top = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+
+[node name="NotificationToast" type="PanelContainer"]
+custom_minimum_size = Vector2(300, 60)
+script = ExtResource("1_notification_toast")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_1")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="IconLabel" type="Label" parent="HBoxContainer"]
+layout_mode = 2
+text = "ℹ"
+theme_override_font_sizes/font_size = 24
+vertical_alignment = 1
+
+[node name="MessageLabel" type="Label" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Notification message"
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="CloseButton" type="Button" parent="HBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(30, 30)
+flat = true
+text = "×"

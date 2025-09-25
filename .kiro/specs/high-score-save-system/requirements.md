@@ -88,14 +88,3 @@ This specification defines a comprehensive high score save system for the Joust 
 4. WHEN a score doesn't qualify for the high score list THEN the system SHALL still acknowledge the player's performance
 5. WHEN the high score list is updated THEN the system SHALL animate the changes to draw attention
 
-### Requirement 8
-
-**User Story:** As a system administrator, I want the save system to be configurable, so that I can adjust settings like maximum number of high scores stored.
-
-#### Acceptance Criteria
-
-1. WHEN the system initializes THEN it SHALL read configuration settings from a settings file
-2. WHEN configuration is missing THEN the system SHALL use sensible defaults
-3. WHEN the maximum high score count is configured THEN the system SHALL respect this limit
-4. WHEN the save file location is configured THEN the system SHALL use the specified path
-5. WHEN debug mode is enabled THEN the system SHALL provide verbose logging of save operations

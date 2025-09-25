@@ -1,0 +1,61 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8m5n9p2q4r6s"]
+
+[ext_resource type="Script" path="res://scripts/ui/high_score_entry.gd" id="1_high_score_entry"]
+
+[node name="HighScoreEntry" type="Control"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 3
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+script = ExtResource("1_high_score_entry")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RankLabel" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "1."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="NameLabel" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "Player Name"
+vertical_alignment = 1
+
+[node name="ScoreLabel" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "1,000,000"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="DateLabel" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "12/25/24"
+horizontal_alignment = 1
+vertical_alignment = 1
+modulate = Color(0.8, 0.8, 0.8, 1)
+
+[node name="SessionIndicator" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "★"
+horizontal_alignment = 1
+vertical_alignment = 1
+modulate = Color(1, 1, 0, 1)

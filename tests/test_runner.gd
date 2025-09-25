@@ -10,6 +10,7 @@ var test_results = []
 
 func _ready():
 	print("Starting HighScoreValidator Tests...")
+	print("Note: For multi-player high score tests, run test_multi_player_high_scores_runner.tscn")
 	validator = HighScoreValidator.new()
 	
 	run_all_tests()

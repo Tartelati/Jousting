@@ -17,8 +17,7 @@ graph TB
     SM --> HSV[HighScoreValidator]
     HSS --> FS[File System]
     HSV --> SM
-    CFG[ConfigManager] --> HSS
-    CFG --> SM
+
     
     subgraph "UI Layer"
         UI
@@ -34,7 +33,6 @@ graph TB
     
     subgraph "Data Layer"
         HSS
-        CFG
         FS
     end
 ```
@@ -134,17 +132,15 @@ const MIN_SCORE = 0
 const MAX_REASONABLE_SCORE = 99_999_999
 ```
 
-### ConfigManager Integration
+### Configuration Management
 
-**Responsibilities:**
-- Manage system configuration
-- Provide default values
-- Handle configuration file loading
+**Implementation:**
+Configuration is now handled directly within the ScoreManager and HighScoreStorage classes rather than through a separate ConfigManager. This simplifies the architecture while maintaining all necessary configuration capabilities.
 
 **Configuration Options:**
 ```gdscript
-# Default configuration
-var default_config = {
+# Configuration handled in ScoreManager
+var config: Dictionary = {
     "max_high_scores": 10,
     "save_location": "user://high_scores.save",
     "backup_enabled": true,

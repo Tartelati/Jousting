@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3 uid="uid://d7f9g2h4j5k8l"]
+
+[ext_resource type="Script" path="res://scripts/ui/high_score_screen.gd" id="1_high_score_screen"]
+[ext_resource type="PackedScene" uid="uid://bvn8k7m2x3p4q" path="res://scenes/ui/high_score_display.tscn" id="2_high_score_display"]
+
+[node name="HighScoreScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_high_score_screen")
+
+[node name="HighScoreDisplay" parent="." instance=ExtResource("2_high_score_display")]
+layout_mode = 1

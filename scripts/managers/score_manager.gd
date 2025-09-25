@@ -24,6 +24,7 @@ var last_life_score = {}
 # Enhanced high score system components
 var storage: HighScoreStorage
 var validator: HighScoreValidator
+var notification_system: NotificationSystem
 var config: Dictionary = {
 	"max_high_scores": 10,
 	"save_location": "user://high_scores.save",
@@ -36,6 +37,11 @@ var config: Dictionary = {
 # Session tracking
 var current_session_id: String
 var session_scores: Dictionary = {}  # Track scores achieved this session
+
+# Multi-player high score tracking
+var qualifying_players: Array[int] = []  # Players who achieved qualifying scores
+var player_high_score_data: Dictionary = {}  # Store high score data per player
+var processed_players: Array[int] = []  # Track which players have been processed for high scores
 
 # Points values for different actions
 var points = {
@@ -320,7 +326,123 @@ func reset_all_players():
 	last_life_score.clear()
 	session_scores.clear()
 	
+	# Clear multi-player high score tracking
+	qualifying_players.clear()
+	player_high_score_data.clear()
+	processed_players.clear()
+	
 	print("[DEBUG] ScoreManager: All players reset")
+
+# MULTI-PLAYER HIGH SCORE METHODS
+
+func check_all_players_for_qualifying_scores():
+	"""Check all active players for qualifying high scores"""
+	qualifying_players.clear()
+	player_high_score_data.clear()
+	
+	for player_index in scores.keys():
+		var player_score = scores[player_index]
+		if is_qualifying_score(player_score) and not player_index in processed_players:
+			qualifying_players.append(player_index)
+			player_high_score_data[player_index] = {
+				"score": player_score,
+				"rank": get_player_rank(player_score),
+				"is_personal_best": _check_player_personal_best(player_index, player_score)
+			}
+			
+			if config.debug_logging:
+				print("[ScoreManager] Player %d qualifies with score %d (rank %d)" % [player_index, player_score, player_high_score_data[player_index].rank])
+	
+	# Sort qualifying players by score (highest first)
+	qualifying_players.sort_custom(func(a, b): return scores[a] > scores[b])
+	
+	return qualifying_players
+
+func get_next_qualifying_player() -> int:
+	"""Get the next player who needs to enter their name for high score"""
+	for player_index in qualifying_players:
+		if not player_index in processed_players:
+			return player_index
+	return -1
+
+func get_player_high_score_data(player_index: int) -> Dictionary:
+	"""Get high score data for a specific player"""
+	return player_high_score_data.get(player_index, {})
+
+func mark_player_processed(player_index: int):
+	"""Mark a player as having been processed for high score entry"""
+	if not player_index in processed_players:
+		processed_players.append(player_index)
+
+func get_remaining_qualifying_players() -> Array[int]:
+	"""Get list of players who still need to enter names"""
+	var remaining: Array[int] = []
+	for player_index in qualifying_players:
+		if not player_index in processed_players:
+			remaining.append(player_index)
+	return remaining
+
+func _check_player_personal_best(player_index: int, current_score: int) -> bool:
+	"""Check if current score is a personal best for this player"""
+	var player_name = "Player %d" % player_index
+	var existing_best = _get_player_best_score(player_name)
+	return existing_best == -1 or current_score > existing_best
+
+func submit_multi_player_high_score(player_index: int, player_name: String) -> Dictionary:
+	"""Submit high score for a specific player in multi-player context"""
+	if not player_index in qualifying_players:
+		return {
+			"success": false,
+			"rank": -1,
+			"is_personal_best": false,
+			"previous_score": 0,
+			"message": "Player does not have a qualifying score"
+		}
+	
+	var result = submit_high_score(player_index, player_name)
+	
+	if result.success:
+		mark_player_processed(player_index)
+		
+		# Update player high score data with final results
+		player_high_score_data[player_index]["final_name"] = player_name
+		player_high_score_data[player_index]["final_rank"] = result.rank
+		
+		if config.debug_logging:
+			print("[ScoreManager] Multi-player high score submitted for Player %d: %s (rank %d)" % [player_index, player_name, result.rank])
+	
+	return result
+
+func get_multi_player_session_summary() -> Dictionary:
+	"""Get summary of all players' performance in current session"""
+	var summary = {
+		"total_players": scores.size(),
+		"qualifying_players": qualifying_players.size(),
+		"processed_players": processed_players.size(),
+		"player_scores": {},
+		"session_high_scores": []
+	}
+	
+	# Add all player scores
+	for player_index in scores.keys():
+		summary.player_scores[player_index] = {
+			"score": scores[player_index],
+			"qualified": player_index in qualifying_players,
+			"processed": player_index in processed_players
+		}
+	
+	# Add session high scores
+	for player_index in processed_players:
+		if player_index in player_high_score_data:
+			var data = player_high_score_data[player_index]
+			summary.session_high_scores.append({
+				"player_index": player_index,
+				"name": data.get("final_name", "Player %d" % player_index),
+				"score": data.score,
+				"rank": data.get("final_rank", data.rank)
+			})
+	
+	return summary
 
 # ENHANCED HIGH SCORE SYSTEM METHODS
 
@@ -334,6 +456,9 @@ func initialize_enhanced_system():
 	
 	# Initialize validator
 	validator = HighScoreValidator.new()
+	
+	# Initialize notification system
+	_initialize_notification_system()
 	
 	if config.debug_logging:
 		print("[ScoreManager] Enhanced high score system initialized with session ID: %s" % current_session_id)
@@ -432,13 +557,18 @@ func get_formatted_high_scores() -> Array[Dictionary]:
 			"name": entry.name,
 			"score": entry.score,
 			"formatted_score": _format_score(entry.score),
-			"date": entry.get("date", "Unknown"),
+			"date": entry.get("date", _get_current_date()),
 			"is_current_session": _is_current_session_score(entry),
 			"player_index": entry.get("player_index", 1)
 		}
 		formatted_scores.append(formatted_entry)
 	
 	return formatted_scores
+
+func _get_current_date() -> String:
+	"""Get current date in YYYY-MM-DD format"""
+	var datetime = Time.get_datetime_dict_from_system()
+	return "%04d-%02d-%02d" % [datetime.year, datetime.month, datetime.day]
 
 func is_qualifying_score(score: int) -> bool:
 	"""Check if a score qualifies for the high score list"""
@@ -574,3 +704,108 @@ func _save_high_scores_with_retry(scores_to_save: Array[Dictionary]) -> bool:
 	
 	config.auto_save = false
 	return false
+
+# NOTIFICATION SYSTEM METHODS
+
+func _initialize_notification_system():
+	"""Initialize the notification system for user feedback"""
+	# Find or create notification system in the scene tree
+	notification_system = _find_or_create_notification_system()
+	
+	if notification_system:
+		# Connect to our signals for automatic feedback
+		high_score_saved.connect(_on_high_score_saved_feedback)
+		save_error.connect(_on_save_error_feedback)
+		personal_best_achieved.connect(_on_personal_best_feedback)
+		
+		if config.debug_logging:
+			print("[ScoreManager] Notification system initialized")
+
+func _find_or_create_notification_system() -> NotificationSystem:
+	"""Find existing notification system or create a new one"""
+	# Try to find existing notification system
+	var existing_system = get_tree().get_first_node_in_group("notification_system")
+	if existing_system and existing_system is NotificationSystem:
+		return existing_system
+	
+	# Create new notification system
+	var new_system = preload("res://scripts/ui/notification_system.gd").new()
+	new_system.name = "NotificationSystem"
+	new_system.add_to_group("notification_system")
+	
+	# Add to main scene or current scene
+	var main_scene = get_tree().current_scene
+	if main_scene:
+		main_scene.add_child(new_system)
+		return new_system
+	
+	return null
+
+func show_high_score_feedback(message: String, type: String = "success"):
+	"""Show feedback message to the user"""
+	if not notification_system:
+		if config.debug_logging:
+			print("[ScoreManager] Notification system not available: %s" % message)
+		return
+	
+	match type:
+		"success":
+			notification_system.show_success(message)
+		"error":
+			notification_system.show_error(message)
+		"personal_best":
+			notification_system.show_personal_best(message)
+		_:
+			notification_system.show_info(message)
+
+func _on_high_score_saved_feedback(player_name: String, score: int, rank: int):
+	"""Handle high score saved signal with user feedback"""
+	var message = ""
+	
+	if rank == 1:
+		message = "🏆 NEW HIGH SCORE! 🏆\n%s achieved %s points!" % [player_name, _format_score(score)]
+	elif rank <= 3:
+		message = "🥉 TOP 3 SCORE! 🥉\n%s ranked #%d with %s points!" % [player_name, rank, _format_score(score)]
+	else:
+		message = "⭐ HIGH SCORE! ⭐\n%s ranked #%d with %s points!" % [player_name, rank, _format_score(score)]
+	
+	show_high_score_feedback(message, "success")
+
+func _on_save_error_feedback(error_message: String):
+	"""Handle save error signal with user feedback"""
+	var user_message = "❌ Save Failed\n" + error_message
+	show_high_score_feedback(user_message, "error")
+
+func _on_personal_best_feedback(player_index: int, previous_best: int):
+	"""Handle personal best achievement with special feedback"""
+	var current_score = get_score(player_index)
+	var improvement = current_score - previous_best
+	var message = "🌟 PERSONAL BEST! 🌟\nImproved by %s points!\nNew best: %s" % [_format_score(improvement), _format_score(current_score)]
+	
+	show_high_score_feedback(message, "personal_best")
+
+func show_score_achievement_feedback(player_index: int, achievement_type: String, details: Dictionary = {}):
+	"""Show feedback for various score achievements"""
+	if not notification_system:
+		return
+	
+	var player_name = "Player %d" % player_index
+	var current_score = get_score(player_index)
+	
+	match achievement_type:
+		"qualifying_score":
+			var message = "🎯 Qualifying Score!\n%s can enter the high score list!" % player_name
+			notification_system.show_info(message, 4.0)
+		
+		"milestone_reached":
+			var milestone = details.get("milestone", 0)
+			var message = "🎊 Milestone Reached!\n%s points achieved!" % _format_score(milestone)
+			notification_system.show_success(message, 3.0)
+		
+		"extra_life_earned":
+			var message = "💚 Extra Life!\n%s earned a bonus life!" % player_name
+			notification_system.show_success(message, 2.5)
+		
+		"score_doubled":
+			var message = "⚡ Score Doubled!\n%s is on fire!" % player_name
+			notification_system.show_success(message, 3.0)

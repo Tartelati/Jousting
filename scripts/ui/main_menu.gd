@@ -7,6 +7,7 @@ signal quit_game
 func _ready():
 	# Connect button signals
 	$VBoxContainer/StartGameButton.connect("pressed", _on_start_game_pressed)
+	$VBoxContainer/HighScoresButton.connect("pressed", _on_high_scores_pressed)
 	$VBoxContainer/OptionsButton.connect("pressed", _on_options_pressed)
 	$VBoxContainer/QuitButton.connect("pressed", _on_quit_pressed)
 	
@@ -27,6 +28,12 @@ func _on_options_pressed():
 	var options_menu = load("res://scenes/ui/options_menu.tscn").instantiate()
 	add_child(options_menu)
 	options_menu.connect("closed", func(): options_menu.queue_free())
+
+func _on_high_scores_pressed():
+	# Create and show high score screen
+	var high_score_screen = load("res://scenes/ui/high_score_screen.tscn").instantiate()
+	add_child(high_score_screen)
+	high_score_screen.back_to_main_menu.connect(func(): high_score_screen.queue_free())
 
 func _on_quit_pressed():
 	emit_signal("quit_game")
