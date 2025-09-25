@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://c8xr7ywqkxbvn"]
 
-[ext_resource type="Script" path="res://tests/integration_game_over_ui_test.gd" id="1_integration_test"]
+[ext_resource type="Script" uid="uid://cr4ihk86c43vr" path="res://tests/integration_game_over_ui_test.gd" id="1_integration_test"]
 
 [node name="IntegrationGameOverUITest" type="Control"]
 layout_mode = 3
@@ -21,9 +21,9 @@ grow_vertical = 2
 
 [node name="TestLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 24
 text = "GameOver UI Integration Test"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 24
 
 [node name="StartButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
@@ -31,10 +31,10 @@ text = "Start Integration Test"
 
 [node name="StatusLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 12
 text = "Ready to test GameOver UI integration"
 horizontal_alignment = 1
 autowrap_mode = 3
-theme_override_font_sizes/font_size = 12
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
 layout_mode = 2
@@ -45,7 +45,7 @@ size_flags_vertical = 3
 
 [node name="InstructionsLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 10
 text = "Manual Testing: Press 1 for valid name, 2 for invalid name, 3 for skip test"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 10
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)

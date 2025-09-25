@@ -14,7 +14,7 @@ signal personal_best_achieved(player_index: int, previous_best: int)
 # Properties
 var scores = {}
 var lives = {}
-var high_scores = [
+var high_scores: Array[Dictionary] = [
 	{"name": "David Lacassagne", "score": 999_999_999}
 ]
 var max_lives = 5
@@ -131,7 +131,7 @@ func load_high_scores():
 			var validation_result = validator.validate_high_score_list(loaded_scores)
 			
 			if validation_result.valid:
-				high_scores = validation_result.sanitized_data.scores
+				high_scores = validation_result.sanitized_data.scores as Array[Dictionary]
 				if config.debug_logging:
 					print("[ScoreManager] Loaded %d high scores from enhanced storage" % high_scores.size())
 			else:
@@ -158,9 +158,9 @@ func _load_legacy_high_scores():
 			
 			# Handle different legacy formats
 			if loaded_data is Array:
-				high_scores = loaded_data
+				high_scores = loaded_data as Array[Dictionary]
 			elif loaded_data is Dictionary and loaded_data.has("scores"):
-				high_scores = loaded_data.scores
+				high_scores = loaded_data.scores as Array[Dictionary]
 			else:
 				_initialize_default_high_scores()
 				
@@ -173,7 +173,7 @@ func _initialize_default_high_scores():
 	"""Initialize with default high scores"""
 	high_scores = [
 		{"name": "David Lacassagne", "score": 999_999_999, "date": "2024-01-01", "timestamp": 0, "player_index": 1, "session_id": "default", "version": "1.1.0"}
-	]
+	] as Array[Dictionary]
 
 func _ensure_david_and_limit():
 	"""Ensure David is at the top and limit list size"""

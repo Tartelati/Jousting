@@ -74,7 +74,7 @@ A comprehensive enhancement to the high score system is currently specified in `
 
 #### Maintainability
 - Modular architecture with clear separation of concerns
-- Comprehensive test coverage
+- Comprehensive test coverage using built-in TestBase framework
 - Configuration-driven behavior
 - Extensive documentation
 
@@ -119,14 +119,14 @@ The high score system enhancement has progressed beyond the specification phase:
 ✅ **Core Validation and Utility Classes (Phase 1)**
 - HighScoreValidator class with comprehensive score and name validation
 - Data sanitization and integrity checking functions
-- Complete unit test suite with 40+ test cases covering edge cases
+- Complete unit test suite with 40+ test cases covering edge cases using built-in TestBase framework
 - Integration examples and documentation
 
 ✅ **Robust File Storage System (Phase 2)**
 - HighScoreStorage class with save/load operations using Godot's FileAccess
 - Backup and recovery mechanisms for data protection
 - File integrity verification and corruption detection
-- Comprehensive test suite including unit, integration, and manual tests
+- Comprehensive test suite including unit, integration, and manual tests using built-in TestBase framework
 - Complete documentation and usage examples
 
 ✅ **Enhanced ScoreManager Integration (Phase 4) - COMPLETE**
@@ -136,7 +136,7 @@ The high score system enhancement has progressed beyond the specification phase:
 - Session tracking with unique session IDs and current session marking
 - Multi-player support for simultaneous high score achievements
 - Backward compatibility with legacy methods maintained
-- Comprehensive integration testing including unit, integration, and manual tests
+- Comprehensive integration testing including unit, integration, and manual tests using built-in TestBase framework
 - Enhanced signals for UI feedback and error handling
 - **Task 4 officially completed with all requirements met**
 
@@ -148,7 +148,7 @@ The high score system enhancement has progressed beyond the specification phase:
 - All migration methods implemented in HighScoreStorage class (_detect_file_version, migrate_old_format, _migrate_from_legacy, _migrate_from_v1_0, etc.)
 - Migration compatibility validation integrated into HighScoreValidator
 - Complete ScoreManager integration with automatic migration on load
-- Comprehensive test coverage including unit, integration, and manual tests
+- Comprehensive test coverage including unit, integration, and manual tests using built-in TestBase framework
 - **Task 5 officially completed with all requirements met and ready for production**
 
 ✅ **Enhanced Name Entry and Validation UI (Phase 6) - COMPLETE**
@@ -157,7 +157,7 @@ The high score system enhancement has progressed beyond the specification phase:
 - Real-time validation feedback with color coding and character count display
 - Multiple interaction methods (Submit button, Enter key, Skip button)
 - Personal best detection and achievement celebration messages
-- Comprehensive test coverage including unit, integration, and manual tests
+- Comprehensive test coverage including unit, integration, and manual tests using built-in TestBase framework
 - **Task 6 officially completed with all requirements met**
 
 ✅ **High Score Display and Formatting System (Phase 7) - COMPLETE**
@@ -167,7 +167,7 @@ The high score system enhancement has progressed beyond the specification phase:
 - Placeholder text for empty high score lists with user-friendly messaging
 - Main menu integration with dedicated high score viewing screen
 - HighScoreDisplay, HighScoreEntry, and HighScoreScreen components implemented
-- Comprehensive testing suite including unit, integration, and manual tests
+- Comprehensive testing suite including unit, integration, and manual tests using built-in TestBase framework
 - **Task 7 officially completed with all requirements met**
 
 ✅ **User Feedback and Notification System (Phase 8) - COMPLETE**
@@ -178,7 +178,7 @@ The high score system enhancement has progressed beyond the specification phase:
 - Personal best achievement highlighting with special visual effects and animations
 - Animated feedback for high score list updates with smooth transitions and sparkle effects
 - Comprehensive integration with ScoreManager for automatic feedback generation
-- Complete test suite including unit, integration, and manual tests with visual verification
+- Complete test suite including unit, integration, and manual tests with visual verification using built-in TestBase framework
 - **Task 8 officially completed with all requirements met**
 
 ✅ **Multi-Player High Score Handling (Phase 9) - COMPLETE**
@@ -188,7 +188,7 @@ The high score system enhancement has progressed beyond the specification phase:
 - Independent score tracking and submission for multiple players in single session
 - Player queue management and processing state tracking
 - Session summary with all submitted high scores and rankings
-- Comprehensive test suite including unit, integration, and manual tests
+- Comprehensive test suite including unit, integration, and manual tests using built-in TestBase framework
 - **Task 9 officially completed with all requirements met**
 
 ### All Major Tasks Complete ✅
@@ -202,8 +202,10 @@ The high score system enhancement has progressed beyond the specification phase:
 8. ✅ **Task 8**: User feedback and notification system **COMPLETE**
 9. ✅ **Task 9**: Multi-player high score handling **COMPLETE**
 
+### Deferred Tasks
+- **Task 10**: Main menu integration with dedicated high score viewing screen (deferred)
+
 ### Optional Future Enhancements
-- Main menu integration improvements
 - Performance optimization for very large datasets
 - Additional UI polish and animations
 

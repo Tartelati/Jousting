@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Integration tests for multi-player high score system (standalone version)
 
@@ -7,6 +7,7 @@ var multi_player_game_over: Control
 var game_over_scene = preload("res://scenes/ui/multi_player_game_over.tscn")
 
 func before_each():
+	super.before_each()
 	# Setup ScoreManager
 	score_manager = preload("res://scripts/managers/score_manager.gd").new()
 	score_manager.name = "ScoreManager"
@@ -21,7 +22,8 @@ func after_each():
 	if multi_player_game_over:
 		multi_player_game_over.queue_free()
 	if score_manager:
-		score_manager.queue_free()
+		score_manager = null
+	super.after_each()
 
 # Test multi-player workflow integration
 

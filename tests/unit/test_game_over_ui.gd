@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Test class for GameOver UI name entry and validation functionality (standalone version)
 class_name TestGameOverUI
@@ -10,6 +10,7 @@ var mock_validator: HighScoreValidator
 
 func before_each():
 	"""Setup before each test"""
+	super.before_each()
 	# Load the game over scene
 	game_over_scene = load("res://scenes/ui/game_over.tscn")
 	game_over_instance = game_over_scene.instantiate()
@@ -43,7 +44,8 @@ func after_each():
 	if game_over_instance:
 		game_over_instance.queue_free()
 	if score_manager:
-		score_manager.queue_free()
+		score_manager = null
+	super.after_each()
 
 func test_name_entry_shows_for_qualifying_score():
 	"""Test that name entry UI shows when player achieves qualifying score"""

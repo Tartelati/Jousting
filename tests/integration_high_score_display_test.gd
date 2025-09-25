@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Integration test for high score display system (standalone version)
 class_name TestHighScoreDisplayIntegration
@@ -8,6 +8,7 @@ var score_manager: Node
 var test_scene: Node
 
 func before_each():
+	super.before_each()
 	# Get the real ScoreManager
 	score_manager = get_node("/root/ScoreManager")
 	assert_not_null(score_manager, "ScoreManager should be available")
@@ -23,6 +24,10 @@ func before_each():
 	
 	# Wait for ready
 	await get_tree().process_frame
+
+func after_each():
+	# Cleanup is handled by add_child_autofree
+	super.after_each()
 
 func test_real_score_manager_integration():
 	"""Test integration with real ScoreManager"""

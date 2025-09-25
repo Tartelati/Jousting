@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Integration test for NotificationSystem with ScoreManager (standalone version)
 class_name TestNotificationSystemIntegration
@@ -8,6 +8,7 @@ var notification_system: NotificationSystem
 var test_scene: Node
 
 func before_each():
+	super.before_each()
 	# Create test scene
 	test_scene = Node.new()
 	add_child(test_scene)
@@ -29,6 +30,7 @@ func after_each():
 		test_scene.queue_free()
 	score_manager = null
 	notification_system = null
+	super.after_each()
 
 func test_score_manager_creates_notification_system():
 	"""Test that ScoreManager creates and initializes notification system"""

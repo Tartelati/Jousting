@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Test class for HighScoreDisplay functionality (standalone version)
 class_name TestHighScoreDisplay
@@ -7,6 +7,7 @@ var high_score_display: HighScoreDisplay
 var mock_score_manager: Node
 
 func before_each():
+	super.before_each()
 	# Create a mock score manager
 	mock_score_manager = Node.new()
 	mock_score_manager.name = "ScoreManager"
@@ -58,6 +59,7 @@ func get_formatted_high_scores() -> Array[Dictionary]:
 func after_each():
 	if mock_score_manager and is_instance_valid(mock_score_manager):
 		mock_score_manager.queue_free()
+	super.after_each()
 
 func test_initialization():
 	"""Test that HighScoreDisplay initializes correctly"""

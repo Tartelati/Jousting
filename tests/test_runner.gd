@@ -152,7 +152,7 @@ func test_validate_high_score_list():
 	print("\n--- Testing validate_high_score_list ---")
 	
 	# Valid list
-	var valid_scores = [
+	var valid_scores: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000},
 		{"name": "Player2", "score": 2000}
 	]
@@ -162,7 +162,7 @@ func test_validate_high_score_list():
 	assert_eq(result.sanitized_data.scores.size(), 2, "Should have 2 sanitized entries")
 	
 	# List with invalid entries
-	var invalid_scores = [
+	var invalid_scores: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000},
 		{"name": "Player2"},  # Missing score
 		{"score": 3000}       # Missing name
@@ -173,7 +173,7 @@ func test_validate_high_score_list():
 	assert_true(result.errors.size() > 0, "Should have errors for invalid entries")
 	
 	# Duplicate removal
-	var duplicate_scores = [
+	var duplicate_scores: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000},
 		{"name": "Player1", "score": 1000},  # Duplicate
 		{"name": "Player2", "score": 2000}
@@ -227,7 +227,8 @@ func test_edge_cases():
 	assert_false(validator.is_valid_score(999_999_999), "Extremely high scores should be invalid")
 	
 	# Empty score list
-	var result = validator.validate_high_score_list([])
+	var empty_scores: Array[Dictionary] = []
+	var result = validator.validate_high_score_list(empty_scores)
 	assert_true(result.valid, "Empty score list should be valid")
 	assert_eq(result.sanitized_data.scores.size(), 0, "Empty list should remain empty")
 	

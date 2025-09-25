@@ -1,13 +1,16 @@
-extends Node
+extends TestBase
 
-# Test class for HighScoreValidator (standalone version)
+# Test class for HighScoreValidator
 var validator: HighScoreValidator
 
 func before_each():
+	super.before_each()
 	validator = HighScoreValidator.new()
 
 func after_each():
-	validator = null
+	if validator:
+		validator = null
+	super.after_each()
 
 # Test score validation
 func test_is_valid_score_with_valid_scores():
@@ -128,7 +131,7 @@ func test_validate_high_score_entry_adds_missing_optional_fields():
 
 # Test high score list validation
 func test_validate_high_score_list_valid_list():
-	var scores = [
+	var scores: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000},
 		{"name": "Player2", "score": 2000}
 	]
@@ -138,7 +141,7 @@ func test_validate_high_score_list_valid_list():
 	assert_eq(result.sanitized_data.scores.size(), 2, "Should have 2 sanitized entries")
 
 func test_validate_high_score_list_with_invalid_entries():
-	var scores = [
+	var scores: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000},
 		{"name": "Player2"},  # Missing score
 		{"score": 3000}       # Missing name
@@ -149,7 +152,7 @@ func test_validate_high_score_list_with_invalid_entries():
 	assert_true(result.errors.size() > 0, "Should have errors for invalid entries")
 
 func test_validate_high_score_list_removes_duplicates():
-	var scores = [
+	var scores: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000},
 		{"name": "Player1", "score": 1000},  # Duplicate
 		{"name": "Player2", "score": 2000}
@@ -175,7 +178,7 @@ func test_validate_score_submission_with_sanitization():
 
 # Test score improvement checking
 func test_is_score_improvement_new_player():
-	var existing_scores = [
+	var existing_scores: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000}
 	]
 	
@@ -183,7 +186,7 @@ func test_is_score_improvement_new_player():
 	assert_true(result, "New player should always be an improvement")
 
 func test_is_score_improvement_existing_player_better():
-	var existing_scores = [
+	var existing_scores: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000}
 	]
 	
@@ -191,7 +194,7 @@ func test_is_score_improvement_existing_player_better():
 	assert_true(result, "Higher score should be an improvement")
 
 func test_is_score_improvement_existing_player_worse():
-	var existing_scores = [
+	var existing_scores: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000}
 	]
 	
@@ -208,7 +211,8 @@ func test_extremely_high_scores():
 	assert_false(validator.is_reasonable_score(999_999_999, 1.0), "Extremely high scores should not be reasonable")
 
 func test_empty_score_list():
-	var result = validator.validate_high_score_list([])
+	var empty_scores: Array[Dictionary] = []
+	var result = validator.validate_high_score_list(empty_scores)
 	assert_true(result.valid, "Empty score list should be valid")
 	assert_eq(result.sanitized_data.scores.size(), 0, "Empty list should remain empty")
 

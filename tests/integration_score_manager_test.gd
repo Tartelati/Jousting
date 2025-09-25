@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Integration test for enhanced ScoreManager functionality
 # Tests the integration between ScoreManager, HighScoreStorage, and HighScoreValidator

@@ -15,6 +15,7 @@ Jousting is a 2D platformer game developed using GDScript, the scripting languag
 - Multiplayer support (up to 4 players)
 - Enhanced high score system with robust persistence, validation, and user feedback
 - Dynamic player joining and controller support
+- Type-safe code with explicit type annotations for better Godot 4 compatibility
 
 ## Game Systems
 
@@ -67,6 +68,9 @@ A comprehensive high score persistence system has been fully implemented with al
 - **✅ Session Tracking**: Unique session IDs and current session score marking
 - **✅ Comprehensive Testing**: Full test coverage including unit, integration, and manual testing suites
 
+**Deferred Features:**
+- **📋 Task 10**: Main menu integration with dedicated high score viewing screen (deferred for future development)
+
 ## Getting Started
 
 To run the game, follow these steps:
@@ -74,16 +78,20 @@ To run the game, follow these steps:
 2. Open the project in Godot 4.4
 3. Ensure the required addons are enabled in Project Settings > Plugins:
    - `multiplayer_input` (for controller support)
-   - `gut` (for comprehensive testing framework)
 4. Run the main scene to start the game
 
+**Note**: The project uses a built-in testing framework and does not require the GUT (Godot Unit Test) addon.
+
 ### Testing
-The project includes comprehensive testing using the **GUT (Godot Unit Test)** framework:
-- **GUT Framework**: Professional testing framework with comprehensive assertion methods
+The project includes comprehensive testing with a built-in framework:
+- **Simple Framework**: Built-in `TestBase` class with all necessary assertion methods and proper lifecycle management
 - **Test Coverage**: All high score system components have full unit and integration test coverage
-- **Test Execution**: Access the GUT panel in the Godot editor (Window > Dock > GUT) to run tests
+- **Test Execution**: Run `tests/simple_test_runner.tscn` to execute all test suites
 - **Manual Testing**: Detailed test procedures available in the `tests/` directory
 - **Test Types**: Unit tests, integration tests, and manual testing scenarios
+- **Inheritance Support**: Proper `super.before_each()` and `super.after_each()` calls ensure consistent test behavior
+- **Type Safety**: Enhanced with explicit type annotations for better Godot 4 compatibility
+- **No Dependencies**: Works out of the box without external addons or plugins
 
 ### Controls
 - **Player 1**: Arrow keys to move, Space to flap
@@ -115,9 +123,10 @@ Contributions are welcome! Feel free to open issues or submit pull requests to i
 
 When contributing:
 1. Follow the existing code style and structure
-2. Update documentation for any new features
-3. Test multiplayer functionality thoroughly
-4. Consider the impact on the high score system
+2. Use explicit type annotations for better type safety (Godot 4 best practice)
+3. Update documentation for any new features
+4. Test multiplayer functionality thoroughly
+5. Consider the impact on the high score system
 
 ## License
 

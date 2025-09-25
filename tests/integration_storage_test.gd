@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Integration test for HighScoreStorage
 # This test can be run by attaching it to a node in a scene and running the scene

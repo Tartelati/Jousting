@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Integration test for migration system
 class_name IntegrationMigrationTest

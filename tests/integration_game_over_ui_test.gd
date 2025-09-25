@@ -1,4 +1,4 @@
-extends Control
+extends TestBase
 
 # Integration test for GameOver UI name entry workflow
 # This test simulates the complete user experience of entering a name for a high score

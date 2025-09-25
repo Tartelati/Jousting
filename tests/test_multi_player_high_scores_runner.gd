@@ -61,7 +61,7 @@ func _run_basic_validation():
 	if validator:
 		test_output_text += "PASS\n"
 		tests_passed += 1
-		validator.queue_free()
+		validator = null
 	else:
 		test_output_text += "FAIL\n"
 		tests_failed += 1

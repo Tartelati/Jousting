@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Test multi-player high score handling functionality (standalone version)
 
@@ -6,6 +6,7 @@ var score_manager: Node
 var validator: HighScoreValidator
 
 func before_each():
+	super.before_each()
 	# Create fresh instances for each test
 	score_manager = preload("res://scripts/managers/score_manager.gd").new()
 	score_manager.name = "ScoreManager"
@@ -18,7 +19,8 @@ func before_each():
 
 func after_each():
 	if score_manager:
-		score_manager.queue_free()
+		score_manager = null
+	super.after_each()
 
 # Test multi-player score tracking
 

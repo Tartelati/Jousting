@@ -48,6 +48,61 @@ This directory contains tests and validation examples for the high score system 
 - `manual_validation.md` - Manual test cases for verification
 - `README.md` - This documentation file
 
+## Testing Framework
+
+The project includes a **simple, built-in testing framework** for comprehensive testing:
+
+### Framework Setup
+- **✅ ENABLED**: Simple TestBase framework is now the primary testing system
+- **No External Dependencies**: Built-in testing framework using custom `TestBase` class
+- **Features**: Provides comprehensive testing capabilities with `assert_eq()`, `assert_true()`, `assert_not_null()`, and other assertion methods
+- **Integration**: Supports test discovery, detailed reporting, and easy test execution
+
+### Test Structure
+- **Unit Tests**: Individual component testing extending `TestBase`
+- **Integration Tests**: System interaction testing with TestBase support
+- **Manual Tests**: User interface and workflow testing
+- **Custom Test Runners**: Standalone test scenes for specific components
+
+### Running Tests
+1. **Simple Test Runner**: 
+   - Run `tests/simple_test_runner.tscn` scene in Godot
+   - Executes all configured test suites automatically
+   - Provides detailed output and summary
+2. **Individual Tests**: Run specific test scenes for targeted testing
+3. **Manual Testing**: Follow test procedures in `tests/manual_*.md` files
+
+### Writing Tests
+To create new tests:
+1. Extend `TestBase` class: `extends TestBase`
+2. Override `before_each()` and `after_each()` methods if needed, calling `super.before_each()` and `super.after_each()`
+3. Create test methods starting with `test_`
+4. Use assertion methods: `assert_eq()`, `assert_true()`, etc.
+5. Use explicit type annotations for better type safety (Godot 4 best practice)
+6. Add test class path to `simple_test_runner.gd`
+
+**Example Test Structure:**
+```gdscript
+extends TestBase
+
+func before_each():
+    super.before_each()  # Important: Call parent setup
+    # Your test setup code here
+
+func after_each():
+    # Your test cleanup code here
+    super.after_each()  # Important: Call parent cleanup
+
+func test_your_feature():
+    # Use explicit type annotations for better type safety
+    var test_data: Array[Dictionary] = [
+        {"name": "TestPlayer", "score": 1000}
+    ]
+    
+    # Your test code here
+    assert_eq(actual, expected, "Test description")
+```
+
 ## Running Tests
 
 ### HighScoreValidator Tests

@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Test class for NotificationSystem (standalone version)
 class_name TestNotificationSystem
@@ -7,6 +7,7 @@ var notification_system: NotificationSystem
 var test_scene: Node
 
 func before_each():
+	super.before_each()
 	# Create test scene
 	test_scene = Node.new()
 	add_child(test_scene)
@@ -23,6 +24,7 @@ func after_each():
 	if test_scene:
 		test_scene.queue_free()
 	notification_system = null
+	super.after_each()
 
 func test_notification_system_initialization():
 	"""Test that notification system initializes correctly"""

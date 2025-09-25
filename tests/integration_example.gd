@@ -1,4 +1,4 @@
-extends Node
+extends TestBase
 
 # Integration example showing how HighScoreValidator works with ScoreManager
 # This demonstrates the validator functionality without requiring a full test framework
@@ -152,7 +152,7 @@ func test_list_validation():
 	print("\n--- List Validation Tests ---")
 	
 	# Valid list
-	var valid_list = [
+	var valid_list: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000},
 		{"name": "Player2", "score": 2000}
 	]
@@ -162,7 +162,7 @@ func test_list_validation():
 	print("  Sanitized entries: ", result1.sanitized_data.scores.size())
 	
 	# List with invalid entries
-	var invalid_list = [
+	var invalid_list: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000},
 		{"name": "Player2"},  # Missing score
 		{"score": 3000}       # Missing name
@@ -173,7 +173,7 @@ func test_list_validation():
 	print("  Errors: ", result2.errors.size())
 	
 	# List with duplicates
-	var duplicate_list = [
+	var duplicate_list: Array[Dictionary] = [
 		{"name": "Player1", "score": 1000},
 		{"name": "Player1", "score": 1000},  # Duplicate
 		{"name": "Player2", "score": 2000}
@@ -188,7 +188,8 @@ func test_edge_cases():
 	print("\n--- Edge Case Tests ---")
 	
 	# Empty list
-	var result1 = validator.validate_high_score_list([])
+	var empty_list: Array[Dictionary] = []
+	var result1 = validator.validate_high_score_list(empty_list)
 	print("✓ Empty list is valid: ", result1.valid)
 	print("  Empty list size: ", result1.sanitized_data.scores.size())
 	
