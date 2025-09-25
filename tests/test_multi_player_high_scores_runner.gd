@@ -18,7 +18,7 @@ func _run_tests():
 	status_label.text = "Running basic validation tests..."
 	progress_bar.value = 0
 	test_output.text = "Multi-player High Score Test Runner (Standalone)\n"
-	test_output.text += "=" * 50 + "\n\n"
+	test_output.text += "=".repeat(50) + "\n\n"
 	test_output.text += "Note: This is a basic test runner.\n"
 	test_output.text += "For full GUT framework support, install the GUT addon.\n\n"
 	test_output.text += "Running basic validation tests...\n\n"

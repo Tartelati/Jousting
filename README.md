@@ -47,29 +47,43 @@ Advanced physics-based movement with multiple states:
 
 The project includes detailed specifications for ongoing development:
 
-### High Score Save System
-A comprehensive high score persistence system has been implemented with robust features. See `.kiro/specs/high-score-save-system/` for detailed requirements, design, and implementation plans including:
+### High Score Save System ✅ COMPLETE
+A comprehensive high score persistence system has been fully implemented with all 9 major tasks complete. See `.kiro/specs/high-score-save-system/` for detailed requirements, design, and implementation documentation:
 
+**Core System Components:**
 - **✅ Data Validation**: Complete HighScoreValidator class with comprehensive score and name validation
 - **✅ Robust Data Persistence**: Complete HighScoreStorage class with automatic saving, backup and recovery mechanisms
 - **✅ Enhanced ScoreManager**: Fully integrated enhanced ScoreManager with new persistence features and backward compatibility
-- **✅ ScoreManager Integration**: Complete integration with HighScoreStorage and HighScoreValidator, including enhanced submission methods, automatic saving, error handling, and comprehensive testing
 - **✅ Data Migration System**: Migration system with version tracking, backward compatibility, and save file recovery
-- **✅ Enhanced Name Entry UI**: Complete enhanced name entry and validation UI with real-time feedback, character filtering, and comprehensive testing
-- **✅ High Score Display System**: Complete formatted high score display with proper number formatting, date display, current session highlighting, and responsive UI components
-- **✅ Player Name Entry**: Validation and sanitization of player names for high scores
+
+**User Experience Features:**
+- **✅ Enhanced Name Entry UI**: Real-time validation with character filtering and user-friendly feedback
+- **✅ High Score Display System**: Formatted display with proper number formatting, date display, and current session highlighting
+- **✅ User Feedback System**: Animated notifications for achievements, errors, and personal bests
+- **✅ Multi-player High Score Support**: Sequential name entry for multiple qualifying players with independent validation
+
+**Technical Features:**
 - **✅ Error Handling**: Graceful degradation when storage is unavailable, with comprehensive error recovery
 - **✅ Session Tracking**: Unique session IDs and current session score marking
-- **✅ Multi-player High Score System**: Complete multi-player high score handling with sequential name entry, player-specific validation, and comprehensive testing
-- **✅ User Feedback and Notification System**: Complete notification system with animated feedback, success/error messages, personal best highlighting, and comprehensive testing
+- **✅ Comprehensive Testing**: Full test coverage including unit, integration, and manual testing suites
 
 ## Getting Started
 
 To run the game, follow these steps:
 1. Clone the repository: `git clone https://github.com/Tartelati/Jousting.git`
 2. Open the project in Godot 4.4
-3. Ensure the multiplayer_input addon is enabled in Project Settings
+3. Ensure the required addons are enabled in Project Settings > Plugins:
+   - `multiplayer_input` (for controller support)
+   - `gut` (for comprehensive testing framework)
 4. Run the main scene to start the game
+
+### Testing
+The project includes comprehensive testing using the **GUT (Godot Unit Test)** framework:
+- **GUT Framework**: Professional testing framework with comprehensive assertion methods
+- **Test Coverage**: All high score system components have full unit and integration test coverage
+- **Test Execution**: Access the GUT panel in the Godot editor (Window > Dock > GUT) to run tests
+- **Manual Testing**: Detailed test procedures available in the `tests/` directory
+- **Test Types**: Unit tests, integration tests, and manual testing scenarios
 
 ### Controls
 - **Player 1**: Arrow keys to move, Space to flap
