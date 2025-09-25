@@ -1,6 +1,6 @@
-extends GutTest
+extends Node
 
-# Test multi-player high score handling functionality
+# Test multi-player high score handling functionality (standalone version)
 
 var score_manager: Node
 var validator: HighScoreValidator

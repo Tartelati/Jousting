@@ -1,6 +1,6 @@
-extends GutTest
+extends Node
 
-# Integration tests for multi-player high score system
+# Integration tests for multi-player high score system (standalone version)
 
 var score_manager: Node
 var multi_player_game_over: Control

@@ -7,7 +7,7 @@ extends Control
 @onready var run_button = $VBoxContainer/RunButton
 @onready var results_label = $VBoxContainer/ResultsLabel
 
-var gut_instance: GUT
+var test_runner: Node
 
 func _ready():
 	# Setup UI
@@ -17,9 +17,9 @@ func _ready():
 	# Connect button
 	run_button.connect("pressed", _run_tests)
 	
-	# Initialize GUT
-	gut_instance = GUT.new()
-	add_child(gut_instance)
+	# Initialize basic test runner
+	test_runner = Node.new()
+	add_child(test_runner)
 
 func _create_ui():
 	"""Create the test runner UI if it doesn't exist"""

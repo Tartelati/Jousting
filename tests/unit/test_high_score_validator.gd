@@ -1,6 +1,6 @@
-extends GutTest
+extends Node
 
-# Test class for HighScoreValidator
+# Test class for HighScoreValidator (standalone version)
 var validator: HighScoreValidator
 
 func before_each():

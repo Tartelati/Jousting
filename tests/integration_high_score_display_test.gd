@@ -1,6 +1,6 @@
-extends GutTest
+extends Node
 
-# Integration test for high score display system
+# Integration test for high score display system (standalone version)
 class_name TestHighScoreDisplayIntegration
 
 var high_score_display: HighScoreDisplay

@@ -1,6 +1,6 @@
-extends GutTest
+extends Node
 
-# Test class for GameOver UI name entry and validation functionality
+# Test class for GameOver UI name entry and validation functionality (standalone version)
 class_name TestGameOverUI
 
 var game_over_scene: PackedScene

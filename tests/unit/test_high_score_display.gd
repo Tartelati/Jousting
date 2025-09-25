@@ -1,6 +1,6 @@
-extends GutTest
+extends Node
 
-# Test class for HighScoreDisplay functionality
+# Test class for HighScoreDisplay functionality (standalone version)
 class_name TestHighScoreDisplay
 
 var high_score_display: HighScoreDisplay

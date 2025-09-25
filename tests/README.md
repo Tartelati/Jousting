@@ -5,7 +5,7 @@ This directory contains tests and validation examples for the high score system 
 ## Files
 
 ### HighScoreValidator Tests
-- `unit/test_high_score_validator.gd` - Comprehensive unit tests for validator
+- `unit/test_high_score_validator.gd` - Comprehensive standalone unit tests for validator
 - `test_runner.gd` - Simple test runner for validator tests
 - `test_runner.tscn` - Scene file for running validator tests
 - `integration_example.gd` - Integration example showing real-world usage
@@ -57,7 +57,13 @@ This directory contains tests and validation examples for the high score system 
 2. Run the scene
 3. Check the console output for test results
 
-#### Option 2: Integration Example
+#### Option 2: Standalone Unit Tests
+1. Create a new scene with a Node
+2. Attach `tests/unit/test_high_score_validator.gd` as the script
+3. Run the scene to execute all unit tests
+4. Check the console output for detailed test results
+
+#### Option 3: Integration Example
 1. Open Godot editor
 2. Create a new scene
 3. Add a Node and attach `integration_example.gd` as its script

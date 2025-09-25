@@ -1,6 +1,6 @@
-extends GutTest
+extends Node
 
-# Integration test for NotificationSystem with ScoreManager
+# Integration test for NotificationSystem with ScoreManager (standalone version)
 class_name TestNotificationSystemIntegration
 
 var score_manager: Node

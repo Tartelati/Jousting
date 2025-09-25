@@ -1,6 +1,6 @@
-extends GutTest
+extends Node
 
-# Test class for NotificationSystem
+# Test class for NotificationSystem (standalone version)
 class_name TestNotificationSystem
 
 var notification_system: NotificationSystem
