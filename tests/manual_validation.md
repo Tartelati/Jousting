@@ -80,6 +80,14 @@ var existing_scores = [{"name": "Player1", "score": 1000}]
 
 ## How to Test
 
+### Option 1: Use the Standalone Unit Test
+1. Open the Godot editor
+2. Create a new scene with a Node
+3. Attach `tests/unit/test_high_score_validator.gd` as the script
+4. Run the scene to execute all comprehensive unit tests
+5. Check the console output for detailed test results
+
+### Option 2: Manual Testing with Custom Script
 1. Open the Godot editor
 2. Create a new scene with a Node
 3. Attach a script to the node

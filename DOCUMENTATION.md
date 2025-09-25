@@ -72,7 +72,7 @@ This document provides an overview of all documentation available for the Joust 
 ### High Score System Testing
 
 #### HighScoreValidator Testing
-- **[tests/unit/test_high_score_validator.gd](tests/unit/test_high_score_validator.gd)** - ✅ Comprehensive unit tests for data validation
+- **[tests/unit/test_high_score_validator.gd](tests/unit/test_high_score_validator.gd)** - ✅ Comprehensive standalone unit tests for data validation
 - **[tests/test_runner.gd](tests/test_runner.gd)** - ✅ Simple test runner for validation system
 - **[tests/integration_example.gd](tests/integration_example.gd)** - ✅ Integration examples and usage demonstrations
 
