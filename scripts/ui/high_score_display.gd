@@ -450,9 +450,23 @@ func show_score_comparison(old_score: int, new_score: int, player_name: String):
 		dismiss_tween.tween_callback(comparison_container.queue_free).set_delay(0.3)
 	).set_delay(3.0)
 
+func _format_score(score: int) -> String:
+	"""Format score with thousands separators"""
+	var score_str = str(score)
+	var formatted = ""
+	var count = 0
+	
+	for i in range(score_str.length() - 1, -1, -1):
+		if count > 0 and count % 3 == 0:
+			formatted = "," + formatted
+		formatted = score_str[i] + formatted
+		count += 1
+	
+	return formatted
+
 func _format_score_display(score: int) -> String:
 	"""Format score for display with thousands separators"""
-	return _format_score(score) if has_method("_format_score") else str(score)
+	return _format_score(score)
 
 func _input(event):
 	"""Handle input for navigation"""

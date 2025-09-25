@@ -215,14 +215,14 @@ func assert_false(condition: bool, message: String):
 
 func print_results():
 	"""Print test results"""
-	print("\n" + "="*60)
+	print("\n" + "=".repeat(60))
 	print("INTEGRATION TEST RESULTS")
-	print("="*60)
+	print("=".repeat(60))
 	
 	for result in test_results:
 		print(result)
 	
-	print("\n" + "="*60)
+	print("\n" + "=".repeat(60))
 	print("SUMMARY:")
 	print("Tests Passed: %d" % tests_passed)
 	print("Tests Failed: %d" % tests_failed)
@@ -239,7 +239,7 @@ func print_results():
 	else:
 		print("❌ %d INTEGRATION TESTS FAILED" % tests_failed)
 	
-	print("="*60)
+	print("=".repeat(60))
 	
 	# Clean up after all tests
 	cleanup_test_files()

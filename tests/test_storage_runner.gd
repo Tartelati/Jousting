@@ -18,9 +18,9 @@ func run_tests():
 	pass
 
 func print_final_results():
-	print("\n" + "="*60)
+	print("\n" + "=".repeat(60))
 	print("FINAL TEST RESULTS - %s" % test_name)
-	print("="*60)
+	print("=".repeat(60))
 	print("Tests Passed: %d" % tests_passed)
 	print("Tests Failed: %d" % tests_failed)
 	print("Total Tests: %d" % tests_total)
@@ -36,4 +36,4 @@ func print_final_results():
 	else:
 		print("❌ %d TESTS FAILED" % tests_failed)
 	
-	print("="*60)
+	print("=".repeat(60))

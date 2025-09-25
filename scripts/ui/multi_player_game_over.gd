@@ -150,7 +150,7 @@ func _process_next_player():
 	
 	# Update progress
 	var remaining_count = score_manager.get_remaining_qualifying_players().size()
-	progress_label.text = "(%d of %d qualifying players)" % (remaining_players.size() - remaining_count + 1, remaining_players.size())
+	progress_label.text = "(%d of %d qualifying players)" % [remaining_players.size() - remaining_count + 1, remaining_players.size()]
 	
 	# Setup name entry
 	name_entry.text = ""

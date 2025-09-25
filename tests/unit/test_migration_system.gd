@@ -281,7 +281,8 @@ func test_save_file_location_discovery():
 	
 	# Create directory if it doesn't exist
 	if not DirAccess.dir_exists_absolute(alt_dir):
-		DirAccess.create_dir_recursive_absolute(alt_dir)
+		var dir_access = DirAccess.open("user://")
+		dir_access.make_dir_recursive(alt_dir.replace("user://", ""))
 	
 	var test_scores = [{"name": "AltLocation", "score": 4000}]
 	var file = FileAccess.open(alt_path, FileAccess.WRITE)
@@ -309,7 +310,8 @@ func test_save_file_recovery_from_alternate_location():
 	var alt_dir = alt_path.get_base_dir()
 	
 	if not DirAccess.dir_exists_absolute(alt_dir):
-		DirAccess.create_dir_recursive_absolute(alt_dir)
+		var dir_access = DirAccess.open("user://")
+		dir_access.make_dir_recursive(alt_dir.replace("user://", ""))
 	
 	var test_scores = [{"name": "RecoveryTest", "score": 9500}]
 	var file = FileAccess.open(alt_path, FileAccess.WRITE)

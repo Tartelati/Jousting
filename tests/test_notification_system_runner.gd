@@ -179,7 +179,7 @@ class GutRunner extends Node:
 	
 	const LOG_LEVEL_ALL_ASSERTS = 0
 	
-	var test_scripts: Array[String] = []
+	var test_script_paths: Array[String] = []
 	var current_test_index: int = 0
 	var test_count: int = 0
 	
@@ -190,7 +190,7 @@ class GutRunner extends Node:
 		pass  # Placeholder
 	
 	func add_script(script_path: String):
-		test_scripts.append(script_path)
+		test_script_paths.append(script_path)
 	
 	func get_test_count() -> int:
 		return test_count
@@ -201,7 +201,7 @@ class GutRunner extends Node:
 		current_test_index = 0
 		
 		# Count total tests (simplified)
-		for script_path in test_scripts:
+		for script_path in test_script_paths:
 			test_count += _count_tests_in_script(script_path)
 		
 		# Run tests
@@ -215,11 +215,11 @@ class GutRunner extends Node:
 	
 	func _run_next_script():
 		"""Run the next test script"""
-		if current_test_index >= test_scripts.size():
+		if current_test_index >= test_script_paths.size():
 			emit_signal("tests_finished")
 			return
 		
-		var script_path = test_scripts[current_test_index]
+		var script_path = test_script_paths[current_test_index]
 		_run_script_tests(script_path)
 		current_test_index += 1
 	

@@ -196,14 +196,14 @@ func test_large_dataset_handling():
 	assert_true(true, "Large dataset handling should not crash")
 
 func print_results():
-	print("\n" + "="*50)
+	print("\n" + "=".repeat(50))
 	print("HIGH SCORE DISPLAY TEST RESULTS")
-	print("="*50)
+	print("=".repeat(50))
 	
 	for result_line in test_results:
 		print(result_line)
 	
-	print("\n" + "="*50)
+	print("\n" + "=".repeat(50))
 	print("SUMMARY:")
 	print("Tests Passed: %d" % tests_passed)
 	print("Tests Failed: %d" % tests_failed)
@@ -214,4 +214,4 @@ func print_results():
 	else:
 		print("❌ %d HIGH SCORE DISPLAY TESTS FAILED" % tests_failed)
 	
-	print("="*50)
+	print("=".repeat(50))

@@ -243,14 +243,14 @@ func test_edge_cases():
 	assert_true(result.warnings.size() > 0, "Should warn about invalid date")
 
 func print_results():
-	print("\n" + "="*50)
+	print("\n" + "=".repeat(50))
 	print("TEST RESULTS")
-	print("="*50)
+	print("=".repeat(50))
 	
 	for result_line in test_results:
 		print(result_line)
 	
-	print("\n" + "="*50)
+	print("\n" + "=".repeat(50))
 	print("SUMMARY:")
 	print("Tests Passed: %d" % tests_passed)
 	print("Tests Failed: %d" % tests_failed)
@@ -261,4 +261,4 @@ func print_results():
 	else:
 		print("❌ %d TESTS FAILED" % tests_failed)
 	
-	print("="*50)
+	print("=".repeat(50))

@@ -103,7 +103,9 @@ func _create_notification(message: String, type: NotificationType, notification_
 	if notification_template:
 		notification = notification_template.instantiate()
 		if notification.has_method("setup_notification"):
-			notification.setup_notification(message, type, notification_id)
+			# Convert our enum to the toast's enum (they should match)
+			var toast_type = type  # Direct assignment since enums should be compatible
+			notification.setup_notification(message, toast_type, notification_id)
 			return notification
 	
 	# Fallback: create simple notification

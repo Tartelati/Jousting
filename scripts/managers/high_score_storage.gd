@@ -464,7 +464,7 @@ func attempt_save_file_recovery() -> Array[Dictionary]:
 	return _load_from_file(found_path)
 
 # Private helper methods
-func _load_from_file(file_path: String) -> Array[Dictionary]:
+func _load_from_file(file_path: String):
 	"""Load and validate data from a specific file with enhanced migration support"""
 	var file = FileAccess.open(file_path, FileAccess.READ)
 	if not file:

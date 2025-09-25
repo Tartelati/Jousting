@@ -7,9 +7,17 @@ class_name NotificationToast
 @onready var message_label: Label = $HBoxContainer/MessageLabel
 @onready var close_button: Button = $HBoxContainer/CloseButton
 
+# Notification types (duplicated to avoid circular dependency)
+enum NotificationType {
+	SUCCESS,
+	ERROR,
+	INFO,
+	PERSONAL_BEST
+}
+
 # Properties
 var notification_id: String = ""
-var notification_type: NotificationSystem.NotificationType
+var notification_type: NotificationType
 
 signal dismiss_requested(notification_id: String)
 
@@ -18,7 +26,7 @@ func _ready():
 	if close_button:
 		close_button.pressed.connect(_on_close_pressed)
 
-func setup_notification(message: String, type: NotificationSystem.NotificationType, id: String):
+func setup_notification(message: String, type: NotificationType, id: String):
 	"""Set up the notification with the provided data"""
 	notification_id = id
 	notification_type = type
@@ -31,19 +39,19 @@ func setup_notification(message: String, type: NotificationSystem.NotificationTy
 	# Set icon and styling based on type
 	_apply_notification_style(type)
 
-func _apply_notification_style(type: NotificationSystem.NotificationType):
+func _apply_notification_style(type: NotificationType):
 	"""Apply styling based on notification type"""
 	var style_box = StyleBoxFlat.new()
 	var icon_text = "ℹ"
 	
 	match type:
-		NotificationSystem.NotificationType.SUCCESS:
+		NotificationType.SUCCESS:
 			style_box.bg_color = Color(0.2, 0.8, 0.2, 0.9)  # Green
 			icon_text = "✓"
-		NotificationSystem.NotificationType.ERROR:
+		NotificationType.ERROR:
 			style_box.bg_color = Color(0.8, 0.2, 0.2, 0.9)  # Red
 			icon_text = "✗"
-		NotificationSystem.NotificationType.PERSONAL_BEST:
+		NotificationType.PERSONAL_BEST:
 			style_box.bg_color = Color(1.0, 0.8, 0.0, 0.9)  # Gold
 			icon_text = "★"
 			# Add special effects for personal best
