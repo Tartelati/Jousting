@@ -490,17 +490,17 @@ func _load_from_file(file_path: String) -> Array[Dictionary]:
             if not verify_file_integrity(file_path):
                 if debug_logging:
                     print("[HighScoreStorage] Current version file integrity check failed")
-                return null  # Changed: Return null to trigger recovery (consistent with migration failures)
+                return [] as Array[Dictionary]  # Changed: Return empty array to trigger recovery (consistent with migration failures)
             # Added: Check if scores is actually an Array before casting
             if not (data.has("scores") and data.scores is Array):
                 if debug_logging:
                     print("[HighScoreStorage] Current version file has invalid scores type")
-                return null
+                return [] as Array[Dictionary]
             return data.scores as Array[Dictionary]
         else:
             if debug_logging:
                 print("[HighScoreStorage] Current version file has invalid structure")
-            return null  # Changed: Return null for consistency
+            return [] as Array[Dictionary]  # Changed: Return empty array for consistency
     
     # Handle older versions that need migration
     if detected_version != "unknown":
@@ -524,13 +524,13 @@ func _load_from_file(file_path: String) -> Array[Dictionary]:
         else:
             if debug_logging:
                 print("[HighScoreStorage] Migration returned no scores")
-            return null  # Unchanged: But now consistent with current version failures
+            return [] as Array[Dictionary]  # Unchanged: But now consistent with current version failures
     
-    # Unknown format - log and return null
+    # Unknown format - log and return empty array
     if debug_logging:
         print("[HighScoreStorage] Unknown file format, cannot load")
     
-    return null
+    return [] as Array[Dictionary]
 
 func _calculate_checksum(scores: Array[Dictionary]) -> String:
     """Calculate a simple checksum for data integrity"""
