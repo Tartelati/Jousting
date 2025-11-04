@@ -14,6 +14,7 @@ Jousting is a 2D platformer game developed using GDScript, the scripting languag
 - Retro-inspired graphics and sound effects
 - Multiplayer support (up to 4 players)
 - Enhanced high score system with robust persistence, validation, and user feedback
+- Power-up system with collectible power eggs and temporary special abilities (In Development)
 - Dynamic player joining and controller support
 - Type-safe code with explicit type annotations for better Godot 4 compatibility
 
@@ -70,6 +71,27 @@ A comprehensive high score persistence system has been fully implemented with al
 
 **Deferred Features:**
 - **📋 Task 10**: Main menu integration with dedicated high score viewing screen (deferred for future development)
+
+### Power-Up System 🔄 IN DEVELOPMENT
+A comprehensive power-up system is currently in the specification phase. This system will add temporary special abilities through collectible power eggs. See `.kiro/specs/power-up-system/` for detailed requirements, design, and implementation documentation:
+
+**Planned Features:**
+- **📋 Power Egg Spawning**: 15% chance for power eggs to spawn instead of normal eggs when enemies are defeated
+- **📋 Invincibility Power**: Temporary invulnerability with enemy-defeating contact ability
+- **📋 Collection System**: Physics-based power egg collection with immediate activation
+- **📋 Visual Effects**: Distinctive power egg appearance, player power indicators, and activation effects
+- **📋 Audio Feedback**: Complete audio system for spawning, collection, activation, and expiration
+- **📋 Multi-Player Support**: Independent power tracking for up to 4 players simultaneously
+- **📋 Configuration System**: Adjustable spawn rates, durations, and effects for gameplay balancing
+- **📋 Timer Management**: Power duration tracking with expiration warnings and automatic cleanup
+
+**Implementation Status:**
+- **✅ Requirements**: Complete user stories and acceptance criteria defined
+- **✅ Design Document**: Comprehensive architecture and component design completed
+- **✅ Integration Plan**: Detailed plan for integrating with existing codebase
+- **✅ Implementation Tasks**: 14-phase development roadmap with clear milestones
+- **✅ Task 1 - Core Infrastructure**: PowerManager class and power system foundation complete
+- **🔄 Active Development**: PowerEgg entity and collection system (Task 2)
 
 ## Getting Started
 

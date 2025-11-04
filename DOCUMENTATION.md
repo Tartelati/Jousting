@@ -12,6 +12,17 @@ This document provides an overview of all documentation available for the Joust 
 ### Core Gameplay Systems
 - **[movement-system-documentation.md](movement-system-documentation.md)** - Comprehensive player movement mechanics (idle, walking, flying states)
 - **[high-score-system-overview.md](high-score-system-overview.md)** - Current and planned high score system features
+- **[power-up-system-overview.md](power-up-system-overview.md)** - 🔄 Power-up system with collectible power eggs and temporary abilities (Core Infrastructure Complete)
+
+### Power-Up System Implementation
+- **[scripts/managers/power_manager.gd](scripts/managers/power_manager.gd)** - ✅ Complete PowerManager class with core infrastructure
+  - Power type definitions and enumeration (PowerType.INVINCIBILITY)
+  - Power activation, deactivation, and state tracking for up to 4 players
+  - Spawn probability logic for power egg generation (15% base rate, enemy-specific rates)
+  - Timer management system with duration tracking and expiration handling
+  - Configuration system for spawn rates, durations, and effects
+  - Signal system for power events (activated, expired, warning)
+  - Comprehensive test coverage with unit, integration, and manual tests
 
 ### Multiplayer Systems
 - **[improved-controller-system.md](improved-controller-system.md)** - Controller assignment and dynamic player joining
@@ -51,10 +62,16 @@ This document provides an overview of all documentation available for the Joust 
 ## 🔧 Development Specifications
 
 ### Active Specifications
-- **[.kiro/specs/high-score-save-system/](/.kiro/specs/high-score-save-system/)** - Complete specification for enhanced high score system
+- **[.kiro/specs/high-score-save-system/](/.kiro/specs/high-score-save-system/)** - ✅ Complete specification for enhanced high score system
   - **[requirements.md](/.kiro/specs/high-score-save-system/requirements.md)** - User stories and acceptance criteria
   - **[design.md](/.kiro/specs/high-score-save-system/design.md)** - Architecture and component design
   - **[tasks.md](/.kiro/specs/high-score-save-system/tasks.md)** - 14-phase implementation plan
+
+- **[.kiro/specs/power-up-system/](/.kiro/specs/power-up-system/)** - 🔄 Power-up system specification (In Development)
+  - **[requirements.md](/.kiro/specs/power-up-system/requirements.md)** - User stories and acceptance criteria for power-up mechanics
+  - **[design.md](/.kiro/specs/power-up-system/design.md)** - Architecture design for PowerManager, PowerEgg, and integration
+  - **[integration-plan.md](/.kiro/specs/power-up-system/integration-plan.md)** - Detailed integration plan with existing codebase
+  - **[tasks.md](/.kiro/specs/power-up-system/tasks.md)** - 14-phase implementation roadmap
 
 ## 🐛 Bug Fixes and Critical Issues
 
@@ -95,24 +112,37 @@ scripts/
 ├── entities/
 │   ├── player.gd              # Main player controller with movement states
 │   ├── enemy_base.gd          # Base enemy class with AI and scoring
-│   └── pterodactyl.gd         # Flying enemy implementation
+│   ├── pterodactyl.gd         # Flying enemy implementation
+│   └── power_egg.gd           # 📋 PLANNED: Power egg entity with collection mechanics
 ├── managers/
 │   ├── game_manager.gd        # Core game flow and player management
-│   ├── score_manager.gd       # Current scoring system (to be enhanced)
-│   ├── high_score_validator.gd # ✅ NEW: Data validation and sanitization
+│   ├── score_manager.gd       # ✅ Enhanced scoring system with persistence
+│   ├── high_score_validator.gd # ✅ Data validation and sanitization
+│   ├── high_score_storage.gd  # ✅ Robust file storage with backup/recovery
+│   ├── power_manager.gd       # ✅ Power-up system management (core infrastructure complete)
 │   ├── sound_manager.gd       # Audio management
 │   └── spawn_manager.gd       # Enemy spawning system
 └── ui/
     ├── hud.gd                 # In-game UI and score display
-    └── game_over.gd           # Game over screen with basic high score entry
+    ├── game_over.gd           # ✅ Enhanced game over screen with name entry
+    ├── high_score_display.gd  # ✅ Formatted high score display system
+    ├── notification_system.gd # ✅ User feedback and notification system
+    └── multi_player_game_over.gd # ✅ Multi-player high score handling
 ```
 
 ### Scene Organization
 ```
 scenes/
 ├── entities/                  # Player and enemy scene files
+│   └── power_egg.tscn         # 📋 PLANNED: Power egg collectible scene
 ├── levels/                    # Game level scenes
 ├── ui/                        # User interface scenes
+│   ├── high_score_display.tscn # ✅ High score display components
+│   ├── high_score_entry.tscn  # ✅ Name entry UI components
+│   └── multi_player_game_over.tscn # ✅ Multi-player game over screen
+├── effects/                   # 📋 PLANNED: Power-up visual effects
+│   ├── power_activation_effect.tscn # 📋 PLANNED: Power activation effects
+│   └── invincibility_overlay.tscn   # 📋 PLANNED: Player power overlays
 └── main.tscn                  # Main game scene
 ```
 
@@ -159,6 +189,7 @@ All 9 major high score system enhancement tasks have been successfully completed
 - ✅ **High Score Save System Enhancement** - All 9 major tasks complete
 - ✅ **Type Safety Improvements** - Enhanced type annotations for better Godot 4 compatibility
 - ✅ **ScoreManager Type Annotations** - Fixed high_scores array type declaration for better type safety
+- ✅ **Power-Up System Core Infrastructure** - PowerManager class with complete power system foundation
   - ✅ **Task 1 - Data Validation System**: Complete HighScoreValidator class with comprehensive testing
   - ✅ **Task 2 - Robust Data Persistence**: Complete HighScoreStorage class with backup/recovery mechanisms
   - ✅ **Task 3 - Configuration Management**: Integrated directly into ScoreManager and Storage classes (simplified architecture)
@@ -171,6 +202,9 @@ All 9 major high score system enhancement tasks have been successfully completed
 
 ### Deferred Features
 - 📋 Main menu integration with dedicated high score viewing screen (Task 10 - deferred)
+
+### In Development
+- 🔄 **Power-Up System**: Collectible power eggs with temporary special abilities (core infrastructure complete, entity development in progress)
 
 ### Planned Features
 - 📋 Enhanced UI/UX improvements
@@ -241,6 +275,7 @@ The project includes a **simple, built-in testing framework** for comprehensive 
 - UI Components: Game over screens, name entry, and display systems
 - Multi-player: Sequential high score processing for multiple players
 - Notification System: User feedback and visual effects
+- PowerManager: Power activation/deactivation, spawn probability, timer management, and multi-player independence
 
 ### Writing Tests
 To create new tests:
@@ -285,6 +320,24 @@ The original specification included a separate ConfigManager component (Task 3),
 
 The configuration system supports all originally planned features including customizable score limits, save locations, backup settings, and debug options.
 
+### Power-Up System Specification Complete
+A comprehensive Power-Up System specification has been completed and is ready for implementation. This system will add collectible power eggs with temporary special abilities to enhance gameplay while maintaining the classic Joust mechanics.
+
+**Specification Status:**
+- ✅ **Requirements Document**: Complete with 7 major requirements covering power egg spawning, collection, invincibility mechanics, duration management, audio/visual feedback, multi-player support, and configuration
+- ✅ **Design Document**: Comprehensive architecture design with PowerManager, PowerEgg entity, player integration, data models, error handling, and performance considerations  
+- ✅ **Integration Plan**: Detailed 4-phase integration strategy with minimal disruption to existing codebase
+- ✅ **Implementation Tasks**: 14-phase development roadmap covering all aspects from infrastructure to documentation
+
+**Key Features Planned:**
+- Power egg spawning system (15% chance to replace normal eggs)
+- Invincibility power with 10-second duration and enemy-defeating contact
+- Independent multi-player power tracking for up to 4 players
+- Comprehensive visual and audio feedback systems
+- Configurable spawn rates, durations, and effects for balancing
+
+The Power-Up System uses a modular architecture with PowerManager class, PowerEgg entity, and minimal modifications to existing player and enemy systems. The design emphasizes backward compatibility, performance optimization, and extensibility for future power types.
+
 ---
 
-*Last Updated: December 2024 - All 9 major high score system tasks officially completed and production-ready. The comprehensive high score save system includes data validation, robust file storage, enhanced ScoreManager integration, data migration, enhanced UI components, user feedback systems, and multi-player support. Task 3 (Configuration Management) was simplified and integrated directly into existing components for improved maintainability. Recent type safety improvements enhance Godot 4 compatibility with explicit type annotations. The system is now complete with full test coverage and ready for production use.*
+*Last Updated: December 2024 - All 9 major high score system tasks officially completed and production-ready. Power-Up System specification completed and ready for implementation. The comprehensive high score save system includes data validation, robust file storage, enhanced ScoreManager integration, data migration, enhanced UI components, user feedback systems, and multi-player support. Task 3 (Configuration Management) was simplified and integrated directly into existing components for improved maintainability. Recent type safety improvements enhance Godot 4 compatibility with explicit type annotations. The high score system is now complete with full test coverage and ready for production use.*

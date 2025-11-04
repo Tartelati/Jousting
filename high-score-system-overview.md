@@ -220,3 +220,10 @@ The enhanced high score system will provide players with:
 - **Long-term Engagement**: Persistent progress tracking across sessions
 
 This enhancement represents a significant improvement in the game's polish and player retention features while maintaining the classic Joust gameplay experience.
+
+## Related Systems
+
+### Power-Up System (In Development)
+A complementary Power-Up System is currently in the specification phase that will work alongside the enhanced high score system. This system will add collectible power eggs with temporary special abilities, creating new scoring opportunities and gameplay dynamics. The power-up system is designed to integrate seamlessly with the existing high score tracking, providing bonus points for power-enhanced achievements and maintaining the robust persistence and validation features of the enhanced high score system.
+
+See `power-up-system-overview.md` for detailed information about the planned power-up features and their integration with the high score system.

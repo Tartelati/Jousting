@@ -21,6 +21,7 @@ GameManager="*res://scripts/managers/game_manager.gd"
 SoundManager="*res://scripts/managers/sound_manager.gd"
 ScoreManager="*res://scripts/managers/score_manager.gd"
 SpawnManager="*res://scripts/managers/spawn_manager.gd"
+PowerManager="*res://scripts/managers/power_manager.gd"
 MultiplayerInput="*res://addons/multiplayer_input/multiplayer_input.gd"
 
 [display]
