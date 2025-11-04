@@ -13,6 +13,10 @@ enum PowerType {
 @onready var power_warning_audio: AudioStreamPlayer = $PowerWarningAudio
 @onready var power_expiration_audio: AudioStreamPlayer = $PowerExpirationAudio
 
+# Configuration and debug components
+var config_manager
+var debug_ui
+
 # Power state data structure
 class PowerData:
 	var type: PowerType
@@ -33,30 +37,8 @@ class PowerData:
 		var current_time = Time.get_time_dict_from_system().unix
 		return max(0.0, (start_time + duration) - current_time)
 
-# Configuration system
-var power_configs: Dictionary = {
-	PowerType.INVINCIBILITY: {
-		"duration": 10.0,
-		"spawn_chance": 0.15,
-		"enemy_spawn_rates": {
-			"EnemyBase": 0.15,
-			"EnemyHunter": 0.20,
-			"ShadowLord": 0.25
-		},
-		"effects": {
-			"player_glow": true,
-			"screen_tint": Color(0.8, 0.8, 1.0, 0.3),
-			"particle_effect": "invincibility_sparkles"
-		},
-		"audio": {
-			"collection": "power_collect_invincibility",
-			"activation": "invincibility_start",
-			"ambient": "invincibility_loop",
-			"warning": "power_expire_warning",
-			"expiration": "power_expire"
-		}
-	}
-}
+# Legacy configuration system (now loaded from config manager)
+var power_configs: Dictionary = {}
 
 # Active powers tracking
 var active_powers: Dictionary = {}  # player_index -> PowerData
@@ -68,30 +50,56 @@ signal power_expired(player_index: int, power_type: PowerType)
 signal power_warning(player_index: int, power_type: PowerType, remaining_time: float)
 
 func _ready():
-	print("[PowerManager] Power system initialized")
+	print("[PowerManager] Power system initializing...")
+	_setup_configuration_manager()
+	_setup_debug_ui()
+	_load_configuration()
 	_setup_audio_streams()
+	print("[PowerManager] Power system initialized")
 
 func _process(delta):
+	# Only process if system is enabled
+	if not config_manager or not config_manager.is_system_enabled():
+		return
+	
 	update_power_timers(delta)
 
 # Public Interface Methods
 
 func should_spawn_power_egg(enemy_class_name: String) -> bool:
 	"""Determine if a power egg should spawn based on enemy type and spawn rates"""
-	# Get base spawn chance for invincibility power
-	var base_chance = power_configs[PowerType.INVINCIBILITY].spawn_chance
+	# Check if system is enabled
+	if not config_manager or not config_manager.is_system_enabled():
+		return false
 	
-	# Check for enemy-specific spawn rates
-	var enemy_rates = power_configs[PowerType.INVINCIBILITY].enemy_spawn_rates
-	var spawn_chance = base_chance
+	# Check if invincibility power is enabled
+	if not config_manager.is_power_enabled("invincibility"):
+		return false
 	
-	# Use enemy-specific rate if available
-	if enemy_rates.has(enemy_class_name):
-		spawn_chance = enemy_rates[enemy_class_name]
+	# Track spawn attempt for debug statistics
+	if debug_ui:
+		debug_ui.track_spawn_attempt()
+	
+	# Check for debug force spawn rate
+	var force_spawn_rate = config_manager.get_debug_setting("force_spawn_rate", -1.0)
+	if force_spawn_rate >= 0.0:
+		var debug_random_val = randf()
+		var debug_spawn_result = debug_random_val <= force_spawn_rate
+		if debug_spawn_result and debug_ui:
+			debug_ui.track_successful_spawn()
+		return debug_spawn_result
+	
+	# Get spawn chance from configuration
+	var spawn_chance = config_manager.get_enemy_spawn_rate("invincibility", enemy_class_name)
 	
 	# Generate random number and check against spawn chance
-	var random_value = randf()
-	return random_value <= spawn_chance
+	var random_val = randf()
+	var spawn_result = random_val <= spawn_chance
+	
+	if spawn_result and debug_ui:
+		debug_ui.track_successful_spawn()
+	
+	return spawn_result
 
 func get_power_egg_scene() -> PackedScene:
 	"""Get the power egg scene for spawning"""
@@ -99,18 +107,33 @@ func get_power_egg_scene() -> PackedScene:
 
 func activate_power(player_index: int, power_type: PowerType) -> bool:
 	"""Activate a power for the specified player"""
+	# Check if system is enabled
+	if not config_manager or not config_manager.is_system_enabled():
+		return false
+	
 	# Validate inputs
 	if player_index < 1 or player_index > 4:
 		push_error("[PowerManager] Invalid player index: %d" % player_index)
 		return false
 	
-	if not power_configs.has(power_type):
+	# Get power name for configuration lookup
+	var power_name = _get_power_name_from_type(power_type)
+	if power_name == "":
 		push_error("[PowerManager] Unknown power type: %d" % power_type)
 		return false
 	
-	# Get power configuration
-	var config = power_configs[power_type]
-	var duration = config.duration
+	# Check if power is enabled
+	if not config_manager.is_power_enabled(power_name):
+		print("[PowerManager] Power %s is disabled" % power_name)
+		return false
+	
+	# Get power configuration from config manager
+	var duration = config_manager.get_power_duration(power_name)
+	
+	# Check for debug test mode duration
+	var test_duration = config_manager.get_debug_setting("test_mode_duration", -1.0)
+	if test_duration > 0.0:
+		duration = test_duration
 	
 	# Deactivate any existing power for this player
 	if is_power_active(player_index):
@@ -138,6 +161,10 @@ func activate_power(player_index: int, power_type: PowerType) -> bool:
 	
 	# Send notification for power activation
 	_send_power_notification(player_index, power_type, "activated")
+	
+	# Track activation for debug statistics
+	if debug_ui:
+		debug_ui.track_power_activation(power_type)
 	
 	print("[PowerManager] Power %d activated for player %d (duration: %.1fs)" % [power_type, player_index, duration])
 	return true
@@ -226,7 +253,109 @@ func update_power_timers(_delta: float) -> void:
 	for player_index in players_to_remove:
 		deactivate_power(player_index)
 
-# Configuration Methods
+# Configuration Setup Methods
+
+func _setup_configuration_manager():
+	"""Setup configuration manager"""
+	var PowerConfigManager = preload("res://scripts/managers/power_config_manager.gd")
+	config_manager = PowerConfigManager.new()
+	
+	# Connect to configuration change signals
+	config_manager.config_changed.connect(_on_config_changed)
+	config_manager.debug_mode_changed.connect(_on_debug_mode_changed)
+	config_manager.system_enabled_changed.connect(_on_system_enabled_changed)
+
+func _setup_debug_ui():
+	"""Setup debug UI if debug mode is enabled"""
+	if config_manager and config_manager.is_debug_mode():
+		_create_debug_ui()
+		_create_debug_console()
+
+func _create_debug_ui():
+	"""Create debug UI instance"""
+	var debug_ui_scene = preload("res://scenes/debug/power_debug_ui.tscn")
+	debug_ui = debug_ui_scene.instantiate()
+	
+	# Add to current scene
+	var current_scene = get_tree().current_scene
+	if current_scene:
+		current_scene.add_child(debug_ui)
+		print("[PowerManager] Debug UI created")
+
+func _create_debug_console():
+	"""Create debug console instance"""
+	var console_scene = preload("res://scenes/debug/power_console.tscn")
+	var console = console_scene.instantiate()
+	
+	# Add to current scene
+	var current_scene = get_tree().current_scene
+	if current_scene:
+		current_scene.add_child(console)
+		print("[PowerManager] Debug console created")
+
+func _load_configuration():
+	"""Load configuration from config manager"""
+	if not config_manager:
+		return
+	
+	# Convert config manager data to legacy format for compatibility
+	_update_legacy_config_format()
+
+func _update_legacy_config_format():
+	"""Update legacy power_configs dictionary from config manager"""
+	power_configs.clear()
+	
+	# Load invincibility power configuration
+	var invincibility_config = config_manager.get_power_config("invincibility")
+	if invincibility_config.size() > 0:
+		# Convert screen tint from dictionary to Color if needed
+		var screen_tint = Color.WHITE
+		var effects = invincibility_config.get("effects", {})
+		if effects.has("screen_tint"):
+			var tint_data = effects.screen_tint
+			if tint_data is Dictionary:
+				screen_tint = Color(tint_data.get("r", 0.8), tint_data.get("g", 0.8), tint_data.get("b", 1.0), tint_data.get("a", 0.3))
+			else:
+				screen_tint = tint_data
+		
+		power_configs[PowerType.INVINCIBILITY] = {
+			"duration": invincibility_config.get("duration", 10.0),
+			"spawn_chance": invincibility_config.get("spawn_chance", 0.15),
+			"enemy_spawn_rates": invincibility_config.get("enemy_spawn_rates", {}),
+			"effects": {
+				"player_glow": effects.get("player_glow", true),
+				"screen_tint": screen_tint,
+				"particle_effect": effects.get("particle_effect", "invincibility_sparkles")
+			},
+			"audio": invincibility_config.get("audio", {})
+		}
+
+# Configuration Signal Handlers
+
+func _on_config_changed(section: String, key: String, value):
+	"""Handle configuration changes"""
+	print("[PowerManager] Configuration changed: %s.%s = %s" % [section, key, str(value)])
+	_update_legacy_config_format()
+
+func _on_debug_mode_changed(enabled: bool):
+	"""Handle debug mode changes"""
+	print("[PowerManager] Debug mode %s" % ("enabled" if enabled else "disabled"))
+	
+	if enabled and not debug_ui:
+		_create_debug_ui()
+	elif not enabled and debug_ui:
+		debug_ui.queue_free()
+		debug_ui = null
+
+func _on_system_enabled_changed(enabled: bool):
+	"""Handle system enabled changes"""
+	print("[PowerManager] Power system %s" % ("enabled" if enabled else "disabled"))
+	
+	if not enabled:
+		# Deactivate all active powers when system is disabled
+		reset_all_powers()
+
+# Configuration Methods (Updated)
 
 func get_power_config(power_type: PowerType) -> Dictionary:
 	"""Get configuration for a specific power type"""
@@ -234,18 +363,29 @@ func get_power_config(power_type: PowerType) -> Dictionary:
 
 func set_power_duration(power_type: PowerType, duration: float) -> void:
 	"""Set duration for a specific power type"""
-	if power_configs.has(power_type):
-		power_configs[power_type].duration = duration
+	var power_name = _get_power_name_from_type(power_type)
+	if power_name != "" and config_manager:
+		config_manager.set_power_duration(power_name, duration)
 
 func set_spawn_chance(power_type: PowerType, chance: float) -> void:
 	"""Set spawn chance for a specific power type"""
-	if power_configs.has(power_type):
-		power_configs[power_type].spawn_chance = clamp(chance, 0.0, 1.0)
+	var power_name = _get_power_name_from_type(power_type)
+	if power_name != "" and config_manager:
+		config_manager.set_spawn_chance(power_name, chance)
 
 func set_enemy_spawn_rate(power_type: PowerType, enemy_class: String, rate: float) -> void:
 	"""Set spawn rate for a specific enemy type"""
-	if power_configs.has(power_type):
-		power_configs[power_type].enemy_spawn_rates[enemy_class] = clamp(rate, 0.0, 1.0)
+	var power_name = _get_power_name_from_type(power_type)
+	if power_name != "" and config_manager:
+		config_manager.set_enemy_spawn_rate(power_name, enemy_class, rate)
+
+func _get_power_name_from_type(power_type: PowerType) -> String:
+	"""Convert power type enum to configuration name"""
+	match power_type:
+		PowerType.INVINCIBILITY:
+			return "invincibility"
+		_:
+			return ""
 
 # Debug Methods
 
@@ -254,7 +394,10 @@ func get_debug_info() -> Dictionary:
 	var debug_info = {
 		"active_powers_count": active_powers.size(),
 		"active_powers": {},
-		"power_configs": power_configs
+		"power_configs": power_configs,
+		"system_enabled": config_manager.is_system_enabled() if config_manager else false,
+		"debug_mode": config_manager.is_debug_mode() if config_manager else false,
+		"config_manager_info": config_manager.get_debug_info() if config_manager else {}
 	}
 	
 	for player_index in active_powers.keys():
@@ -266,6 +409,46 @@ func get_debug_info() -> Dictionary:
 		}
 	
 	return debug_info
+
+func toggle_debug_ui():
+	"""Toggle debug UI visibility"""
+	if debug_ui:
+		debug_ui.toggle_debug_ui()
+	elif config_manager and config_manager.is_debug_mode():
+		_create_debug_ui()
+
+func enable_debug_mode():
+	"""Enable debug mode and create debug UI"""
+	if config_manager:
+		config_manager.set_debug_mode(true)
+
+func disable_debug_mode():
+	"""Disable debug mode and hide debug UI"""
+	if config_manager:
+		config_manager.set_debug_mode(false)
+
+func get_configuration_manager():
+	"""Get reference to configuration manager"""
+	return config_manager
+
+func reload_configuration():
+	"""Reload configuration from file"""
+	if config_manager:
+		config_manager.load_configuration()
+		_update_legacy_config_format()
+		print("[PowerManager] Configuration reloaded")
+
+func save_configuration():
+	"""Save current configuration to file"""
+	if config_manager:
+		config_manager.save_configuration()
+		print("[PowerManager] Configuration saved")
+
+func validate_configuration() -> Array[String]:
+	"""Validate current configuration"""
+	if config_manager:
+		return config_manager.validate_configuration()
+	return ["Configuration manager not available"]
 
 func get_all_active_powers() -> Dictionary:
 	"""Get all currently active powers by player"""
@@ -484,3 +667,31 @@ func get_power_color(power_type: PowerType) -> Color:
 			return Color(1.0, 0.8, 0.3)  # Golden
 		_:
 			return Color.WHITE
+
+# Input handling for debug hotkeys
+func _input(event):
+	"""Handle debug input events"""
+	if not config_manager or not config_manager.is_debug_mode():
+		return
+	
+	if event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_F1:
+				toggle_debug_ui()
+			KEY_F5:
+				reload_configuration()
+			KEY_F6:
+				save_configuration()
+			KEY_F7:
+				if not config_manager.is_debug_mode():
+					enable_debug_mode()
+				else:
+					disable_debug_mode()
+			KEY_F8:
+				config_manager.set_system_enabled(not config_manager.is_system_enabled())
+			KEY_F9:
+				# Quick test: activate invincibility for player 1
+				activate_power(1, PowerType.INVINCIBILITY)
+			KEY_F10:
+				# Quick test: deactivate all powers
+				reset_all_powers()

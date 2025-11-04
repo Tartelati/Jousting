@@ -14,7 +14,7 @@ Jousting is a 2D platformer game developed using GDScript, the scripting languag
 - Retro-inspired graphics and sound effects
 - Multiplayer support (up to 4 players)
 - Enhanced high score system with robust persistence, validation, and user feedback
-- Power-up system with collectible power eggs and temporary special abilities (Core mechanics complete)
+- Power-up system with collectible power eggs and temporary special abilities (Core system complete - ready for gameplay testing)
 - Dynamic player joining and controller support
 - Type-safe code with explicit type annotations for better Godot 4 compatibility
 

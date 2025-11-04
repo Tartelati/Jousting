@@ -1,0 +1,174 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqxvhqxvhqxvh"]
+
+[ext_resource type="Script" path="res://scripts/debug/power_debug_ui.gd" id="1_power_debug"]
+
+[node name="PowerDebugUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_power_debug")
+
+[node name="MainPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -300.0
+offset_right = 400.0
+offset_bottom = 300.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MainPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+
+[node name="TitleLabel" type="Label" parent="MainPanel/VBoxContainer"]
+layout_mode = 2
+text = "Power System Debug Console"
+horizontal_alignment = 1
+
+[node name="TabContainer" type="TabContainer" parent="MainPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Configuration" type="VBoxContainer" parent="MainPanel/VBoxContainer/TabContainer"]
+layout_mode = 2
+
+[node name="SystemSettings" type="VBoxContainer" parent="MainPanel/VBoxContainer/TabContainer/Configuration"]
+layout_mode = 2
+
+[node name="SystemLabel" type="Label" parent="MainPanel/VBoxContainer/TabContainer/Configuration/SystemSettings"]
+layout_mode = 2
+text = "System Settings"
+
+[node name="SystemEnabledCheck" type="CheckBox" parent="MainPanel/VBoxContainer/TabContainer/Configuration/SystemSettings"]
+layout_mode = 2
+text = "Power System Enabled"
+
+[node name="DebugModeCheck" type="CheckBox" parent="MainPanel/VBoxContainer/TabContainer/Configuration/SystemSettings"]
+layout_mode = 2
+text = "Debug Mode Enabled"
+
+[node name="HSeparator" type="HSeparator" parent="MainPanel/VBoxContainer/TabContainer/Configuration"]
+layout_mode = 2
+
+[node name="PowerSettings" type="VBoxContainer" parent="MainPanel/VBoxContainer/TabContainer/Configuration"]
+layout_mode = 2
+
+[node name="PowerLabel" type="Label" parent="MainPanel/VBoxContainer/TabContainer/Configuration/PowerSettings"]
+layout_mode = 2
+text = "Invincibility Power Settings"
+
+[node name="DurationLabel" type="Label" parent="MainPanel/VBoxContainer/TabContainer/Configuration/PowerSettings"]
+layout_mode = 2
+text = "Duration: 10.0s"
+
+[node name="DurationSlider" type="HSlider" parent="MainPanel/VBoxContainer/TabContainer/Configuration/PowerSettings"]
+layout_mode = 2
+
+[node name="SpawnChanceLabel" type="Label" parent="MainPanel/VBoxContainer/TabContainer/Configuration/PowerSettings"]
+layout_mode = 2
+text = "Spawn Chance: 15.0%"
+
+[node name="SpawnChanceSlider" type="HSlider" parent="MainPanel/VBoxContainer/TabContainer/Configuration/PowerSettings"]
+layout_mode = 2
+
+[node name="Testing" type="VBoxContainer" parent="MainPanel/VBoxContainer/TabContainer"]
+layout_mode = 2
+
+[node name="TestControls" type="VBoxContainer" parent="MainPanel/VBoxContainer/TabContainer/Testing"]
+layout_mode = 2
+
+[node name="TestLabel" type="Label" parent="MainPanel/VBoxContainer/TabContainer/Testing/TestControls"]
+layout_mode = 2
+text = "Power Testing Controls"
+
+[node name="PlayerContainer" type="HBoxContainer" parent="MainPanel/VBoxContainer/TabContainer/Testing/TestControls"]
+layout_mode = 2
+
+[node name="PlayerLabel" type="Label" parent="MainPanel/VBoxContainer/TabContainer/Testing/TestControls/PlayerContainer"]
+layout_mode = 2
+text = "Test Player:"
+
+[node name="PlayerSpinBox" type="SpinBox" parent="MainPanel/VBoxContainer/TabContainer/Testing/TestControls/PlayerContainer"]
+layout_mode = 2
+
+[node name="ForceSpawnButton" type="Button" parent="MainPanel/VBoxContainer/TabContainer/Testing/TestControls"]
+layout_mode = 2
+text = "Force Spawn Power Egg (F2)"
+
+[node name="ActivatePowerButton" type="Button" parent="MainPanel/VBoxContainer/TabContainer/Testing/TestControls"]
+layout_mode = 2
+text = "Activate Invincibility (F3)"
+
+[node name="DeactivateAllButton" type="Button" parent="MainPanel/VBoxContainer/TabContainer/Testing/TestControls"]
+layout_mode = 2
+text = "Deactivate All Powers (F4)"
+
+[node name="Visualization" type="VBoxContainer" parent="MainPanel/VBoxContainer/TabContainer"]
+layout_mode = 2
+
+[node name="VisualizationSettings" type="VBoxContainer" parent="MainPanel/VBoxContainer/TabContainer/Visualization"]
+layout_mode = 2
+
+[node name="VisualizationLabel" type="Label" parent="MainPanel/VBoxContainer/TabContainer/Visualization/VisualizationSettings"]
+layout_mode = 2
+text = "Visualization Settings"
+
+[node name="SpawnVisualizationCheck" type="CheckBox" parent="MainPanel/VBoxContainer/TabContainer/Visualization/VisualizationSettings"]
+layout_mode = 2
+text = "Show Spawn Visualization"
+
+[node name="TimerDisplayCheck" type="CheckBox" parent="MainPanel/VBoxContainer/TabContainer/Visualization/VisualizationSettings"]
+layout_mode = 2
+text = "Show Power Timers"
+
+[node name="HSeparator2" type="HSeparator" parent="MainPanel/VBoxContainer/TabContainer/Visualization"]
+layout_mode = 2
+
+[node name="ActivePowersLabel" type="Label" parent="MainPanel/VBoxContainer/TabContainer/Visualization"]
+layout_mode = 2
+text = "Active Powers"
+
+[node name="ActivePowersList" type="ItemList" parent="MainPanel/VBoxContainer/TabContainer/Visualization"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Statistics" type="VBoxContainer" parent="MainPanel/VBoxContainer/TabContainer"]
+layout_mode = 2
+
+[node name="StatsLabel" type="RichTextLabel" parent="MainPanel/VBoxContainer/TabContainer/Statistics"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+text = "[b]Power System Statistics[/b]
+
+Loading..."
+
+[node name="ResetStatsButton" type="Button" parent="MainPanel/VBoxContainer/TabContainer/Statistics"]
+layout_mode = 2
+text = "Reset Statistics"
+
+[node name="ControlButtons" type="HBoxContainer" parent="MainPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="SaveConfigButton" type="Button" parent="MainPanel/VBoxContainer/ControlButtons"]
+layout_mode = 2
+text = "Save Config"
+
+[node name="ReloadConfigButton" type="Button" parent="MainPanel/VBoxContainer/ControlButtons"]
+layout_mode = 2
+text = "Reload Config"
+
+[node name="CloseButton" type="Button" parent="MainPanel/VBoxContainer/ControlButtons"]
+layout_mode = 2
+text = "Close (F1)"

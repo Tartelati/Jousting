@@ -1,0 +1,69 @@
+{
+  "power_system": {
+    "enabled": true,
+    "debug_mode": false,
+    "global_settings": {
+      "max_simultaneous_powers": 4,
+      "power_egg_timeout": 15.0,
+      "warning_threshold": 3.0,
+      "collection_points": 200
+    },
+    "powers": {
+      "invincibility": {
+        "enabled": true,
+        "duration": 10.0,
+        "spawn_chance": 0.15,
+        "enemy_spawn_rates": {
+          "EnemyBase": 0.15,
+          "EnemyHunter": 0.20,
+          "ShadowLord": 0.25
+        },
+        "effects": {
+          "player_glow": true,
+          "screen_tint": {
+            "r": 0.8,
+            "g": 0.8,
+            "b": 1.0,
+            "a": 0.3
+          },
+          "particle_effect": "invincibility_sparkles",
+          "overlay_animation": "invincibility_overlay"
+        },
+        "audio": {
+          "collection": "power_collect_invincibility",
+          "activation": "invincibility_start",
+          "ambient": "invincibility_loop",
+          "warning": "power_expire_warning",
+          "expiration": "power_expire",
+          "volume_levels": {
+            "spawn": -5.0,
+            "activation": 0.0,
+            "ambient": -15.0,
+            "warning": -3.0,
+            "expiration": -8.0
+          },
+          "pitch_scales": {
+            "activation": 1.5,
+            "ambient": 0.8,
+            "warning": 2.0,
+            "expiration": 0.7
+          }
+        },
+        "gameplay": {
+          "invulnerable": true,
+          "defeat_on_contact": true,
+          "bonus_score_multiplier": 1.5,
+          "movement_speed_multiplier": 1.0
+        }
+      }
+    },
+    "debug": {
+      "show_spawn_visualization": false,
+      "log_power_events": true,
+      "show_power_timers": false,
+      "force_spawn_rate": -1.0,
+      "test_mode_duration": -1.0,
+      "enable_dev_tools": false
+    }
+  }
+}

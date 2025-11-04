@@ -229,6 +229,10 @@ func _award_points(player_index: int):
 func _activate_power(player_index: int):
 	var power_manager = get_node_or_null("/root/PowerManager")
 	if power_manager and power_manager.has_method("activate_power"):
+		# Track collection for debug statistics
+		if power_manager.debug_ui and power_manager.debug_ui.has_method("track_power_collection"):
+			power_manager.debug_ui.track_power_collection(power_type)
+		
 		# Send collection notification before activation
 		if power_manager.has_method("_send_power_notification"):
 			power_manager._send_power_notification(player_index, power_type, "collected")
