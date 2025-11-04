@@ -777,7 +777,20 @@ func _show_power_expiration_warning(remaining_time: float):
 	if not is_power_active:
 		return
 	
+	print("[Player%d] Power expiring in %.1f seconds!" % [player_index, remaining_time])
+	
 	# Create rapid flashing effect on player sprite
+	var sprite_warning_tween = create_tween()
+	sprite_warning_tween.set_loops(6)  # Flash 6 times over 3 seconds
+	sprite_warning_tween.tween_property(animated_sprite, "modulate:a", 0.3, 0.25)
+	sprite_warning_tween.tween_property(animated_sprite, "modulate:a", 1.0, 0.25)
+	
+	# Flash power overlay if available
+	if power_overlay:
+		var overlay_warning_tween = create_tween()
+		overlay_warning_tween.set_loops(6)
+		overlay_warning_tween.tween_property(power_overlay, "modulate:a", 0.1, 0.25)
+		overlay_warning_tween.tween_property(power_overlay, "modulate:a", 0.8, 0.25)
 	var warning_tween = create_tween()
 	warning_tween.set_loops(int(remaining_time * 4))  # Flash 4 times per second
 	warning_tween.tween_property(animated_sprite, "modulate:a", 0.5, 0.125)

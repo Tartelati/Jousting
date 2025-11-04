@@ -17,6 +17,7 @@ The Power-Up System is currently in active development with core mechanics now f
 - ✅ **Task 2 - PowerEgg Entity**: PowerEgg entity and collection system **COMPLETE**
 - ✅ **Task 3 - Enemy Integration**: Enemy defeat mechanics integration **COMPLETE**
 - ✅ **Task 4 - Player Invincibility**: Player invincibility power mechanics **COMPLETE**
+- 🔄 **Task 5 - Visual Effects**: Visual effects system **IN PROGRESS**
 
 ## System Overview
 

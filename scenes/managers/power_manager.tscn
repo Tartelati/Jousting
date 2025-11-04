@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqm8k7x2qm8ys"]
+
+[ext_resource type="Script" path="res://scripts/managers/power_manager.gd" id="1_power_manager"]
+
+[node name="PowerManager" type="Node"]
+script = ExtResource("1_power_manager")
+
+[node name="PowerSpawnAudio" type="AudioStreamPlayer" parent="."]
+volume_db = -5.0
+
+[node name="PowerActivationAudio" type="AudioStreamPlayer" parent="."]
+volume_db = 0.0
+
+[node name="PowerAmbientAudio" type="AudioStreamPlayer" parent="."]
+volume_db = -15.0
+
+[node name="PowerWarningAudio" type="AudioStreamPlayer" parent="."]
+volume_db = -3.0
+
+[node name="PowerExpirationAudio" type="AudioStreamPlayer" parent="."]
+volume_db = -8.0

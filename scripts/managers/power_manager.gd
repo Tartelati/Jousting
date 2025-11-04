@@ -6,6 +6,13 @@ enum PowerType {
 	INVINCIBILITY = 0
 }
 
+# Audio components for power system
+@onready var power_spawn_audio: AudioStreamPlayer = $PowerSpawnAudio
+@onready var power_activation_audio: AudioStreamPlayer = $PowerActivationAudio
+@onready var power_ambient_audio: AudioStreamPlayer = $PowerAmbientAudio
+@onready var power_warning_audio: AudioStreamPlayer = $PowerWarningAudio
+@onready var power_expiration_audio: AudioStreamPlayer = $PowerExpirationAudio
+
 # Power state data structure
 class PowerData:
 	var type: PowerType
@@ -56,13 +63,13 @@ var active_powers: Dictionary = {}  # player_index -> PowerData
 var power_timers: Dictionary = {}   # player_index -> Timer
 
 # Signals for power events
-signal power_collected(player_index: int, power_type: PowerType)
 signal power_activated(player_index: int, power_type: PowerType, duration: float)
 signal power_expired(player_index: int, power_type: PowerType)
 signal power_warning(player_index: int, power_type: PowerType, remaining_time: float)
 
 func _ready():
 	print("[PowerManager] Power system initialized")
+	_setup_audio_streams()
 
 func _process(delta):
 	update_power_timers(delta)
@@ -122,6 +129,10 @@ func activate_power(player_index: int, power_type: PowerType) -> bool:
 	timer.start()
 	power_timers[player_index] = timer
 	
+	# Play activation audio
+	play_power_activation_sound(power_type)
+	start_power_ambient_sound(power_type)
+	
 	# Emit activation signal
 	emit_signal("power_activated", player_index, power_type, duration)
 	
@@ -145,6 +156,10 @@ func deactivate_power(player_index: int) -> void:
 	
 	# Remove power data
 	active_powers.erase(player_index)
+	
+	# Play expiration audio and stop ambient sound
+	play_power_expiration_sound(power_type)
+	stop_power_ambient_sound()
 	
 	# Emit expiration signal
 	emit_signal("power_expired", player_index, power_type)
@@ -198,6 +213,7 @@ func update_power_timers(_delta: float) -> void:
 		# Check for warning threshold (3 seconds remaining)
 		var remaining_time = power_data.get_remaining_time()
 		if remaining_time <= 3.0 and remaining_time > 2.9:
+			play_power_warning_sound(power_data.type)
 			emit_signal("power_warning", player_index, power_data.type, remaining_time)
 	
 	# Clean up expired powers
@@ -258,3 +274,117 @@ func reset_all_powers() -> void:
 func _on_power_expired(player_index: int):
 	"""Handle power expiration from timer"""
 	deactivate_power(player_index)
+
+# Audio Management Methods
+
+func _setup_audio_streams():
+	"""Setup audio streams with appropriate sound files"""
+	# Load power-related audio files
+	if power_spawn_audio:
+		var spawn_sound = load("res://assets/sounds/sfx/power_egg_spawn.wav")
+		if spawn_sound:
+			power_spawn_audio.stream = spawn_sound
+			power_spawn_audio.volume_db = -5.0
+	
+	if power_activation_audio:
+		# Try to load dedicated power activation sound first
+		var activation_sound = load("res://assets/sounds/sfx/power_activation.wav")
+		if not activation_sound:
+			# Fallback to flap sound with modified pitch
+			activation_sound = load("res://assets/sounds/sfx/flapsound.wav")
+		if activation_sound:
+			power_activation_audio.stream = activation_sound
+			power_activation_audio.volume_db = 0.0
+			power_activation_audio.pitch_scale = 1.5  # Higher pitch for power-up feel
+	
+	if power_ambient_audio:
+		# Try to load dedicated ambient loop sound first
+		var ambient_sound = load("res://assets/sounds/sfx/power_ambient_loop.ogg")
+		if not ambient_sound:
+			# Fallback to spray sound with modified pitch
+			ambient_sound = load("res://assets/sounds/sfx/spray-can-shaking-and-spraying-66933.ogg")
+		if ambient_sound:
+			power_ambient_audio.stream = ambient_sound
+			power_ambient_audio.volume_db = -15.0  # Quiet ambient sound
+			power_ambient_audio.pitch_scale = 0.8   # Lower pitch for ambient feel
+	
+	if power_warning_audio:
+		# Try to load dedicated warning sound first
+		var warning_sound = load("res://assets/sounds/sfx/power_warning.wav")
+		if not warning_sound:
+			# Fallback to collision sound with high pitch
+			warning_sound = load("res://assets/sounds/sfx/collision_sound.wav")
+		if warning_sound:
+			power_warning_audio.stream = warning_sound
+			power_warning_audio.volume_db = -3.0
+			power_warning_audio.pitch_scale = 2.0  # High pitch for urgency
+	
+	if power_expiration_audio:
+		# Try to load dedicated expiration sound first
+		var expiration_sound = load("res://assets/sounds/sfx/power_expiration.wav")
+		if not expiration_sound:
+			# Fallback to death sound with lower pitch
+			expiration_sound = load("res://assets/sounds/sfx/death_sound.wav")
+		if expiration_sound:
+			power_expiration_audio.stream = expiration_sound
+			power_expiration_audio.volume_db = -8.0
+			power_expiration_audio.pitch_scale = 0.7  # Lower pitch for power-down feel
+
+func play_power_spawn_sound():
+	"""Play sound when power egg spawns"""
+	if power_spawn_audio and power_spawn_audio.stream:
+		power_spawn_audio.play()
+		print("[PowerManager] Playing power spawn sound")
+
+func play_power_activation_sound(power_type: PowerType):
+	"""Play sound when power is activated"""
+	if power_activation_audio and power_activation_audio.stream:
+		# Adjust pitch based on power type
+		match power_type:
+			PowerType.INVINCIBILITY:
+				power_activation_audio.pitch_scale = 1.5
+		
+		power_activation_audio.play()
+		print("[PowerManager] Playing power activation sound for type %d" % power_type)
+
+func start_power_ambient_sound(power_type: PowerType):
+	"""Start looping ambient sound during active power"""
+	if power_ambient_audio and power_ambient_audio.stream:
+		# Configure ambient sound based on power type
+		match power_type:
+			PowerType.INVINCIBILITY:
+				power_ambient_audio.pitch_scale = 0.8
+				power_ambient_audio.volume_db = -15.0
+		
+		# Start looping ambient sound
+		if not power_ambient_audio.playing:
+			power_ambient_audio.play()
+		print("[PowerManager] Starting ambient sound for power type %d" % power_type)
+
+func stop_power_ambient_sound():
+	"""Stop looping ambient sound"""
+	if power_ambient_audio and power_ambient_audio.playing:
+		power_ambient_audio.stop()
+		print("[PowerManager] Stopping ambient sound")
+
+func play_power_warning_sound(power_type: PowerType):
+	"""Play warning sound when power is about to expire"""
+	if power_warning_audio and power_warning_audio.stream:
+		# Adjust warning sound based on power type
+		match power_type:
+			PowerType.INVINCIBILITY:
+				power_warning_audio.pitch_scale = 2.0
+		
+		power_warning_audio.play()
+		print("[PowerManager] Playing power warning sound for type %d" % power_type)
+
+func play_power_expiration_sound(power_type: PowerType):
+	"""Play sound when power expires"""
+	if power_expiration_audio and power_expiration_audio.stream:
+		# Adjust expiration sound based on power type
+		match power_type:
+			PowerType.INVINCIBILITY:
+				power_expiration_audio.pitch_scale = 0.7
+		
+		power_expiration_audio.play()
+		print("[PowerManager] Playing power expiration sound for type %d" % power_type)

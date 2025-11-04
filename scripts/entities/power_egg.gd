@@ -90,7 +90,12 @@ func _start_timeout_timer():
 		timeout_timer.start()
 
 func _play_spawn_effects():
-	if spawn_sound:
+	# Play spawn sound through PowerManager for consistency
+	var power_manager = get_node_or_null("/root/PowerManager")
+	if power_manager and power_manager.has_method("play_power_spawn_sound"):
+		power_manager.play_power_spawn_sound()
+	elif spawn_sound:
+		# Fallback to local sound if PowerManager not available
 		spawn_sound.play()
 	
 	if spawn_effect:
@@ -173,7 +178,14 @@ func collect(player_index: int):
 	_cleanup()
 
 func _play_collection_effects():
+	# Play collection sound with proper power egg collection audio
 	if collection_sound:
+		# Load and play power egg collection sound
+		var collection_audio = load("res://assets/sounds/sfx/power_egg_collect.wav")
+		if collection_audio:
+			collection_sound.stream = collection_audio
+			collection_sound.volume_db = -2.0
+			collection_sound.pitch_scale = 1.2  # Slightly higher pitch for satisfying pickup
 		collection_sound.play()
 	
 	# Create collection burst effect

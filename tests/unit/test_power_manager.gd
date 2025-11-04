@@ -224,3 +224,42 @@ func test_reset_all_powers():
 	# Verify all powers are deactivated
 	assert_false(power_manager.is_power_active(1), "Player 1 should not have active power after reset")
 	assert_false(power_manager.is_power_active(2), "Player 2 should not have active power after reset")
+
+func test_audio_components_exist():
+	"""Test that audio components are properly set up"""
+	# Check that audio nodes exist
+	var spawn_audio = power_manager.get_node_or_null("PowerSpawnAudio")
+	var activation_audio = power_manager.get_node_or_null("PowerActivationAudio")
+	var ambient_audio = power_manager.get_node_or_null("PowerAmbientAudio")
+	var warning_audio = power_manager.get_node_or_null("PowerWarningAudio")
+	var expiration_audio = power_manager.get_node_or_null("PowerExpirationAudio")
+	
+	assert_not_null(spawn_audio, "PowerSpawnAudio node should exist")
+	assert_not_null(activation_audio, "PowerActivationAudio node should exist")
+	assert_not_null(ambient_audio, "PowerAmbientAudio node should exist")
+	assert_not_null(warning_audio, "PowerWarningAudio node should exist")
+	assert_not_null(expiration_audio, "PowerExpirationAudio node should exist")
+
+func test_audio_methods_exist():
+	"""Test that audio methods are available"""
+	assert_true(power_manager.has_method("play_power_spawn_sound"), "play_power_spawn_sound method should exist")
+	assert_true(power_manager.has_method("play_power_activation_sound"), "play_power_activation_sound method should exist")
+	assert_true(power_manager.has_method("start_power_ambient_sound"), "start_power_ambient_sound method should exist")
+	assert_true(power_manager.has_method("stop_power_ambient_sound"), "stop_power_ambient_sound method should exist")
+	assert_true(power_manager.has_method("play_power_warning_sound"), "play_power_warning_sound method should exist")
+	assert_true(power_manager.has_method("play_power_expiration_sound"), "play_power_expiration_sound method should exist")
+
+func test_audio_calls_dont_crash():
+	"""Test that audio method calls don't crash the system"""
+	var power_type = power_manager.PowerType.INVINCIBILITY
+	
+	# These should not crash even if audio files are missing
+	power_manager.play_power_spawn_sound()
+	power_manager.play_power_activation_sound(power_type)
+	power_manager.start_power_ambient_sound(power_type)
+	power_manager.play_power_warning_sound(power_type)
+	power_manager.play_power_expiration_sound(power_type)
+	power_manager.stop_power_ambient_sound()
+	
+	# If we get here without crashing, the test passes
+	assert_true(true, "Audio method calls should not crash")

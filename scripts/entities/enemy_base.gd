@@ -445,6 +445,9 @@ func _spawn_power_egg(player_velocity: Vector2, player_index: int, award_score: 
 	# Add to scene
 	get_parent().add_child(power_egg)
 	
+	# Play spawn sound through PowerManager (PowerEgg will also play its own spawn sound)
+	# Note: PowerEgg will handle its own spawn sound in _play_spawn_effects()
+	
 	# Hide this enemy's egg components since we're using PowerEgg instead
 	if egg_sprite:
 		egg_sprite.visible = false
