@@ -52,7 +52,7 @@
   - Create power expiration handling and automatic cleanup
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 6.1, 6.2_
 
-- [ ] 5. Create visual effects system for power-ups
+- [x] 5. Create visual effects system for power-ups
   - Design and implement power egg glow/particle effects for spawn indication
   - Create player invincibility overlay effects (golden glow, sparkle particles)
   - Add power collection burst effect when player touches power egg

@@ -38,6 +38,14 @@ This document provides an overview of all documentation available for the Joust 
   - Power egg vs normal egg decision system
   - Seamless integration with existing egg physics and positioning
 
+- **[scripts/entities/player.gd](scripts/entities/player.gd)** - ✅ Complete player invincibility power mechanics
+  - Power state tracking variables and lifecycle management
+  - Invincibility collision detection that defeats enemies on contact
+  - Bonus scoring system (150 points per enemy defeated during invincibility)
+  - Visual effect integration points (power overlay, particles, audio)
+  - PowerManager signal integration for coordinated power management
+  - Multi-player power independence with per-player state tracking
+
 ### Multiplayer Systems
 - **[improved-controller-system.md](improved-controller-system.md)** - Controller assignment and dynamic player joining
 - **[dynamic-joining-fix-summary.md](dynamic-joining-fix-summary.md)** - Dynamic player joining implementation details
@@ -47,6 +55,11 @@ This document provides an overview of all documentation available for the Joust 
 ### Implementation Guides
 - **[movement-implementation-guide.md](movement-implementation-guide.md)** - Technical implementation details for movement system
 - **[gamemanager-integration-fixed.md](gamemanager-integration-fixed.md)** - GameManager integration documentation
+
+### Power-Up System Implementation Summaries
+- **[power-up-system-task-1-completion-summary.md](power-up-system-task-1-completion-summary.md)** - ✅ PowerManager class and core infrastructure implementation
+- **[power-up-system-task-2-progress-update.md](power-up-system-task-2-progress-update.md)** - ✅ PowerEgg entity and collection system implementation
+- **[power-up-system-task-4-completion-summary.md](power-up-system-task-4-completion-summary.md)** - ✅ Player invincibility power mechanics implementation
 
 ### Data Validation and Storage System
 - **[scripts/managers/high_score_validator.gd](scripts/managers/high_score_validator.gd)** - ✅ Complete data validation and sanitization system
@@ -81,7 +94,7 @@ This document provides an overview of all documentation available for the Joust 
   - **[design.md](/.kiro/specs/high-score-save-system/design.md)** - Architecture and component design
   - **[tasks.md](/.kiro/specs/high-score-save-system/tasks.md)** - 14-phase implementation plan
 
-- **[.kiro/specs/power-up-system/](/.kiro/specs/power-up-system/)** - 🔄 Power-up system specification (In Development)
+- **[.kiro/specs/power-up-system/](/.kiro/specs/power-up-system/)** - 🔄 Power-up system specification (Core mechanics complete)
   - **[requirements.md](/.kiro/specs/power-up-system/requirements.md)** - User stories and acceptance criteria for power-up mechanics
   - **[design.md](/.kiro/specs/power-up-system/design.md)** - Architecture design for PowerManager, PowerEgg, and integration
   - **[integration-plan.md](/.kiro/specs/power-up-system/integration-plan.md)** - Detailed integration plan with existing codebase
@@ -206,6 +219,7 @@ All 9 major high score system enhancement tasks have been successfully completed
 - ✅ **Power-Up System Core Infrastructure** - PowerManager class with complete power system foundation
 - ✅ **Power-Up System PowerEgg Entity** - Complete PowerEgg collectible with physics and collection mechanics
 - ✅ **Power-Up System Enemy Integration** - Enemy defeat mechanics enhanced with power egg spawning logic
+- ✅ **Power-Up System Player Mechanics** - Complete player invincibility power implementation with collision detection
   - ✅ **Task 1 - Data Validation System**: Complete HighScoreValidator class with comprehensive testing
   - ✅ **Task 2 - Robust Data Persistence**: Complete HighScoreStorage class with backup/recovery mechanisms
   - ✅ **Task 3 - Configuration Management**: Integrated directly into ScoreManager and Storage classes (simplified architecture)
@@ -220,7 +234,7 @@ All 9 major high score system enhancement tasks have been successfully completed
 - 📋 Main menu integration with dedicated high score viewing screen (Task 10 - deferred)
 
 ### In Development
-- 🔄 **Power-Up System**: Collectible power eggs with temporary special abilities (Tasks 1-3 complete: PowerManager, PowerEgg entity, and enemy integration complete. Task 4 player invincibility mechanics in progress)
+- 🔄 **Power-Up System**: Collectible power eggs with temporary special abilities (Tasks 1-4 complete: PowerManager, PowerEgg entity, enemy integration, and player invincibility mechanics complete. Task 5 visual effects system in progress)
 
 ### Planned Features
 - 📋 Enhanced UI/UX improvements

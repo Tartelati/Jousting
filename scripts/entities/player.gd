@@ -662,18 +662,55 @@ func _start_power_effects(power_type: int):
 			# Visual effects
 			if power_overlay:
 				power_overlay.visible = true
-				power_overlay.play("invincibility_glow")
+				power_overlay.play("P%d_Idle" % player_index)
+				# Create pulsing overlay effect
+				var overlay_tween = create_tween()
+				overlay_tween.set_loops()
+				overlay_tween.tween_property(power_overlay, "modulate:a", 0.4, 0.5)
+				overlay_tween.tween_property(power_overlay, "modulate:a", 0.8, 0.5)
 			
 			if power_particles:
 				power_particles.visible = true
 				power_particles.emitting = true
+				# Configure invincibility particles
+				var particle_material = power_particles.process_material as ParticleProcessMaterial
+				if particle_material:
+					particle_material.color = Color(1.0, 0.9, 0.4, 0.8)
+					particle_material.scale_min = 0.2
+					particle_material.scale_max = 0.8
 			
 			# Audio effects
 			if power_audio:
 				power_audio.play()
 			
-			# Apply visual modulation for invincibility
+			# Apply visual modulation for invincibility with pulsing effect
 			animated_sprite.modulate = Color(1.2, 1.2, 0.8, 1.0)  # Golden tint
+			var sprite_tween = create_tween()
+			sprite_tween.set_loops()
+			sprite_tween.tween_property(animated_sprite, "modulate", Color(1.4, 1.4, 0.6, 1.0), 0.3)
+			sprite_tween.tween_property(animated_sprite, "modulate", Color(1.2, 1.2, 0.8, 1.0), 0.3)
+			
+			# Create screen tint effect
+			_create_invincibility_screen_tint()
+
+func _create_invincibility_screen_tint():
+	"""Create a subtle screen tint effect during invincibility"""
+	var tint = ColorRect.new()
+	tint.color = Color(0.8, 0.8, 1.0, 0.1)  # Subtle blue-white tint
+	tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tint.name = "InvincibilityTint_P%d" % player_index
+	
+	# Get the main scene to add the tint overlay
+	var main_scene = get_tree().current_scene
+	if main_scene:
+		tint.set_anchors_preset(Control.PRESET_FULL_RECT)
+		main_scene.add_child(tint)
+		
+		# Create pulsing tint effect
+		var tint_tween = create_tween()
+		tint_tween.set_loops()
+		tint_tween.tween_property(tint, "modulate:a", 0.05, 1.0)
+		tint_tween.tween_property(tint, "modulate:a", 0.15, 1.0)
 
 func _stop_power_effects():
 	"""Stop all power visual and audio effects"""
@@ -692,6 +729,13 @@ func _stop_power_effects():
 	
 	# Restore normal visual appearance
 	animated_sprite.modulate = Color.WHITE
+	
+	# Remove screen tint
+	var main_scene = get_tree().current_scene
+	if main_scene:
+		var tint = main_scene.get_node_or_null("InvincibilityTint_P%d" % player_index)
+		if tint:
+			tint.queue_free()
 
 func _connect_power_manager_signals():
 	"""Connect to PowerManager signals for power activation/deactivation"""
@@ -704,6 +748,10 @@ func _connect_power_manager_signals():
 		# Connect power expiration signal
 		if not power_manager.is_connected("power_expired", _on_power_expired):
 			power_manager.connect("power_expired", _on_power_expired)
+		
+		# Connect power warning signal
+		if not power_manager.is_connected("power_warning", _on_power_warning):
+			power_manager.connect("power_warning", _on_power_warning)
 		
 		print("[Player%d] Connected to PowerManager signals" % player_index)
 	else:
@@ -718,6 +766,36 @@ func _on_power_expired(expired_player_index: int, _power_type: int):
 	"""Handle power expiration signal from PowerManager"""
 	if expired_player_index == player_index:
 		deactivate_power()
+
+func _on_power_warning(warning_player_index: int, _power_type: int, remaining_time: float):
+	"""Handle power warning signal from PowerManager"""
+	if warning_player_index == player_index:
+		_show_power_expiration_warning(remaining_time)
+
+func _show_power_expiration_warning(remaining_time: float):
+	"""Show visual warning effects when power is about to expire"""
+	if not is_power_active:
+		return
+	
+	# Create rapid flashing effect on player sprite
+	var warning_tween = create_tween()
+	warning_tween.set_loops(int(remaining_time * 4))  # Flash 4 times per second
+	warning_tween.tween_property(animated_sprite, "modulate:a", 0.5, 0.125)
+	warning_tween.tween_property(animated_sprite, "modulate:a", 1.0, 0.125)
+	
+	# Flash power overlay more rapidly
+	if power_overlay and power_overlay.visible:
+		var overlay_warning_tween = create_tween()
+		overlay_warning_tween.set_loops(int(remaining_time * 6))  # Flash 6 times per second
+		overlay_warning_tween.tween_property(power_overlay, "modulate:a", 0.2, 0.083)
+		overlay_warning_tween.tween_property(power_overlay, "modulate:a", 0.8, 0.083)
+	
+	# Increase particle emission for warning
+	if power_particles and power_particles.visible:
+		power_particles.amount = 40  # Increase from 25 to 40
+		var particle_material = power_particles.process_material as ParticleProcessMaterial
+		if particle_material:
+			particle_material.color = Color(1.0, 0.5, 0.2, 0.8)  # Change to orange-red warning color
 
 
 # --- Audio Implementation ---

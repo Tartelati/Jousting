@@ -269,3 +269,126 @@ texture = ExtResource("2_bo48s")
 [node name="Life4" type="TextureRect" parent="P4HudLives/LivesContainer"]
 layout_mode = 2
 texture = ExtResource("2_bo48s")
+
+[node name="PowerIndicators" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="P1PowerIndicator" type="MarginContainer" parent="PowerIndicators"]
+visible = false
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -80.0
+offset_right = -20.0
+offset_bottom = -40.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="PowerContainer" type="VBoxContainer" parent="PowerIndicators/P1PowerIndicator"]
+layout_mode = 2
+
+[node name="PowerIcon" type="TextureRect" parent="PowerIndicators/P1PowerIndicator/PowerContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+texture = ExtResource("2_bo48s")
+stretch_mode = 4
+
+[node name="PowerBar" type="ProgressBar" parent="PowerIndicators/P1PowerIndicator/PowerContainer"]
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="P2PowerIndicator" type="MarginContainer" parent="PowerIndicators"]
+visible = false
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -20.0
+offset_right = -20.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="PowerContainer" type="VBoxContainer" parent="PowerIndicators/P2PowerIndicator"]
+layout_mode = 2
+
+[node name="PowerIcon" type="TextureRect" parent="PowerIndicators/P2PowerIndicator/PowerContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+texture = ExtResource("2_bo48s")
+stretch_mode = 4
+
+[node name="PowerBar" type="ProgressBar" parent="PowerIndicators/P2PowerIndicator/PowerContainer"]
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="P3PowerIndicator" type="MarginContainer" parent="PowerIndicators"]
+visible = false
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 20.0
+offset_top = -20.0
+offset_right = 120.0
+offset_bottom = 20.0
+grow_vertical = 2
+
+[node name="PowerContainer" type="VBoxContainer" parent="PowerIndicators/P3PowerIndicator"]
+layout_mode = 2
+
+[node name="PowerIcon" type="TextureRect" parent="PowerIndicators/P3PowerIndicator/PowerContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+texture = ExtResource("2_bo48s")
+stretch_mode = 4
+
+[node name="PowerBar" type="ProgressBar" parent="PowerIndicators/P3PowerIndicator/PowerContainer"]
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="P4PowerIndicator" type="MarginContainer" parent="PowerIndicators"]
+visible = false
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 20.0
+offset_top = -80.0
+offset_right = 120.0
+offset_bottom = -40.0
+grow_vertical = 2
+
+[node name="PowerContainer" type="VBoxContainer" parent="PowerIndicators/P4PowerIndicator"]
+layout_mode = 2
+
+[node name="PowerIcon" type="TextureRect" parent="PowerIndicators/P4PowerIndicator/PowerContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+texture = ExtResource("2_bo48s")
+stretch_mode = 4
+
+[node name="PowerBar" type="ProgressBar" parent="PowerIndicators/P4PowerIndicator/PowerContainer"]
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false

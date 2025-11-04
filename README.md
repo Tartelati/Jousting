@@ -14,7 +14,7 @@ Jousting is a 2D platformer game developed using GDScript, the scripting languag
 - Retro-inspired graphics and sound effects
 - Multiplayer support (up to 4 players)
 - Enhanced high score system with robust persistence, validation, and user feedback
-- Power-up system with collectible power eggs and temporary special abilities (In Development)
+- Power-up system with collectible power eggs and temporary special abilities (Core mechanics complete)
 - Dynamic player joining and controller support
 - Type-safe code with explicit type annotations for better Godot 4 compatibility
 
@@ -72,18 +72,23 @@ A comprehensive high score persistence system has been fully implemented with al
 **Deferred Features:**
 - **📋 Task 10**: Main menu integration with dedicated high score viewing screen (deferred for future development)
 
-### Power-Up System 🔄 IN DEVELOPMENT
-A comprehensive power-up system is currently in the specification phase. This system will add temporary special abilities through collectible power eggs. See `.kiro/specs/power-up-system/` for detailed requirements, design, and implementation documentation:
+### Power-Up System 🔄 IN DEVELOPMENT - Core Mechanics Complete
+A comprehensive power-up system with core mechanics now functional. This system adds temporary special abilities through collectible power eggs. See `.kiro/specs/power-up-system/` for detailed requirements, design, and implementation documentation:
 
-**Planned Features:**
-- **📋 Power Egg Spawning**: 15% chance for power eggs to spawn instead of normal eggs when enemies are defeated
-- **📋 Invincibility Power**: Temporary invulnerability with enemy-defeating contact ability
-- **📋 Collection System**: Physics-based power egg collection with immediate activation
-- **📋 Visual Effects**: Distinctive power egg appearance, player power indicators, and activation effects
+**Implemented Features:**
+- **✅ Power Egg Spawning**: 15% chance for power eggs to spawn instead of normal eggs when enemies are defeated
+- **✅ Invincibility Power**: Temporary invulnerability with enemy-defeating contact ability (10-second duration)
+- **✅ Collection System**: Physics-based power egg collection with immediate activation
+- **✅ PowerManager Infrastructure**: Complete power system with multi-player support and timer management
+- **✅ Player Integration**: Full invincibility mechanics with collision detection and bonus scoring
+- **✅ Enemy Integration**: Enemy defeat mechanics enhanced with power egg spawning logic
+- **✅ Configuration System**: Adjustable spawn rates, durations, and effects for gameplay balancing
+- **✅ Timer Management**: Power duration tracking with expiration warnings and automatic cleanup
+
+**In Development:**
+- **📋 Visual Effects**: Enhanced power egg appearance, player power indicators, and activation effects
 - **📋 Audio Feedback**: Complete audio system for spawning, collection, activation, and expiration
-- **📋 Multi-Player Support**: Independent power tracking for up to 4 players simultaneously
-- **📋 Configuration System**: Adjustable spawn rates, durations, and effects for gameplay balancing
-- **📋 Timer Management**: Power duration tracking with expiration warnings and automatic cleanup
+- **📋 UI Integration**: Power status indicators and duration timers in HUD
 
 **Implementation Status:**
 - **✅ Requirements**: Complete user stories and acceptance criteria defined
@@ -91,7 +96,10 @@ A comprehensive power-up system is currently in the specification phase. This sy
 - **✅ Integration Plan**: Detailed plan for integrating with existing codebase
 - **✅ Implementation Tasks**: 14-phase development roadmap with clear milestones
 - **✅ Task 1 - Core Infrastructure**: PowerManager class and power system foundation complete
-- **🔄 Task 2 - PowerEgg Entity**: PowerEgg entity and collection system **IN PROGRESS**
+- **✅ Task 2 - PowerEgg Entity**: PowerEgg entity and collection system complete
+- **✅ Task 3 - Enemy Integration**: Enemy defeat mechanics integration complete
+- **✅ Task 4 - Player Mechanics**: Player invincibility power implementation complete
+- **🔄 Task 5 - Visual Effects**: Visual effects system **IN PROGRESS**
 
 ## Getting Started
 

@@ -50,6 +50,11 @@ func _setup_visual_appearance():
 			if glow_effect:
 				glow_effect.modulate = Color(1.0, 0.9, 0.4, 0.8)  # Golden glow
 				glow_effect.play("glow")
+				# Create pulsing glow effect
+				var tween = create_tween()
+				tween.set_loops()
+				tween.tween_property(glow_effect, "modulate:a", 0.4, 1.0)
+				tween.tween_property(glow_effect, "modulate:a", 0.8, 1.0)
 
 func _setup_physics_properties():
 	# Set same physics properties as normal eggs
@@ -90,6 +95,18 @@ func _play_spawn_effects():
 	
 	if spawn_effect:
 		spawn_effect.emitting = true
+		# Configure spawn particles for power egg
+		spawn_effect.amount = 30
+		spawn_effect.lifetime = 2.0
+		var particle_material = spawn_effect.process_material as ParticleProcessMaterial
+		if particle_material:
+			particle_material.emission.set_param_min(20.0)
+			particle_material.emission.set_param_max(40.0)
+			particle_material.initial_velocity_min = 30.0
+			particle_material.initial_velocity_max = 80.0
+			particle_material.scale_min = 0.3
+			particle_material.scale_max = 1.0
+			particle_material.color = Color(1.0, 0.9, 0.4, 1.0)  # Golden particles
 
 func _physics_process(delta):
 	if is_collected:
@@ -162,8 +179,22 @@ func _play_collection_effects():
 	# Create collection burst effect
 	if spawn_effect:
 		spawn_effect.emitting = false
-		spawn_effect.amount = 50
+		spawn_effect.amount = 60
+		var particle_material = spawn_effect.process_material as ParticleProcessMaterial
+		if particle_material:
+			# Configure burst effect
+			particle_material.direction = Vector3(0, -1, 0)
+			particle_material.initial_velocity_min = 80.0
+			particle_material.initial_velocity_max = 150.0
+			particle_material.angular_velocity_min = -180.0
+			particle_material.angular_velocity_max = 180.0
+			particle_material.scale_min = 0.5
+			particle_material.scale_max = 2.0
+			particle_material.color = Color(1.0, 0.8, 0.2, 1.0)  # Bright golden burst
 		spawn_effect.emitting = true
+		
+		# Create screen flash effect for collection
+		_create_collection_flash()
 
 func _award_points(player_index: int):
 	# Award base points for power egg collection
@@ -184,6 +215,23 @@ func _activate_power(player_index: int):
 			print("[DEBUG POWER EGG] Failed to activate power for player %d" % player_index)
 	else:
 		print("[DEBUG POWER EGG] PowerManager not found or invalid")
+
+func _create_collection_flash():
+	"""Create a brief screen flash effect when power egg is collected"""
+	var flash = ColorRect.new()
+	flash.color = Color(1.0, 0.9, 0.4, 0.3)  # Golden flash
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# Get the main scene to add the flash overlay
+	var main_scene = get_tree().current_scene
+	if main_scene:
+		flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+		main_scene.add_child(flash)
+		
+		# Animate the flash
+		var tween = create_tween()
+		tween.tween_property(flash, "modulate:a", 0.0, 0.2)
+		tween.tween_callback(flash.queue_free)
 
 func _cleanup():
 	# Disable all areas
