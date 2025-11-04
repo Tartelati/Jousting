@@ -224,9 +224,6 @@ func process_flying(delta):
 	if randf() < random_dir_change_chance_flying:
 		direction *= -1
 		if enemy_animation: enemy_animation.flip_h = (direction < 0)
-		
-	var just_hit_floor = false
-	var vertical_velocity_before_move = velocity.y # Store velocity before move_and_slide
 
 	move_and_slide()
 
@@ -385,33 +382,99 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 		print("[DEBUG DEFEAT] Enemy %s already defeated (state: %s)" % [name, current_state])
 		return # Already defeated or dead
 
-	print("[DEBUG DEFEAT] Enemy %s changing to EGG state" % name)
+	# NEW: Determine egg type to spawn based on PowerManager
+	var power_manager = get_node_or_null("/root/PowerManager")
+	var should_spawn_power = false
+	
+	if power_manager:
+		# Get enemy class name for spawn rate lookup
+		var enemy_class_name = _get_enemy_class_name()
+		should_spawn_power = power_manager.should_spawn_power_egg(enemy_class_name)
+		print("[DEBUG DEFEAT] Enemy %s (%s) power egg check: %s" % [name, enemy_class_name, should_spawn_power])
+	else:
+		print("[DEBUG DEFEAT] PowerManager not available, falling back to normal egg")
+	
+	if should_spawn_power and power_manager:
+		_spawn_power_egg(player_velocity, player_index, award_score)
+	else:
+		_spawn_normal_egg(player_velocity, player_index, award_score)
+
+func _get_enemy_class_name() -> String:
+	"""Get the enemy class name for PowerManager spawn rate lookup"""
+	var script_path = get_script().get_path()
+	var file_name = script_path.get_file().get_basename()
+	
+	# Map file names to PowerManager expected names
+	match file_name:
+		"enemy_base":
+			return "EnemyBase"
+		"enemy_hunter":
+			return "EnemyHunter"
+		"shadow_lord":
+			return "ShadowLord"
+		_:
+			return "EnemyBase"  # Default fallback
+
+func _spawn_power_egg(player_velocity: Vector2, player_index: int, award_score: bool):
+	"""Spawn a power egg instead of normal egg"""
+	print("[DEBUG DEFEAT] Spawning power egg for %s" % name)
+	
+	# Get power egg scene from PowerManager
+	var power_manager = get_node_or_null("/root/PowerManager")
+	if not power_manager:
+		print("[ERROR] PowerManager not available for power egg spawn, falling back to normal egg")
+		_spawn_normal_egg(player_velocity, player_index, award_score)
+		return
+	
+	var power_egg_scene = power_manager.get_power_egg_scene()
+	if not power_egg_scene:
+		print("[ERROR] Power egg scene not available, falling back to normal egg")
+		_spawn_normal_egg(player_velocity, player_index, award_score)
+		return
+	
+	var power_egg = power_egg_scene.instantiate()
+	if not power_egg:
+		print("[ERROR] Failed to instantiate power egg, falling back to normal egg")
+		_spawn_normal_egg(player_velocity, player_index, award_score)
+		return
+	
+	# Set position and physics properties same as normal egg
+	power_egg.global_position = global_position
+	power_egg.linear_velocity = _calculate_egg_velocity(player_velocity)
+	
+	# Add to scene
+	get_parent().add_child(power_egg)
+	
+	# Hide this enemy's egg components since we're using PowerEgg instead
+	if egg_sprite:
+		egg_sprite.visible = false
+	if egg_area:
+		egg_area.monitoring = false
+		egg_area.monitorable = false
+	
+	# Award score for defeating enemy (not for collecting power egg)
+	if award_score:
+		ScoreManager.add_score(player_index, points_value)
+	
+	# Transition to DEAD state immediately since PowerEgg handles collection
+	current_state = State.DEAD
+	print("[DEBUG DEFEAT] Power egg spawned, enemy %s going to DEAD state" % name)
+	queue_free()
+
+func _spawn_normal_egg(player_velocity: Vector2, player_index: int, award_score: bool):
+	"""Spawn normal egg (existing behavior)"""
+	print("[DEBUG DEFEAT] Spawning normal egg for %s" % name)
+	
 	current_state = State.EGG
 	is_spawning = false # Ensure we are not in spawning state
 	
-	# NEW: Initialize egg physics state
+	# Initialize egg physics state
 	egg_has_touched_ground = false
 	egg_is_bouncing = false
 	egg_bounce_count = 0
 	
-	# NEW: Calculate egg velocity based on player's speed and direction
-	if player_velocity != Vector2.ZERO:
-		# Player stomped this enemy - apply momentum-based velocity
-		var player_speed_factor = player_velocity.length() / 200.0  # Normalize player speed (200 = typical max speed)
-		player_speed_factor = max(0.8, min(player_speed_factor, 2.5))  # Clamp between 0.8x and 2.5x for better bouncing
-		
-		# Apply player's horizontal momentum to egg (increased for more bounce)
-		velocity.x = player_velocity.x * 0.9  # 90% of player's horizontal velocity
-		
-		# Apply stronger upward velocity based on player's speed (ensures good bouncing)
-		var base_upward_force = -200.0  # Increased base upward velocity
-		velocity.y = base_upward_force * player_speed_factor
-		
-		print("[DEBUG] Egg defeated with player velocity: %s, speed factor: %.2f, egg velocity: %s" % [player_velocity, player_speed_factor, velocity])
-	else:
-		# For egg waves or other spawning, give small random velocity
-		velocity.x = randf_range(-50, 50)  # Small random horizontal velocity
-		velocity.y = randf_range(-30, 0)   # Small upward velocity to ensure at least one bounce
+	# Calculate egg velocity
+	velocity = _calculate_egg_velocity(player_velocity)
 	
 	if enemy_animation: enemy_animation.visible = false
 	if egg_sprite: egg_sprite.visible = true
@@ -424,7 +487,7 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 		combat_area.monitoring = false
 		combat_area.monitorable = false
 	
-	# Disable stomp area IMMEDIATELY (this was missing!)
+	# Disable stomp area IMMEDIATELY
 	if stomp_area:
 		print("[DEBUG DEFEAT] Disabling stomp area for %s" % name)
 		stomp_area.monitoring = false
@@ -456,6 +519,30 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 		ScoreManager.add_score(player_index, points_value)
 	
 	print("Enemy %s defeated" % name)
+
+func _calculate_egg_velocity(player_velocity: Vector2) -> Vector2:
+	"""Calculate egg velocity based on player's speed and direction"""
+	var egg_velocity = Vector2.ZERO
+	
+	if player_velocity != Vector2.ZERO:
+		# Player stomped this enemy - apply momentum-based velocity
+		var player_speed_factor = player_velocity.length() / 200.0  # Normalize player speed (200 = typical max speed)
+		player_speed_factor = max(0.8, min(player_speed_factor, 2.5))  # Clamp between 0.8x and 2.5x for better bouncing
+		
+		# Apply player's horizontal momentum to egg (increased for more bounce)
+		egg_velocity.x = player_velocity.x * 0.9  # 90% of player's horizontal velocity
+		
+		# Apply stronger upward velocity based on player's speed (ensures good bouncing)
+		var base_upward_force = -200.0  # Increased base upward velocity
+		egg_velocity.y = base_upward_force * player_speed_factor
+		
+		print("[DEBUG] Egg defeated with player velocity: %s, speed factor: %.2f, egg velocity: %s" % [player_velocity, player_speed_factor, egg_velocity])
+	else:
+		# For egg waves or other spawning, give small random velocity
+		egg_velocity.x = randf_range(-50, 50)  # Small random horizontal velocity
+		egg_velocity.y = randf_range(-30, 0)   # Small upward velocity to ensure at least one bounce
+	
+	return egg_velocity
 
 func collect_egg(player_index):
 	print("[DEBUG EGG COLLECT] collect_egg() called for %s by player %d" % [name, player_index])

@@ -24,6 +24,20 @@ This document provides an overview of all documentation available for the Joust 
   - Signal system for power events (activated, expired, warning)
   - Comprehensive test coverage with unit, integration, and manual tests
 
+- **[scripts/entities/power_egg.gd](scripts/entities/power_egg.gd)** - ✅ Complete PowerEgg entity with collection mechanics
+  - Physics-based collectible with same behavior as normal eggs
+  - Visual distinction with golden color and glow effects
+  - Collection detection and player interaction handling
+  - 15-second timeout system for uncollected power eggs
+  - Power type identification and activation triggering
+  - Audio integration for spawn and collection sound effects
+
+- **[scripts/entities/enemy_base.gd](scripts/entities/enemy_base.gd)** - ✅ Enhanced enemy defeat mechanics
+  - Integrated power egg spawning logic in defeat() method
+  - Configurable spawn rates per enemy type (15% base, 20% hunter, 25% shadow lord)
+  - Power egg vs normal egg decision system
+  - Seamless integration with existing egg physics and positioning
+
 ### Multiplayer Systems
 - **[improved-controller-system.md](improved-controller-system.md)** - Controller assignment and dynamic player joining
 - **[dynamic-joining-fix-summary.md](dynamic-joining-fix-summary.md)** - Dynamic player joining implementation details
@@ -190,6 +204,8 @@ All 9 major high score system enhancement tasks have been successfully completed
 - ✅ **Type Safety Improvements** - Enhanced type annotations for better Godot 4 compatibility
 - ✅ **ScoreManager Type Annotations** - Fixed high_scores array type declaration for better type safety
 - ✅ **Power-Up System Core Infrastructure** - PowerManager class with complete power system foundation
+- ✅ **Power-Up System PowerEgg Entity** - Complete PowerEgg collectible with physics and collection mechanics
+- ✅ **Power-Up System Enemy Integration** - Enemy defeat mechanics enhanced with power egg spawning logic
   - ✅ **Task 1 - Data Validation System**: Complete HighScoreValidator class with comprehensive testing
   - ✅ **Task 2 - Robust Data Persistence**: Complete HighScoreStorage class with backup/recovery mechanisms
   - ✅ **Task 3 - Configuration Management**: Integrated directly into ScoreManager and Storage classes (simplified architecture)
@@ -204,7 +220,7 @@ All 9 major high score system enhancement tasks have been successfully completed
 - 📋 Main menu integration with dedicated high score viewing screen (Task 10 - deferred)
 
 ### In Development
-- 🔄 **Power-Up System**: Collectible power eggs with temporary special abilities (Task 1 complete, Task 2 PowerEgg entity in progress)
+- 🔄 **Power-Up System**: Collectible power eggs with temporary special abilities (Tasks 1-3 complete: PowerManager, PowerEgg entity, and enemy integration complete. Task 4 player invincibility mechanics in progress)
 
 ### Planned Features
 - 📋 Enhanced UI/UX improvements
