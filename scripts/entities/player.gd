@@ -671,7 +671,7 @@ func _on_collection_area_area_entered(area):
 
 	print("[DEBUG COLLECTION] Player%d collection area entered by: %s (groups: %s)" % [player_index, area.name, area.get_groups()])
 
-	# Collect Eggs
+	# Collect Normal Eggs
 	if area.is_in_group("egg_collection_zones"):
 		var parent = area.get_parent()
 		print("[DEBUG COLLECTION] Found egg area, parent: %s" % (parent.name if parent else "null"))
@@ -686,7 +686,17 @@ func _on_collection_area_area_entered(area):
 				print("[DEBUG COLLECTION] Enemy not in egg state, ignoring collection")
 		else:
 			print("[DEBUG COLLECTION] Parent is not a valid enemy")
-	# Add logic for other collectibles here
+	
+	# Collect Power Eggs
+	elif area.is_in_group("power_egg_collection_zones"):
+		var parent = area.get_parent()
+		print("[DEBUG COLLECTION] Found power egg area, parent: %s" % (parent.name if parent else "null"))
+
+		if parent and parent.is_in_group("power_eggs") and parent.has_method("collect"):
+			print("[DEBUG COLLECTION] *** Player%d collecting power egg %s ***" % [player_index, parent.name])
+			parent.collect(player_index)
+		else:
+			print("[DEBUG COLLECTION] Parent is not a valid power egg")
 
 
 # --- Death and Respawn ---

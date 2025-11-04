@@ -204,7 +204,7 @@ All 9 major high score system enhancement tasks have been successfully completed
 - 📋 Main menu integration with dedicated high score viewing screen (Task 10 - deferred)
 
 ### In Development
-- 🔄 **Power-Up System**: Collectible power eggs with temporary special abilities (core infrastructure complete, entity development in progress)
+- 🔄 **Power-Up System**: Collectible power eggs with temporary special abilities (Task 1 complete, Task 2 PowerEgg entity in progress)
 
 ### Planned Features
 - 📋 Enhanced UI/UX improvements

@@ -1,0 +1,83 @@
+[gd_scene load_steps=8 format=3 uid="uid://bvn8k7x2qm8ys"]
+
+[ext_resource type="Script" path="res://scripts/entities/power_egg.gd" id="1_power_egg"]
+[ext_resource type="Texture2D" uid="uid://cvd3kcrwla4om" path="res://assets/sprites/egg.png" id="2_egg_texture"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_power_egg"]
+radius = 16.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_collection"]
+radius = 20.0
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_power_egg"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_egg_texture")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_glow"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_egg_texture")
+}],
+"loop": true,
+"name": &"glow",
+"speed": 2.0
+}]
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_spawn"]
+direction = Vector3(0, -1, 0)
+initial_velocity_min = 20.0
+initial_velocity_max = 50.0
+gravity = Vector3(0, 98, 0)
+scale_min = 0.5
+scale_max = 1.5
+
+[node name="PowerEgg" type="RigidBody2D"]
+collision_layer = 16
+collision_mask = 6
+mass = 1.0
+gravity_scale = 1.0
+contact_monitor = true
+max_contacts_reported = 10
+script = ExtResource("1_power_egg")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_power_egg")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_power_egg")
+animation = &"default"
+
+[node name="GlowEffect" type="AnimatedSprite2D" parent="."]
+modulate = Color(1, 0.9, 0.4, 0.6)
+scale = Vector2(1.2, 1.2)
+sprite_frames = SubResource("SpriteFrames_glow")
+animation = &"glow"
+
+[node name="CollectionArea" type="Area2D" parent="." groups=["power_egg_collection_zones"]]
+collision_layer = 32
+collision_mask = 32
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CollectionArea"]
+shape = SubResource("CircleShape2D_collection")
+
+[node name="SpawnEffect" type="GPUParticles2D" parent="."]
+emitting = false
+amount = 20
+process_material = SubResource("ParticleProcessMaterial_spawn")
+texture = ExtResource("2_egg_texture")
+
+[node name="TimeoutTimer" type="Timer" parent="."]
+wait_time = 15.0
+one_shot = true
+
+[node name="SpawnSound" type="AudioStreamPlayer2D" parent="."]
+
+[node name="CollectionSound" type="AudioStreamPlayer2D" parent="."]

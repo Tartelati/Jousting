@@ -15,7 +15,12 @@
   - Set up signal system for power events (collected, activated, expired, warning)
   - _Requirements: 1.1, 1.2, 1.3, 4.1, 4.2, 4.3, 4.4, 7.1, 7.2, 7.3_
 
-- [ ] 2. Implement PowerEgg entity and collection system
+- [x] 2. Implement PowerEgg entity and collection system
+
+
+
+
+
   - Create PowerEgg scene with visual distinction from normal eggs (golden color/glow)
   - Implement PowerEgg script with same physics properties as normal eggs
   - Add collection detection and player interaction handling

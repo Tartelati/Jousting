@@ -88,9 +88,7 @@ func should_spawn_power_egg(enemy_class_name: String) -> bool:
 
 func get_power_egg_scene() -> PackedScene:
 	"""Get the power egg scene for spawning"""
-	# For now, return null - this will be implemented in task 2
-	# This method is here to satisfy the interface requirements
-	return null
+	return preload("res://scenes/entities/power_egg.tscn")
 
 func activate_power(player_index: int, power_type: PowerType) -> bool:
 	"""Activate a power for the specified player"""
