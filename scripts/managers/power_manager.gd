@@ -129,12 +129,15 @@ func activate_power(player_index: int, power_type: PowerType) -> bool:
 	timer.start()
 	power_timers[player_index] = timer
 	
-	# Play activation audio
+	# Play activation audio (only for this player's power)
 	play_power_activation_sound(power_type)
-	start_power_ambient_sound(power_type)
+	start_power_ambient_sound(power_type, player_index)
 	
 	# Emit activation signal
 	emit_signal("power_activated", player_index, power_type, duration)
+	
+	# Send notification for power activation
+	_send_power_notification(player_index, power_type, "activated")
 	
 	print("[PowerManager] Power %d activated for player %d (duration: %.1fs)" % [power_type, player_index, duration])
 	return true
@@ -157,12 +160,15 @@ func deactivate_power(player_index: int) -> void:
 	# Remove power data
 	active_powers.erase(player_index)
 	
-	# Play expiration audio and stop ambient sound
+	# Play expiration audio and stop ambient sound for this player
 	play_power_expiration_sound(power_type)
-	stop_power_ambient_sound()
+	stop_power_ambient_sound(player_index)
 	
 	# Emit expiration signal
 	emit_signal("power_expired", player_index, power_type)
+	
+	# Send notification for power expiration
+	_send_power_notification(player_index, power_type, "expired")
 	
 	print("[PowerManager] Power %d deactivated for player %d" % [power_type, player_index])
 
@@ -261,6 +267,33 @@ func get_debug_info() -> Dictionary:
 	
 	return debug_info
 
+func get_all_active_powers() -> Dictionary:
+	"""Get all currently active powers by player"""
+	var result = {}
+	for player_index in active_powers.keys():
+		var power_data = active_powers[player_index]
+		if not power_data.is_expired():
+			result[player_index] = {
+				"type": power_data.type,
+				"remaining_time": power_data.get_remaining_time(),
+				"start_time": power_data.start_time,
+				"duration": power_data.duration
+			}
+	return result
+
+func has_any_active_powers() -> bool:
+	"""Check if any player has active powers"""
+	return active_powers.size() > 0
+
+func get_players_with_power_type(power_type: PowerType) -> Array[int]:
+	"""Get list of player indices who have the specified power type active"""
+	var players = []
+	for player_index in active_powers.keys():
+		var power_data = active_powers[player_index]
+		if power_data.type == power_type and not power_data.is_expired():
+			players.append(player_index)
+	return players
+
 func reset_all_powers() -> void:
 	"""Reset all active powers (useful for game restart)"""
 	var players_to_clear = active_powers.keys()
@@ -347,7 +380,7 @@ func play_power_activation_sound(power_type: PowerType):
 		power_activation_audio.play()
 		print("[PowerManager] Playing power activation sound for type %d" % power_type)
 
-func start_power_ambient_sound(power_type: PowerType):
+func start_power_ambient_sound(power_type: PowerType, player_index: int = -1):
 	"""Start looping ambient sound during active power"""
 	if power_ambient_audio and power_ambient_audio.stream:
 		# Configure ambient sound based on power type
@@ -356,16 +389,22 @@ func start_power_ambient_sound(power_type: PowerType):
 				power_ambient_audio.pitch_scale = 0.8
 				power_ambient_audio.volume_db = -15.0
 		
-		# Start looping ambient sound
-		if not power_ambient_audio.playing:
+		# Start looping ambient sound only if no other player has ambient sound playing
+		# or if this is the first active power
+		var active_count = active_powers.size()
+		if active_count <= 1 and not power_ambient_audio.playing:
 			power_ambient_audio.play()
-		print("[PowerManager] Starting ambient sound for power type %d" % power_type)
+		print("[PowerManager] Starting ambient sound for power type %d (player %d)" % [power_type, player_index])
 
-func stop_power_ambient_sound():
-	"""Stop looping ambient sound"""
-	if power_ambient_audio and power_ambient_audio.playing:
-		power_ambient_audio.stop()
-		print("[PowerManager] Stopping ambient sound")
+func stop_power_ambient_sound(_player_index: int = -1):
+	"""Stop looping ambient sound only if no other players have active powers"""
+	# Only stop ambient sound if no other players have active powers
+	if active_powers.size() == 0:
+		if power_ambient_audio and power_ambient_audio.playing:
+			power_ambient_audio.stop()
+			print("[PowerManager] Stopping ambient sound (no active powers)")
+	else:
+		print("[PowerManager] Keeping ambient sound (other players have active powers)")
 
 func play_power_warning_sound(power_type: PowerType):
 	"""Play warning sound when power is about to expire"""
@@ -388,3 +427,60 @@ func play_power_expiration_sound(power_type: PowerType):
 		
 		power_expiration_audio.play()
 		print("[PowerManager] Playing power expiration sound for type %d" % power_type)
+
+func _send_power_notification(player_index: int, power_type: PowerType, event_type: String):
+	"""Send notification for power events"""
+	var notification_system = get_node_or_null("/root/NotificationSystem")
+	if not notification_system:
+		# Try to find notification system in the current scene
+		var current_scene = get_tree().current_scene
+		if current_scene:
+			notification_system = current_scene.find_child("NotificationSystem", true, false)
+	
+	if notification_system and notification_system.has_method("show_notification"):
+		var power_name = _get_power_name(power_type)
+		var message = ""
+		var notification_type = 0  # INFO
+		
+		match event_type:
+			"activated":
+				message = "Player %d: %s activated!" % [player_index, power_name]
+				notification_type = 2  # INFO
+			"expired":
+				message = "Player %d: %s expired" % [player_index, power_name]
+				notification_type = 2  # INFO
+			"collected":
+				message = "Player %d collected %s!" % [player_index, power_name]
+				notification_type = 0  # SUCCESS
+		
+		if message != "":
+			notification_system.show_notification(message, notification_type, 2.0)
+			print("[PowerManager] Sent notification: %s" % message)
+
+func _get_power_name(power_type: PowerType) -> String:
+	"""Get human-readable power name"""
+	match power_type:
+		PowerType.INVINCIBILITY:
+			return "Invincibility"
+		_:
+			return "Unknown Power"
+
+func get_power_icon_texture(power_type: PowerType) -> Texture2D:
+	"""Get icon texture for power type"""
+	match power_type:
+		PowerType.INVINCIBILITY:
+			# Try to load invincibility icon, fallback to life icon
+			var icon = load("res://assets/sprites/power_invincibility_icon.png")
+			if not icon:
+				icon = load("res://assets/sprites/life.png")  # Fallback
+			return icon
+		_:
+			return load("res://assets/sprites/life.png")  # Default fallback
+
+func get_power_color(power_type: PowerType) -> Color:
+	"""Get color theme for power type"""
+	match power_type:
+		PowerType.INVINCIBILITY:
+			return Color(1.0, 0.8, 0.3)  # Golden
+		_:
+			return Color.WHITE

@@ -631,7 +631,7 @@ func _deactivate_invincibility():
 
 func _on_invincibility_contact(area: Area2D):
 	"""Handle enemy contact during invincibility"""
-	if not is_power_active:
+	if not is_power_active or active_power_type != 0:  # 0 = INVINCIBILITY
 		return
 	
 	if area.is_in_group("enemy_vulnerable_areas"):
@@ -654,6 +654,25 @@ func _on_invincibility_contact(area: Area2D):
 				# Fallback to regular score addition
 				if ScoreManager and ScoreManager.has_method("add_score"):
 					ScoreManager.add_score(player_index, 150)
+	
+	# Handle player vs player invincibility interactions
+	elif area.is_in_group("player_vulnerable_areas"):
+		var other_player = area.get_parent()
+		if other_player and other_player.is_in_group("players") and other_player != self:
+			# Check if other player also has invincibility
+			if "is_power_active" in other_player and other_player.is_power_active and "active_power_type" in other_player and other_player.active_power_type == 0:
+				# Both players have invincibility - bounce off each other
+				var direction_away = sign(global_position.x - other_player.global_position.x)
+				if direction_away == 0:
+					direction_away = 1
+				velocity.x = direction_away * 200
+				velocity.y = -100
+				print("[Player%d] Invincibility collision with Player%d - both invincible, bouncing" % [player_index, other_player.player_index])
+			else:
+				# Only this player has invincibility - other player is defeated
+				print("[Player%d] Invincibility kill: Player%d" % [player_index, other_player.player_index])
+				if other_player.has_method("die"):
+					other_player.die()
 
 func _start_power_effects(power_type: int):
 	"""Start visual and audio effects for the power"""

@@ -151,19 +151,52 @@ func show_power_indicator(player_index: int, power_type: int, duration: float):
 		bar.max_value = 100.0
 		bar.value = 100.0
 		
-		# Set power-specific icon color
-		match power_type:
-			0: # INVINCIBILITY
-				icon.modulate = Color(1.0, 0.8, 0.3)  # Golden
-				bar.modulate = Color(1.0, 0.8, 0.3)
+		# Get power manager for power-specific styling
+		var power_manager = get_node_or_null("/root/PowerManager")
+		if power_manager:
+			# Set power-specific icon texture
+			var icon_texture = power_manager.get_power_icon_texture(power_type)
+			if icon_texture:
+				icon.texture = icon_texture
+			
+			# Set power-specific colors
+			var power_color = power_manager.get_power_color(power_type)
+			icon.modulate = power_color
+			bar.modulate = power_color
+			
+			# Add power type label
+			_update_power_type_display(player_index, power_type)
+		else:
+			# Fallback styling
+			match power_type:
+				0: # INVINCIBILITY
+					icon.modulate = Color(1.0, 0.8, 0.3)  # Golden
+					bar.modulate = Color(1.0, 0.8, 0.3)
 		
 		# Start countdown animation
 		_animate_power_duration(player_index, duration)
+		
+		# Show activation effect
+		_show_power_activation_effect(player_index)
 
 func hide_power_indicator(player_index: int):
 	"""Hide power indicator for a player"""
 	if power_indicators.has(player_index):
-		power_indicators[player_index].visible = false
+		var indicator = power_indicators[player_index]
+		indicator.visible = false
+		
+		# Reset colors and textures
+		if power_bars.has(player_index):
+			power_bars[player_index].modulate = Color.WHITE
+		if power_icons.has(player_index):
+			power_icons[player_index].modulate = Color.WHITE
+			# Reset to default icon
+			var default_icon = load("res://assets/sprites/life.png")
+			if default_icon:
+				power_icons[player_index].texture = default_icon
+		
+		# Clear any power type display
+		_clear_power_type_display(player_index)
 
 func _animate_power_duration(player_index: int, duration: float):
 	"""Animate the power duration bar countdown"""
@@ -210,3 +243,89 @@ func _on_power_warning(player_index: int, _power_type: int, _remaining_time: flo
 # NEW: Handle bonus events
 func _on_bonus_awarded(player_index: int, bonus_amount: int, _bonus_type: String, world_position: Vector2 = Vector2.ZERO):
 	show_bonus_text(player_index, bonus_amount, world_position)
+
+func _update_power_type_display(player_index: int, power_type: int):
+	"""Update power type display with name/icon"""
+	if not power_indicators.has(player_index):
+		return
+	
+	var indicator = power_indicators[player_index]
+	var power_container = indicator.get_node_or_null("PowerContainer")
+	if not power_container:
+		return
+	
+	# Add or update power type label
+	var type_label = power_container.get_node_or_null("PowerTypeLabel")
+	if not type_label:
+		type_label = Label.new()
+		type_label.name = "PowerTypeLabel"
+		type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		type_label.add_theme_font_size_override("font_size", 10)
+		power_container.add_child(type_label)
+		power_container.move_child(type_label, 0)  # Move to top
+	
+	# Set power type text
+	var power_manager = get_node_or_null("/root/PowerManager")
+	if power_manager and power_manager.has_method("_get_power_name"):
+		type_label.text = power_manager._get_power_name(power_type)
+	else:
+		match power_type:
+			0: # INVINCIBILITY
+				type_label.text = "INVINCIBILITY"
+			_:
+				type_label.text = "POWER"
+
+func _clear_power_type_display(player_index: int):
+	"""Clear power type display"""
+	if not power_indicators.has(player_index):
+		return
+	
+	var indicator = power_indicators[player_index]
+	var power_container = indicator.get_node_or_null("PowerContainer")
+	if not power_container:
+		return
+	
+	var type_label = power_container.get_node_or_null("PowerTypeLabel")
+	if type_label:
+		type_label.queue_free()
+
+func _show_power_activation_effect(player_index: int):
+	"""Show visual effect when power is activated"""
+	if not power_indicators.has(player_index):
+		return
+	
+	var indicator = power_indicators[player_index]
+	
+	# Create brief flash effect
+	var flash_tween = create_tween()
+	flash_tween.tween_property(indicator, "modulate", Color(2.0, 2.0, 2.0, 1.0), 0.1)
+	flash_tween.tween_property(indicator, "modulate", Color.WHITE, 0.2)
+	
+	# Create scale pulse effect
+	var scale_tween = create_tween()
+	scale_tween.tween_property(indicator, "scale", Vector2(1.2, 1.2), 0.15)
+	scale_tween.tween_property(indicator, "scale", Vector2(1.0, 1.0), 0.15)
+
+func get_power_status_for_player(player_index: int) -> Dictionary:
+	"""Get current power status for a player"""
+	var power_manager = get_node_or_null("/root/PowerManager")
+	if not power_manager:
+		return {"active": false}
+	
+	if power_manager.is_power_active(player_index):
+		return {
+			"active": true,
+			"type": power_manager.get_active_power_type(player_index),
+			"remaining_time": power_manager.get_remaining_duration(player_index)
+		}
+	else:
+		return {"active": false}
+
+func update_all_power_indicators():
+	"""Update all power indicators based on current power states"""
+	for player_index in range(1, 5):
+		var status = get_power_status_for_player(player_index)
+		if status.active:
+			show_power_indicator(player_index, status.type, status.remaining_time)
+		else:
+			hide_power_indicator(player_index)

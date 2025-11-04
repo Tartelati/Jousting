@@ -163,14 +163,23 @@ func _on_collection_area_entered(area):
 		if player and player.is_in_group("players") and player.has_method("get") and "player_index" in player:
 			var player_index = player.player_index
 			print("[DEBUG POWER EGG] Collecting power egg for player %d" % player_index)
-			collect(player_index)
+			
+			# Ensure first-touch wins by immediately setting collected flag
+			if not is_collected:
+				is_collected = true
+				collect(player_index)
 
 func collect(player_index: int):
+	# Double-check collection state for thread safety
 	if is_collected:
 		return
 	
 	print("[DEBUG POWER EGG] PowerEgg collected by player %d" % player_index)
-	is_collected = true
+	
+	# Immediately disable collection area to prevent double collection
+	if collection_area:
+		collection_area.monitoring = false
+		collection_area.monitorable = false
 	
 	_play_collection_effects()
 	_award_points(player_index)
@@ -220,6 +229,10 @@ func _award_points(player_index: int):
 func _activate_power(player_index: int):
 	var power_manager = get_node_or_null("/root/PowerManager")
 	if power_manager and power_manager.has_method("activate_power"):
+		# Send collection notification before activation
+		if power_manager.has_method("_send_power_notification"):
+			power_manager._send_power_notification(player_index, power_type, "collected")
+		
 		var success = power_manager.activate_power(player_index, power_type)
 		if success:
 			print("[DEBUG POWER EGG] Power activated successfully for player %d" % player_index)
