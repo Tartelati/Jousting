@@ -42,7 +42,7 @@
   - Add per-enemy-type spawn rate configuration (base 15%, hunter 20%, shadow lord 25%)
   - _Requirements: 1.1, 1.2, 1.3, 7.4_
 
-- [ ] 4. Implement invincibility power mechanics in player system
+- [x] 4. Implement invincibility power mechanics in player system
 
   - Add power state tracking variables to player.gd (active_power_type, is_power_active)
   - Create activate_power() and deactivate_power() methods in player class

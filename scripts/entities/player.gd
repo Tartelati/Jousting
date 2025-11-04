@@ -41,7 +41,7 @@ var device: int = -1 # Device ID: -1 for keyboard, 0+ for controllers
 @onready var flap_sound = $FlapSound # Keep existing flap sound reference
 @onready var collision_sound = $CollisionSound # Keep existing collision sound reference
 @onready var death_sound = $DeathSound # Keep existing death sound reference
-@onready var combat_area: Area2D = $CombatArea # Keep existing combat area reference
+@onready var combat_area: Area2D = get_node_or_null("CombatArea") # Optional combat area for invincibility
 @onready var collection_area: Area2D = $CollectionArea # Keep existing collection area reference
 @onready var stomp_area: Area2D = $StompArea # Keep existing stomp area reference
 @onready var vulnerable_area: Area2D = $VulnerableArea
@@ -61,6 +61,15 @@ var brake_timer : float = 0.0
 var direction_during_brake : int = 0
 var hold_change_timer: float = 0.0 # Timer for hold input speed changes
 @export var hold_change_interval: float = 0.2 # Time interval for hold changes
+
+# --- Power System Variables ---
+var active_power_type: int = -1  # PowerManager.PowerType.NONE
+var is_power_active: bool = false
+
+# Power visual effect components (optional - will be null if not present in scene)
+@onready var power_overlay: AnimatedSprite2D = get_node_or_null("PowerOverlay")
+@onready var power_particles: GPUParticles2D = get_node_or_null("PowerParticles")
+@onready var power_audio: AudioStreamPlayer2D = get_node_or_null("PowerAudio")
 
 # --- Initialization ---
 func _ready():
@@ -82,6 +91,9 @@ func _ready():
 	if vulnerable_area:
 		vulnerable_area.add_to_group("player_vulnerable_areas")
 		vulnerable_area.connect("area_entered", _on_vulnerable_area_area_entered)
+
+	# Connect to PowerManager signals
+	_connect_power_manager_signals()
 
 	print("[DEBUG] Player", player_index, "assigned device:", device)
 
@@ -548,6 +560,164 @@ func transition_to_flying():
 		velocity.y = flap_force
 		# Play flap sound here as well, since handle_flying_state might not run before landing check
 		if flap_sound: flap_sound.play()
+# --- Power System Methods ---
+
+func activate_power(power_type: int, duration: float):
+	"""Activate a power for this player"""
+	# Deactivate any existing power
+	if is_power_active:
+		deactivate_power()
+	
+	active_power_type = power_type
+	is_power_active = true
+	
+	# Apply power-specific effects
+	match power_type:
+		0: # PowerManager.PowerType.INVINCIBILITY
+			_activate_invincibility()
+	
+	# Start visual and audio effects
+	_start_power_effects(power_type)
+	
+	print("[Player%d] Power activated: %d (duration: %.1fs)" % [player_index, power_type, duration])
+
+func deactivate_power():
+	"""Deactivate the current power"""
+	if not is_power_active:
+		return
+
+	var previous_power_type = active_power_type
+	
+	# Apply power-specific cleanup
+	match previous_power_type:
+		0: # PowerManager.PowerType.INVINCIBILITY
+			_deactivate_invincibility()
+	
+	# Stop visual and audio effects
+	_stop_power_effects()
+	
+	# Reset power state
+	active_power_type = -1  # PowerManager.PowerType.NONE
+	is_power_active = false
+	
+	print("[Player%d] Power deactivated: %d" % [player_index, previous_power_type])
+
+func _activate_invincibility():
+	"""Activate invincibility power effects"""
+	# Modify collision behavior - don't collide with enemies for damage
+	set_collision_mask_value(3, false)  # Disable enemy collision layer
+	
+	# Enable enemy defeat on contact using available area
+	var contact_area = combat_area if combat_area else stomp_area
+	if contact_area:
+		contact_area.monitoring = true
+		if not contact_area.is_connected("area_entered", _on_invincibility_contact):
+			contact_area.connect("area_entered", _on_invincibility_contact)
+	
+	print("[Player%d] Invincibility activated" % player_index)
+
+func _deactivate_invincibility():
+	"""Deactivate invincibility power effects"""
+	# Restore normal collision behavior
+	set_collision_mask_value(3, true)  # Re-enable enemy collision layer
+	
+	# Disable invincibility contact detection using available area
+	var contact_area = combat_area if combat_area else stomp_area
+	if contact_area:
+		if contact_area.is_connected("area_entered", _on_invincibility_contact):
+			contact_area.disconnect("area_entered", _on_invincibility_contact)
+	
+	print("[Player%d] Invincibility deactivated" % player_index)
+
+func _on_invincibility_contact(area: Area2D):
+	"""Handle enemy contact during invincibility"""
+	if not is_power_active:
+		return
+	
+	if area.is_in_group("enemy_vulnerable_areas"):
+		var enemy = area.get_parent()
+		if enemy and enemy.has_method("defeat") and enemy.is_in_group("enemies"):
+			# Skip if enemy is already defeated
+			if "current_state" in enemy and "State" in enemy:
+				if enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING or enemy.current_state == enemy.State.DEAD:
+					return
+			
+			print("[Player%d] Invincibility kill: %s" % [player_index, enemy.name])
+			
+			# Defeat the enemy
+			enemy.defeat(velocity, player_index, true)
+			
+			# Add bonus score for invincibility kills
+			if ScoreManager and ScoreManager.has_method("add_bonus_score"):
+				ScoreManager.add_bonus_score(player_index, 150, "Invincibility Kill", enemy.global_position)
+			else:
+				# Fallback to regular score addition
+				if ScoreManager and ScoreManager.has_method("add_score"):
+					ScoreManager.add_score(player_index, 150)
+
+func _start_power_effects(power_type: int):
+	"""Start visual and audio effects for the power"""
+	match power_type:
+		0: # PowerManager.PowerType.INVINCIBILITY
+			# Visual effects
+			if power_overlay:
+				power_overlay.visible = true
+				power_overlay.play("invincibility_glow")
+			
+			if power_particles:
+				power_particles.visible = true
+				power_particles.emitting = true
+			
+			# Audio effects
+			if power_audio:
+				power_audio.play()
+			
+			# Apply visual modulation for invincibility
+			animated_sprite.modulate = Color(1.2, 1.2, 0.8, 1.0)  # Golden tint
+
+func _stop_power_effects():
+	"""Stop all power visual and audio effects"""
+	# Stop visual effects
+	if power_overlay:
+		power_overlay.visible = false
+		power_overlay.stop()
+	
+	if power_particles:
+		power_particles.visible = false
+		power_particles.emitting = false
+	
+	# Stop audio effects
+	if power_audio:
+		power_audio.stop()
+	
+	# Restore normal visual appearance
+	animated_sprite.modulate = Color.WHITE
+
+func _connect_power_manager_signals():
+	"""Connect to PowerManager signals for power activation/deactivation"""
+	var power_manager = get_node_or_null("/root/PowerManager")
+	if power_manager:
+		# Connect power activation signal
+		if not power_manager.is_connected("power_activated", _on_power_activated):
+			power_manager.connect("power_activated", _on_power_activated)
+		
+		# Connect power expiration signal
+		if not power_manager.is_connected("power_expired", _on_power_expired):
+			power_manager.connect("power_expired", _on_power_expired)
+		
+		print("[Player%d] Connected to PowerManager signals" % player_index)
+	else:
+		print("[Player%d] PowerManager not found - power system disabled" % player_index)
+
+func _on_power_activated(activated_player_index: int, power_type: int, duration: float):
+	"""Handle power activation signal from PowerManager"""
+	if activated_player_index == player_index:
+		activate_power(power_type, duration)
+
+func _on_power_expired(expired_player_index: int, _power_type: int):
+	"""Handle power expiration signal from PowerManager"""
+	if expired_player_index == player_index:
+		deactivate_power()
 
 
 # --- Audio Implementation ---
@@ -612,7 +782,7 @@ func _on_stomp_area_area_entered(area):
 		# Enemy handles its own defeat via its _on_vulnerable_area_area_entered signal
 
 func _on_vulnerable_area_area_entered(area):
-	if not is_alive or is_invincible:
+	if not is_alive or is_invincible or is_power_active:
 		return
 		
 	print("[DEBUG VULNERABLE] Player%d vulnerable area entered by: %s (groups: %s)" % [player_index, area.name, area.get_groups()])
@@ -706,6 +876,10 @@ func die():
 	
 	if not is_alive:
 		return # Already dead
+	
+	# Deactivate any active powers
+	if is_power_active:
+		deactivate_power()
 	
 	is_alive = false
 	set_state(State.DEFEATED)
