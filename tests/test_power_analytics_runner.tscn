@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqxvhqxhqxhqx"]
+
+[ext_resource type="Script" path="res://tests/test_power_analytics_runner.gd" id="1"]
+
+[node name="TestPowerAnalyticsRunner" type="Node"]
+script = ExtResource("1")

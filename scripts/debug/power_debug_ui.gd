@@ -32,6 +32,17 @@ extends Control
 @onready var stats_label: RichTextLabel = $MainPanel/VBoxContainer/TabContainer/Statistics/StatsLabel
 @onready var reset_stats_button: Button = $MainPanel/VBoxContainer/TabContainer/Statistics/ResetStatsButton
 
+# Analytics Tab
+@onready var analytics_tab: VBoxContainer = $MainPanel/VBoxContainer/TabContainer/Analytics
+@onready var analytics_label: RichTextLabel = $MainPanel/VBoxContainer/TabContainer/Analytics/AnalyticsLabel
+@onready var export_report_button: Button = $MainPanel/VBoxContainer/TabContainer/Analytics/ExportReportButton
+@onready var balance_analysis_button: Button = $MainPanel/VBoxContainer/TabContainer/Analytics/BalanceAnalysisButton
+
+# Performance Tab
+@onready var performance_tab: VBoxContainer = $MainPanel/VBoxContainer/TabContainer/Performance
+@onready var performance_label: RichTextLabel = $MainPanel/VBoxContainer/TabContainer/Performance/PerformanceLabel
+@onready var performance_monitoring_check: CheckBox = $MainPanel/VBoxContainer/TabContainer/Performance/PerformanceMonitoringCheck
+
 # Control buttons
 @onready var close_button: Button = $MainPanel/VBoxContainer/ControlButtons/CloseButton
 @onready var save_config_button: Button = $MainPanel/VBoxContainer/ControlButtons/SaveConfigButton
@@ -40,9 +51,11 @@ extends Control
 # References
 var power_manager: Node
 var config_manager
+var power_analytics: PowerAnalytics
+var power_visualization: PowerVisualization
 var update_timer: Timer
 
-# Statistics tracking
+# Statistics tracking (legacy - now handled by PowerAnalytics)
 var spawn_attempts: int = 0
 var successful_spawns: int = 0
 var power_activations: Dictionary = {}
@@ -102,12 +115,40 @@ func _connect_signals():
 	save_config_button.pressed.connect(_on_save_config_pressed)
 	reload_config_button.pressed.connect(_on_reload_config_pressed)
 	reset_stats_button.pressed.connect(_on_reset_stats_pressed)
+	
+	# Analytics buttons
+	if export_report_button:
+		export_report_button.pressed.connect(_on_export_report_pressed)
+	if balance_analysis_button:
+		balance_analysis_button.pressed.connect(_on_balance_analysis_pressed)
+	
+	# Performance monitoring
+	if performance_monitoring_check:
+		performance_monitoring_check.toggled.connect(_on_performance_monitoring_toggled)
 
 func _find_managers():
 	"""Find power manager and config manager references"""
 	power_manager = get_node_or_null("/root/PowerManager")
 	if not power_manager:
 		print("[PowerDebugUI] PowerManager not found")
+	
+	# Find or create analytics system
+	power_analytics = get_node_or_null("/root/PowerAnalytics")
+	if not power_analytics:
+		# Create analytics system
+		power_analytics = preload("res://scripts/managers/power_analytics.gd").new()
+		power_analytics.name = "PowerAnalytics"
+		get_tree().root.add_child(power_analytics)
+		print("[PowerDebugUI] Created PowerAnalytics system")
+	
+	# Find or create visualization system
+	power_visualization = get_node_or_null("/root/PowerVisualization")
+	if not power_visualization:
+		# Create visualization system
+		power_visualization = preload("res://scripts/debug/power_visualization.gd").new()
+		power_visualization.name = "PowerVisualization"
+		get_tree().current_scene.add_child(power_visualization)
+		print("[PowerDebugUI] Created PowerVisualization system")
 	
 	# Create config manager if it doesn't exist
 	if not config_manager:
@@ -155,6 +196,8 @@ func _update_display():
 	
 	_update_active_powers_list()
 	_update_statistics()
+	_update_analytics_display()
+	_update_performance_display()
 
 func _update_active_powers_list():
 	"""Update the active powers list"""
@@ -333,6 +376,147 @@ func _on_reset_stats_pressed():
 	power_activations.clear()
 	power_collections.clear()
 	print("[PowerDebugUI] Statistics reset")
+
+func _on_export_report_pressed():
+	"""Handle export analytics report button"""
+	if power_analytics:
+		var success = power_analytics.export_analytics_report()
+		if success:
+			print("[PowerDebugUI] Analytics report exported successfully")
+		else:
+			print("[PowerDebugUI] Failed to export analytics report")
+
+func _on_balance_analysis_pressed():
+	"""Handle balance analysis button"""
+	if power_analytics:
+		var spawn_analysis = power_analytics.get_spawn_rate_analysis()
+		var effectiveness_analysis = power_analytics.get_power_effectiveness_analysis()
+		
+		print("[PowerDebugUI] === Balance Analysis ===")
+		print("Spawn Rate Analysis:")
+		for enemy_type in spawn_analysis:
+			var data = spawn_analysis[enemy_type]
+			print("  %s: %.1f%% actual vs %.1f%% expected - %s" % [
+				enemy_type, 
+				data.actual_rate * 100, 
+				data.expected_rate * 100, 
+				data.recommendation
+			])
+		
+		print("Power Effectiveness Analysis:")
+		for power_type in effectiveness_analysis:
+			var data = effectiveness_analysis[power_type]
+			print("  Power %d: %.1f enemies/activation, %.1f%% full usage - %s" % [
+				power_type,
+				data.average_enemies_defeated,
+				data.full_duration_usage_rate * 100,
+				data.recommendation
+			])
+
+func _on_performance_monitoring_toggled(enabled: bool):
+	"""Handle performance monitoring toggle"""
+	if power_analytics:
+		power_analytics.performance_monitoring_enabled = enabled
+		print("[PowerDebugUI] Performance monitoring %s" % ("enabled" if enabled else "disabled"))
+
+func _update_analytics_display():
+	"""Update analytics tab display"""
+	if not analytics_label or not power_analytics:
+		return
+	
+	var spawn_analysis = power_analytics.get_spawn_rate_analysis()
+	var effectiveness_analysis = power_analytics.get_power_effectiveness_analysis()
+	var behavior_analysis = power_analytics.get_player_behavior_analysis()
+	
+	var analytics_text = "[b]Power System Analytics[/b]\n\n"
+	
+	# Spawn Rate Analysis
+	analytics_text += "[b]Spawn Rate Analysis:[/b]\n"
+	for enemy_type in spawn_analysis:
+		var data = spawn_analysis[enemy_type]
+		var color = "green" if data.deviation < 0.02 else "yellow" if data.deviation < 0.05 else "red"
+		analytics_text += "• [color=%s]%s: %.1f%% (expected %.1f%%)[/color]\n" % [
+			color, enemy_type, data.actual_rate * 100, data.expected_rate * 100
+		]
+		if data.sample_size < 50:
+			analytics_text += "  [color=gray]Need more data (%d samples)[/color]\n" % data.sample_size
+	
+	if spawn_analysis.size() == 0:
+		analytics_text += "• No spawn data available yet\n"
+	
+	# Power Effectiveness
+	analytics_text += "\n[b]Power Effectiveness:[/b]\n"
+	for power_type in effectiveness_analysis:
+		var data = effectiveness_analysis[power_type]
+		var power_name = _get_power_name(power_type)
+		var score_color = "green" if data.effectiveness_score >= 80 else "yellow" if data.effectiveness_score >= 60 else "red"
+		analytics_text += "• [color=%s]%s: %.1f/100 effectiveness[/color]\n" % [score_color, power_name, data.effectiveness_score]
+		analytics_text += "  %.1f enemies/use, %.1f%% full duration\n" % [data.average_enemies_defeated, data.full_duration_usage_rate * 100]
+	
+	if effectiveness_analysis.size() == 0:
+		analytics_text += "• No effectiveness data available yet\n"
+	
+	# Player Behavior Summary
+	analytics_text += "\n[b]Player Behavior:[/b]\n"
+	for player_index in behavior_analysis:
+		var data = behavior_analysis[player_index]
+		analytics_text += "• Player %d: %d collections, %.1f%% efficiency\n" % [
+			player_index, data.total_collections, data.collection_efficiency * 100
+		]
+	
+	if behavior_analysis.size() == 0:
+		analytics_text += "• No player behavior data available yet\n"
+	
+	analytics_label.text = analytics_text
+
+func _update_performance_display():
+	"""Update performance tab display"""
+	if not performance_label or not power_analytics:
+		return
+	
+	var perf_report = power_analytics.get_performance_report()
+	
+	var perf_text = "[b]Power System Performance[/b]\n\n"
+	
+	# Overall Performance Score
+	var score_color = "green" if perf_report.performance_score >= 80 else "yellow" if perf_report.performance_score >= 60 else "red"
+	perf_text += "[b][color=%s]Performance Score: %.1f/100[/color][/b]\n\n" % [score_color, perf_report.performance_score]
+	
+	# Frame Rate Metrics
+	perf_text += "[b]Frame Rate:[/b]\n"
+	var fps_color = "green" if perf_report.average_fps >= 55 else "yellow" if perf_report.average_fps >= 45 else "red"
+	perf_text += "• [color=%s]Average FPS: %.1f[/color]\n" % [fps_color, perf_report.average_fps]
+	perf_text += "• Frame Time: %.2fms\n" % (perf_report.average_frame_time * 1000)
+	
+	var drops_color = "green" if perf_report.frame_drops == 0 else "yellow" if perf_report.frame_drops < 10 else "red"
+	perf_text += "• [color=%s]Frame Drops: %d[/color]\n" % [drops_color, perf_report.frame_drops]
+	
+	# Audio Performance
+	perf_text += "\n[b]Audio Performance:[/b]\n"
+	var audio_color = "green" if perf_report.audio_stutters == 0 else "yellow" if perf_report.audio_stutters < 5 else "red"
+	perf_text += "• [color=%s]Audio Stutters: %d[/color]\n" % [audio_color, perf_report.audio_stutters]
+	
+	# Memory Usage
+	perf_text += "\n[b]Memory Usage:[/b]\n"
+	perf_text += "• Average: %.1f MB\n" % (perf_report.average_memory_usage / (1024 * 1024))
+	
+	var memory_color = "green" if perf_report.memory_spikes == 0 else "yellow" if perf_report.memory_spikes < 3 else "red"
+	perf_text += "• [color=%s]Memory Spikes: %d[/color]\n" % [memory_color, perf_report.memory_spikes]
+	
+	# Recommendations
+	perf_text += "\n[b]Recommendations:[/b]\n"
+	if perf_report.performance_score >= 80:
+		perf_text += "• [color=green]Performance is excellent[/color]\n"
+	elif perf_report.frame_drops > 10:
+		perf_text += "• [color=red]Consider reducing visual effects[/color]\n"
+	elif perf_report.audio_stutters > 5:
+		perf_text += "• [color=red]Check audio system load[/color]\n"
+	elif perf_report.memory_spikes > 3:
+		perf_text += "• [color=red]Monitor memory usage patterns[/color]\n"
+	else:
+		perf_text += "• [color=yellow]Performance is acceptable[/color]\n"
+	
+	performance_label.text = perf_text
 
 # Public methods
 

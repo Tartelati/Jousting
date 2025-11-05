@@ -120,7 +120,7 @@ func _process(delta):
 
 # Public Interface Methods
 
-func should_spawn_power_egg(enemy_class_name: String) -> bool:
+func should_spawn_power_egg(enemy_class_name: String, spawn_position: Vector2 = Vector2.ZERO) -> bool:
 	"""Determine if a power egg should spawn based on enemy type and spawn rates"""
 	# ERROR HANDLING: Graceful fallback when PowerManager is not available
 	if not config_manager:
@@ -147,6 +147,11 @@ func should_spawn_power_egg(enemy_class_name: String) -> bool:
 	if not invincibility_enabled:
 		return false
 	
+	# Track spawn attempt for analytics
+	var analytics = get_node_or_null("/root/PowerAnalytics")
+	if analytics and analytics.has_method("track_spawn_attempt"):
+		analytics.track_spawn_attempt(enemy_class_name, spawn_position)
+	
 	# Track spawn attempt for debug statistics (with error protection)
 	if debug_ui and debug_ui.has_method("track_spawn_attempt"):
 		debug_ui.track_spawn_attempt()
@@ -159,8 +164,12 @@ func should_spawn_power_egg(enemy_class_name: String) -> bool:
 	if force_spawn_rate >= 0.0:
 		var debug_random_val = randf()
 		var debug_spawn_result = debug_random_val <= force_spawn_rate
-		if debug_spawn_result and debug_ui and debug_ui.has_method("track_successful_spawn"):
-			debug_ui.track_successful_spawn()
+		if debug_spawn_result:
+			# Track successful spawn for analytics
+			if analytics and analytics.has_method("track_successful_spawn"):
+				analytics.track_successful_spawn(enemy_class_name, spawn_position, PowerType.INVINCIBILITY)
+			if debug_ui and debug_ui.has_method("track_successful_spawn"):
+				debug_ui.track_successful_spawn()
 		return debug_spawn_result
 	
 	# ERROR HANDLING: Get spawn chance from configuration with fallback
@@ -178,8 +187,12 @@ func should_spawn_power_egg(enemy_class_name: String) -> bool:
 	var random_val = randf()
 	var spawn_result = random_val <= spawn_chance
 	
-	if spawn_result and debug_ui and debug_ui.has_method("track_successful_spawn"):
-		debug_ui.track_successful_spawn()
+	if spawn_result:
+		# Track successful spawn for analytics
+		if analytics and analytics.has_method("track_successful_spawn"):
+			analytics.track_successful_spawn(enemy_class_name, spawn_position, PowerType.INVINCIBILITY)
+		if debug_ui and debug_ui.has_method("track_successful_spawn"):
+			debug_ui.track_successful_spawn()
 	
 	return spawn_result
 

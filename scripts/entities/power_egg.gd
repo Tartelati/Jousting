@@ -273,6 +273,11 @@ func _activate_power(player_index: int):
 		push_error("[PowerEgg] Invalid player index for power activation: %d" % player_index)
 		return
 	
+	# Track collection for analytics
+	var analytics = get_node_or_null("/root/PowerAnalytics")
+	if analytics and analytics.has_method("track_power_collection"):
+		analytics.track_power_collection(player_index, power_type, global_position)
+	
 	# Track collection for debug statistics (with error protection)
 	if power_manager.debug_ui and is_instance_valid(power_manager.debug_ui) and power_manager.debug_ui.has_method("track_power_collection"):
 		power_manager.debug_ui.track_power_collection(power_type)

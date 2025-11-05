@@ -389,7 +389,7 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 	if power_manager:
 		# Get enemy class name for spawn rate lookup
 		var enemy_class_name = _get_enemy_class_name()
-		should_spawn_power = power_manager.should_spawn_power_egg(enemy_class_name)
+		should_spawn_power = power_manager.should_spawn_power_egg(enemy_class_name, global_position)
 		print("[DEBUG DEFEAT] Enemy %s (%s) power egg check: %s" % [name, enemy_class_name, should_spawn_power])
 	else:
 		print("[DEBUG DEFEAT] PowerManager not available, falling back to normal egg")
