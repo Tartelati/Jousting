@@ -28,6 +28,9 @@ func _ready():
 	# Don't show main menu automatically here. 
 	# The scene defined in project settings (opening_cinematic.tscn) will load first.
 	
+	# Initialize PowerManager integration
+	_initialize_power_system()
+	
 	# Connect to input events for pause
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ensure this node processes even when game is paused
 	# Add debug overlay if we're in development mode
@@ -87,7 +90,7 @@ func _process(_delta):
 		
 		# Add periodic debug output every 2 seconds to show system status
 		if Engine.get_process_frames() % 120 == 0:  # Every 2 seconds at 60fps
-			var assigned_devices = get_assigned_devices()
+			var _assigned_devices = get_assigned_devices()
 			#print("[DEBUG] GameManager: Active players: %d, Connected joypads: %s" % [player_nodes.size(), joypads])
 			#print("[DEBUG] GameManager: Game state: %s, Can join: %s" % [GameState.keys()[current_state], current_state == GameState.PLAYING and player_nodes.size() < 4])
 			#print("[DEBUG] GameManager: Player details:")
@@ -281,7 +284,7 @@ func spawn_single_player_with_device(player_index: int, device_id: int, position
 	
 	print("[DEBUG] GameManager: Spawned Player%d at %s with device %d (controller-initiated)" % [player_index, spawn_position, device_id])
 
-func setup_new_gameplay_scene(player_index: int, main_game_node):
+func setup_new_gameplay_scene(_player_index: int, main_game_node):
 	# This function is called by the main_game scene itself once it's ready.
 	
 	if not main_game_node:
@@ -292,6 +295,9 @@ func setup_new_gameplay_scene(player_index: int, main_game_node):
 
 	# Reset ALL players' scores and lives
 	ScoreManager.reset_all_players()
+	
+	# Reset power system for new game
+	reset_power_system()
 	
 	# Clear existing players to prevent duplicates
 	for player in player_nodes:
@@ -435,3 +441,47 @@ func debug_multiplayer_input():
 			print("[DEBUG] WARNING: start_game is NOT a core action")
 	
 	print("[DEBUG] === End Test ===")
+
+# PowerManager Integration Methods
+
+func _initialize_power_system():
+	"""Initialize PowerManager integration with GameManager"""
+	print("[GameManager] Initializing power system integration...")
+	
+	# Verify PowerManager is available
+	var power_manager = get_node_or_null("/root/PowerManager")
+	if not power_manager:
+		printerr("[GameManager] PowerManager autoload not found!")
+		return
+	
+	# Connect to power system signals for game state management
+	if not power_manager.power_activated.is_connected(_on_power_activated):
+		power_manager.power_activated.connect(_on_power_activated)
+	
+	if not power_manager.power_expired.is_connected(_on_power_expired):
+		power_manager.power_expired.connect(_on_power_expired)
+	
+	print("[GameManager] Power system integration initialized")
+
+func _on_power_activated(player_index: int, power_type: int, duration: float):
+	"""Handle power activation events"""
+	print("[GameManager] Player %d activated power type %d (duration: %.1fs)" % [player_index, power_type, duration])
+	
+	# Update HUD if available
+	if hud_instance and hud_instance.has_method("on_power_activated"):
+		hud_instance.on_power_activated(player_index, power_type, duration)
+
+func _on_power_expired(player_index: int, power_type: int):
+	"""Handle power expiration events"""
+	print("[GameManager] Player %d power type %d expired" % [player_index, power_type])
+	
+	# Update HUD if available
+	if hud_instance and hud_instance.has_method("on_power_expired"):
+		hud_instance.on_power_expired(player_index, power_type)
+
+func reset_power_system():
+	"""Reset power system when starting new game"""
+	var power_manager = get_node_or_null("/root/PowerManager")
+	if power_manager:
+		power_manager.reset_all_powers()
+		print("[GameManager] Power system reset for new game")

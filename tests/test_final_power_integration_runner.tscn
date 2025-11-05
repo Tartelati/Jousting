@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqxvnhxkqxqxq"]
+
+[ext_resource type="Script" path="res://tests/test_final_power_integration_runner.gd" id="1_abc123"]
+
+[node name="TestFinalPowerIntegrationRunner" type="Node"]
+script = ExtResource("1_abc123")
