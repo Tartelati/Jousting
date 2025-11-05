@@ -97,7 +97,7 @@
   - Add memory leak prevention and proper cleanup on scene changes
   - _Requirements: 4.4, 6.1, 6.2_
 
-- [x] 10. Create comprehensive test suite for power system
+- [x] 10. Create comprehensive test suite for power system ✅ **COMPLETE**
   - Write unit tests for PowerManager power activation/deactivation logic
   - Create spawn probability tests to verify 15% power egg spawn rate
   - Add power duration and expiration timing tests
@@ -106,7 +106,7 @@
   - Add performance tests for multiple simultaneous active powers
   - _Requirements: All requirements validation_
 
-- [ ] 11. Add advanced visual polish and particle effects
+- [x] 11. Add advanced visual polish and particle effects
   - Create sophisticated particle systems for power egg spawning
   - Add screen-space effects during invincibility (subtle screen distortion)
   - Implement power egg trail effects during physics movement

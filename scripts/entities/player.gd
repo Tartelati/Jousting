@@ -70,6 +70,9 @@ var is_power_active: bool = false
 @onready var power_overlay: AnimatedSprite2D = get_node_or_null("PowerOverlay")
 @onready var power_particles: GPUParticles2D = get_node_or_null("PowerParticles")
 @onready var power_audio: AudioStreamPlayer2D = get_node_or_null("PowerAudio")
+@onready var screen_distortion_effect: GPUParticles2D = get_node_or_null("ScreenDistortionEffect")
+@onready var environmental_light: PointLight2D = get_node_or_null("EnvironmentalLight")
+@onready var power_activation_flash: ColorRect = get_node_or_null("PowerActivationFlash")
 
 # --- Initialization ---
 func _ready():
@@ -699,47 +702,96 @@ func _on_invincibility_contact(area: Area2D):
 					other_player.die()
 
 func _start_power_effects(power_type: int):
-	"""Start visual and audio effects for the power"""
+	"""Start advanced visual and audio effects for the power"""
 	match power_type:
 		0: # PowerManager.PowerType.INVINCIBILITY
-			# Visual effects
+			# Create power activation screen flash and zoom effect
+			_create_power_activation_flash()
+			
+			# Visual overlay effects
 			if power_overlay:
 				power_overlay.visible = true
 				power_overlay.play("P%d_Idle" % player_index)
-				# Create pulsing overlay effect
+				# Create sophisticated pulsing overlay effect
 				var overlay_tween = create_tween()
 				overlay_tween.set_loops()
-				overlay_tween.tween_property(power_overlay, "modulate:a", 0.4, 0.5)
-				overlay_tween.tween_property(power_overlay, "modulate:a", 0.8, 0.5)
+				overlay_tween.tween_property(power_overlay, "modulate:a", 0.3, 0.4)
+				overlay_tween.tween_property(power_overlay, "modulate:a", 0.9, 0.4)
+				overlay_tween.parallel().tween_property(power_overlay, "scale", Vector2(1.4, 1.4), 0.8)
+				overlay_tween.parallel().tween_property(power_overlay, "scale", Vector2(1.2, 1.2), 0.8)
 			
+			# Enhanced particle effects
 			if power_particles:
 				power_particles.visible = true
 				power_particles.emitting = true
-				# Configure invincibility particles
+				power_particles.amount = 35
+				power_particles.lifetime = 2.0
+				# Configure sophisticated invincibility particles
 				var particle_material = power_particles.process_material as ParticleProcessMaterial
 				if particle_material:
-					particle_material.color = Color(1.0, 0.9, 0.4, 0.8)
-					particle_material.scale_min = 0.2
-					particle_material.scale_max = 0.8
+					particle_material.color = Color(1.0, 0.9, 0.4, 0.9)
+					particle_material.scale_min = 0.3
+					particle_material.scale_max = 1.0
+					particle_material.initial_velocity_min = 30.0
+					particle_material.initial_velocity_max = 80.0
+			
+			# Screen-space distortion effects
+			if screen_distortion_effect:
+				screen_distortion_effect.visible = true
+				screen_distortion_effect.emitting = true
+				var distortion_material = screen_distortion_effect.process_material as ParticleProcessMaterial
+				if distortion_material:
+					distortion_material.color = Color(1.0, 0.9, 0.4, 0.12)
+			
+			# Environmental lighting changes
+			if environmental_light:
+				environmental_light.visible = true
+				environmental_light.energy = 0.0
+				# Animate light intensity
+				var light_tween = create_tween()
+				light_tween.set_loops()
+				light_tween.tween_property(environmental_light, "energy", 1.2, 0.6)
+				light_tween.tween_property(environmental_light, "energy", 0.8, 0.6)
+				light_tween.parallel().tween_property(environmental_light, "range_item_cull_mask", 150.0, 1.2)
+				light_tween.parallel().tween_property(environmental_light, "range_item_cull_mask", 100.0, 1.2)
 			
 			# Audio effects
 			if power_audio:
 				power_audio.play()
 			
-			# Apply visual modulation for invincibility with pulsing effect
-			animated_sprite.modulate = Color(1.2, 1.2, 0.8, 1.0)  # Golden tint
+			# Enhanced sprite visual effects with power-specific color schemes
+			animated_sprite.modulate = Color(1.3, 1.2, 0.7, 1.0)  # Golden invincibility theme
 			var sprite_tween = create_tween()
 			sprite_tween.set_loops()
-			sprite_tween.tween_property(animated_sprite, "modulate", Color(1.4, 1.4, 0.6, 1.0), 0.3)
-			sprite_tween.tween_property(animated_sprite, "modulate", Color(1.2, 1.2, 0.8, 1.0), 0.3)
+			sprite_tween.tween_property(animated_sprite, "modulate", Color(1.5, 1.4, 0.5, 1.0), 0.25)
+			sprite_tween.tween_property(animated_sprite, "modulate", Color(1.3, 1.2, 0.7, 1.0), 0.25)
 			
-			# Create screen tint effect
+			# Create enhanced screen tint with environmental effects
 			_create_invincibility_screen_tint()
 
+func _create_power_activation_flash():
+	"""Create power activation screen flash and zoom effect"""
+	var flash = ColorRect.new()
+	flash.color = Color(1.0, 0.9, 0.4, 0.6)  # Bright golden flash
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flash.name = "PowerActivationFlash_P%d" % player_index
+	
+	# Get the main scene to add the flash overlay
+	var main_scene = get_tree().current_scene
+	if main_scene:
+		flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+		main_scene.add_child(flash)
+		
+		# Create flash and zoom effect
+		var flash_tween = create_tween()
+		flash_tween.parallel().tween_property(flash, "modulate:a", 0.0, 0.4)
+		flash_tween.parallel().tween_property(flash, "scale", Vector2(1.2, 1.2), 0.4)
+		flash_tween.tween_callback(flash.queue_free)
+
 func _create_invincibility_screen_tint():
-	"""Create a subtle screen tint effect during invincibility"""
+	"""Create enhanced screen tint with environmental effects during invincibility"""
 	var tint = ColorRect.new()
-	tint.color = Color(0.8, 0.8, 1.0, 0.1)  # Subtle blue-white tint
+	tint.color = Color(0.9, 0.85, 0.6, 0.08)  # Warm golden environmental tint
 	tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tint.name = "InvincibilityTint_P%d" % player_index
 	
@@ -749,22 +801,35 @@ func _create_invincibility_screen_tint():
 		tint.set_anchors_preset(Control.PRESET_FULL_RECT)
 		main_scene.add_child(tint)
 		
-		# Create pulsing tint effect
+		# Create sophisticated pulsing tint effect with environmental lighting simulation
 		var tint_tween = create_tween()
 		tint_tween.set_loops()
-		tint_tween.tween_property(tint, "modulate:a", 0.05, 1.0)
-		tint_tween.tween_property(tint, "modulate:a", 0.15, 1.0)
+		tint_tween.tween_property(tint, "modulate:a", 0.03, 0.8)
+		tint_tween.tween_property(tint, "modulate:a", 0.12, 0.8)
+		tint_tween.parallel().tween_property(tint, "color", Color(1.0, 0.9, 0.4, 0.08), 1.6)
+		tint_tween.parallel().tween_property(tint, "color", Color(0.9, 0.85, 0.6, 0.08), 1.6)
 
 func _stop_power_effects():
-	"""Stop all power visual and audio effects"""
-	# Stop visual effects
+	"""Stop all advanced power visual and audio effects"""
+	# Stop visual overlay effects
 	if power_overlay:
 		power_overlay.visible = false
 		power_overlay.stop()
 	
+	# Stop particle effects
 	if power_particles:
 		power_particles.visible = false
 		power_particles.emitting = false
+	
+	# Stop screen distortion effects
+	if screen_distortion_effect:
+		screen_distortion_effect.visible = false
+		screen_distortion_effect.emitting = false
+	
+	# Stop environmental lighting
+	if environmental_light:
+		environmental_light.visible = false
+		environmental_light.energy = 0.0
 	
 	# Stop audio effects
 	if power_audio:
@@ -773,12 +838,16 @@ func _stop_power_effects():
 	# Restore normal visual appearance
 	animated_sprite.modulate = Color.WHITE
 	
-	# Remove screen tint
+	# Remove screen tint and activation flash
 	var main_scene = get_tree().current_scene
 	if main_scene:
 		var tint = main_scene.get_node_or_null("InvincibilityTint_P%d" % player_index)
 		if tint:
 			tint.queue_free()
+		
+		var flash = main_scene.get_node_or_null("PowerActivationFlash_P%d" % player_index)
+		if flash:
+			flash.queue_free()
 
 func _connect_power_manager_signals():
 	"""Connect to PowerManager signals for power activation/deactivation"""

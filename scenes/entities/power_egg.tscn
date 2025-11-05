@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://bvn8k7x2qm8ys"]
+[gd_scene load_steps=15 format=3 uid="uid://bvn8k7x2qm8ys"]
 
 [ext_resource type="Script" path="res://scripts/entities/power_egg.gd" id="1_power_egg"]
 [ext_resource type="Texture2D" uid="uid://cvd3kcrwla4om" path="res://assets/sprites/egg.png" id="2_egg_texture"]
@@ -31,14 +31,62 @@ animations = [{
 "speed": 2.0
 }]
 
+[sub_resource type="Curve" id="Curve_spawn_scale"]
+_data = [Vector2(0, 0.2), 0.0, 0.0, 0, 0, Vector2(0.3, 1.0), 0.0, 0.0, 0, 0, Vector2(1, 0.1), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Gradient" id="Gradient_spawn_color"]
+colors = PackedColorArray(1, 0.9, 0.4, 1, 1, 0.8, 0.2, 0.8, 1, 0.6, 0.1, 0.4, 1, 0.4, 0.05, 0)
+
+[sub_resource type="Curve" id="Curve_spawn_emission"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.2, 0.8), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Gradient" id="Gradient_trail_color"]
+colors = PackedColorArray(1, 0.8, 0.3, 0.8, 1, 0.7, 0.2, 0.4, 1, 0.5, 0.1, 0)
+
+[sub_resource type="Gradient" id="Gradient_aura_color"]
+colors = PackedColorArray(1, 0.9, 0.4, 0.4, 1, 0.8, 0.3, 0.2, 1, 0.6, 0.2, 0)
+
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_spawn"]
 direction = Vector3(0, -1, 0)
-initial_velocity_min = 30.0
-initial_velocity_max = 80.0
+spread = 30.0
+initial_velocity_min = 50.0
+initial_velocity_max = 120.0
+angular_velocity_min = -180.0
+angular_velocity_max = 180.0
 gravity = Vector3(0, 98, 0)
-scale_min = 0.3
-scale_max = 1.0
+scale_min = 0.4
+scale_max = 1.2
+scale_curve = SubResource("Curve_spawn_scale")
 color = Color(1, 0.9, 0.4, 1)
+color_ramp = SubResource("Gradient_spawn_color")
+emission_curve = SubResource("Curve_spawn_emission")
+
+[sub_resource type="Curve" id="Curve_spawn_scale"]
+_data = [Vector2(0, 0.2), 0.0, 0.0, 0, 0, Vector2(0.3, 1.0), 0.0, 0.0, 0, 0, Vector2(1, 0.1), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Gradient" id="Gradient_spawn_color"]
+colors = PackedColorArray(1, 0.9, 0.4, 1, 1, 0.8, 0.2, 0.8, 1, 0.6, 0.1, 0.4, 1, 0.4, 0.05, 0)
+
+[sub_resource type="Curve" id="Curve_spawn_emission"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.2, 0.8), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_trail"]
+direction = Vector3(0, 1, 0)
+spread = 15.0
+initial_velocity_min = 10.0
+initial_velocity_max = 30.0
+gravity = Vector3(0, -20, 0)
+scale_min = 0.1
+scale_max = 0.4
+color = Color(1, 0.8, 0.3, 0.6)
+color_ramp = SubResource("Gradient_trail_color")
+
+[sub_resource type="Gradient" id="Gradient_trail_color"]
+colors = PackedColorArray(1, 0.8, 0.3, 0.8, 1, 0.7, 0.2, 0.4, 1, 0.5, 0.1, 0)
 
 [node name="PowerEgg" type="RigidBody2D"]
 collision_layer = 16
@@ -71,10 +119,48 @@ shape = SubResource("CircleShape2D_collection")
 
 [node name="SpawnEffect" type="GPUParticles2D" parent="."]
 emitting = false
-amount = 30
-lifetime = 2.0
+amount = 50
+lifetime = 3.0
+one_shot = true
+explosiveness = 0.8
 process_material = SubResource("ParticleProcessMaterial_spawn")
 texture = ExtResource("2_egg_texture")
+
+[node name="TrailEffect" type="GPUParticles2D" parent="."]
+emitting = true
+amount = 15
+lifetime = 1.0
+process_material = SubResource("ParticleProcessMaterial_trail")
+texture = ExtResource("2_egg_texture")
+
+[node name="AuraEffect" type="GPUParticles2D" parent="."]
+emitting = true
+amount = 8
+lifetime = 2.5
+process_material = SubResource("ParticleProcessMaterial_aura")
+texture = ExtResource("2_egg_texture")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_trail"]
+direction = Vector3(0, 1, 0)
+spread = 15.0
+initial_velocity_min = 10.0
+initial_velocity_max = 30.0
+gravity = Vector3(0, -20, 0)
+scale_min = 0.1
+scale_max = 0.4
+color = Color(1, 0.8, 0.3, 0.6)
+color_ramp = SubResource("Gradient_trail_color")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_aura"]
+direction = Vector3(0, -1, 0)
+spread = 360.0
+initial_velocity_min = 5.0
+initial_velocity_max = 15.0
+gravity = Vector3(0, -10, 0)
+scale_min = 0.2
+scale_max = 0.6
+color = Color(1, 0.9, 0.4, 0.3)
+color_ramp = SubResource("Gradient_aura_color")
 
 [node name="TimeoutTimer" type="Timer" parent="."]
 wait_time = 15.0

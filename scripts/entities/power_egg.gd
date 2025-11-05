@@ -17,6 +17,8 @@ extends RigidBody2D
 @onready var glow_effect: AnimatedSprite2D = $GlowEffect
 @onready var collection_area: Area2D = $CollectionArea
 @onready var spawn_effect: GPUParticles2D = $SpawnEffect
+@onready var trail_effect: GPUParticles2D = $TrailEffect
+@onready var aura_effect: GPUParticles2D = $AuraEffect
 @onready var timeout_timer: Timer = $TimeoutTimer
 
 # Audio components
@@ -67,6 +69,19 @@ func _setup_visual_appearance():
 				tween.set_loops()
 				tween.tween_property(glow_effect, "modulate:a", 0.4, 1.0)
 				tween.tween_property(glow_effect, "modulate:a", 0.8, 1.0)
+			
+			# Setup advanced particle effects
+			if trail_effect:
+				trail_effect.emitting = true
+				var trail_material = trail_effect.process_material as ParticleProcessMaterial
+				if trail_material:
+					trail_material.color = Color(1.0, 0.8, 0.3, 0.6)
+			
+			if aura_effect:
+				aura_effect.emitting = true
+				var aura_material = aura_effect.process_material as ParticleProcessMaterial
+				if aura_material:
+					aura_material.color = Color(1.0, 0.9, 0.4, 0.3)
 
 func _setup_physics_properties():
 	# Set same physics properties as normal eggs
@@ -112,18 +127,21 @@ func _play_spawn_effects():
 	
 	if spawn_effect:
 		spawn_effect.emitting = true
-		# Configure spawn particles for power egg
-		spawn_effect.amount = 30
-		spawn_effect.lifetime = 2.0
+		spawn_effect.restart()
+		# Configure sophisticated spawn particles for power egg
+		spawn_effect.amount = 50
+		spawn_effect.lifetime = 3.0
+		spawn_effect.explosiveness = 0.8
 		var particle_material = spawn_effect.process_material as ParticleProcessMaterial
 		if particle_material:
-			particle_material.emission.set_param_min(20.0)
-			particle_material.emission.set_param_max(40.0)
-			particle_material.initial_velocity_min = 30.0
-			particle_material.initial_velocity_max = 80.0
-			particle_material.scale_min = 0.3
-			particle_material.scale_max = 1.0
+			particle_material.initial_velocity_min = 50.0
+			particle_material.initial_velocity_max = 120.0
+			particle_material.scale_min = 0.4
+			particle_material.scale_max = 1.2
 			particle_material.color = Color(1.0, 0.9, 0.4, 1.0)  # Golden particles
+	
+	# Create screen flash effect for spawn
+	_create_spawn_flash()
 
 func _physics_process(delta):
 	if is_collected:
@@ -271,10 +289,10 @@ func _activate_power(player_index: int):
 		push_warning("[DEBUG POWER EGG] Failed to activate power for player %d, but continuing normal gameplay" % player_index)
 		# Continue normal gameplay - power collection still awards points
 
-func _create_collection_flash():
-	"""Create a brief screen flash effect when power egg is collected"""
+func _create_spawn_flash():
+	"""Create a brief screen flash effect when power egg spawns"""
 	var flash = ColorRect.new()
-	flash.color = Color(1.0, 0.9, 0.4, 0.3)  # Golden flash
+	flash.color = Color(1.0, 0.9, 0.4, 0.15)  # Subtle golden flash for spawn
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
 	# Get the main scene to add the flash overlay
@@ -285,10 +303,36 @@ func _create_collection_flash():
 		
 		# Animate the flash
 		var tween = create_tween()
-		tween.tween_property(flash, "modulate:a", 0.0, 0.2)
+		tween.tween_property(flash, "modulate:a", 0.0, 0.3)
+		tween.tween_callback(flash.queue_free)
+
+func _create_collection_flash():
+	"""Create a brief screen flash effect when power egg is collected"""
+	var flash = ColorRect.new()
+	flash.color = Color(1.0, 0.9, 0.4, 0.4)  # Brighter golden flash for collection
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# Get the main scene to add the flash overlay
+	var main_scene = get_tree().current_scene
+	if main_scene:
+		flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+		main_scene.add_child(flash)
+		
+		# Animate the flash with zoom effect
+		var tween = create_tween()
+		tween.parallel().tween_property(flash, "modulate:a", 0.0, 0.2)
+		tween.parallel().tween_property(flash, "scale", Vector2(1.1, 1.1), 0.2)
 		tween.tween_callback(flash.queue_free)
 
 func _cleanup():
+	# Stop all particle effects
+	if trail_effect:
+		trail_effect.emitting = false
+	if aura_effect:
+		aura_effect.emitting = false
+	if spawn_effect:
+		spawn_effect.emitting = false
+	
 	# Disable all areas
 	if collection_area:
 		collection_area.monitoring = false

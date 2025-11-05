@@ -84,7 +84,7 @@ func test_invincibility_mechanics():
 	else:
 		print("❌ Enemy collision layer should be disabled during invincibility")
 	
-	# Check visual effects (if nodes exist)
+	# Check advanced visual effects (if nodes exist)
 	if test_player.power_overlay:
 		if test_player.power_overlay.visible:
 			print("✓ Power overlay visible during invincibility")
@@ -93,12 +93,40 @@ func test_invincibility_mechanics():
 	else:
 		print("ℹ Power overlay node not present in scene (optional)")
 	
-	# Check sprite modulation
-	var sprite_tinted = test_player.animated_sprite.modulate != Color.WHITE
-	if sprite_tinted:
-		print("✓ Player sprite tinted during invincibility")
+	# Check particle effects
+	if test_player.power_particles:
+		if test_player.power_particles.visible and test_player.power_particles.emitting:
+			print("✓ Power particles active during invincibility")
+		else:
+			print("❌ Power particles should be active during invincibility")
 	else:
-		print("❌ Player sprite should be tinted during invincibility")
+		print("ℹ Power particles node not present in scene (optional)")
+	
+	# Check screen distortion effects
+	if test_player.screen_distortion_effect:
+		if test_player.screen_distortion_effect.visible and test_player.screen_distortion_effect.emitting:
+			print("✓ Screen distortion effect active during invincibility")
+		else:
+			print("❌ Screen distortion effect should be active during invincibility")
+	else:
+		print("ℹ Screen distortion effect node not present in scene (optional)")
+	
+	# Check environmental lighting
+	if test_player.environmental_light:
+		if test_player.environmental_light.visible:
+			print("✓ Environmental lighting active during invincibility")
+		else:
+			print("❌ Environmental lighting should be active during invincibility")
+	else:
+		print("ℹ Environmental lighting node not present in scene (optional)")
+	
+	# Check sprite modulation with enhanced golden theme
+	var sprite_tinted = test_player.animated_sprite.modulate != Color.WHITE
+	var has_golden_tint = test_player.animated_sprite.modulate.r > 1.0 and test_player.animated_sprite.modulate.g > 1.0
+	if sprite_tinted and has_golden_tint:
+		print("✓ Player sprite has enhanced golden tint during invincibility")
+	else:
+		print("❌ Player sprite should have enhanced golden tint during invincibility")
 
 func test_power_cleanup():
 	"""Test power deactivation and cleanup"""
@@ -123,12 +151,30 @@ func test_power_cleanup():
 	else:
 		print("❌ Enemy collision layer should be restored after power deactivation")
 	
-	# Check visual effects cleaned up
+	# Check advanced visual effects cleaned up
 	if test_player.power_overlay:
 		if not test_player.power_overlay.visible:
 			print("✓ Power overlay hidden after deactivation")
 		else:
 			print("❌ Power overlay should be hidden after deactivation")
+	
+	if test_player.power_particles:
+		if not test_player.power_particles.visible or not test_player.power_particles.emitting:
+			print("✓ Power particles stopped after deactivation")
+		else:
+			print("❌ Power particles should be stopped after deactivation")
+	
+	if test_player.screen_distortion_effect:
+		if not test_player.screen_distortion_effect.visible or not test_player.screen_distortion_effect.emitting:
+			print("✓ Screen distortion effect stopped after deactivation")
+		else:
+			print("❌ Screen distortion effect should be stopped after deactivation")
+	
+	if test_player.environmental_light:
+		if not test_player.environmental_light.visible:
+			print("✓ Environmental lighting disabled after deactivation")
+		else:
+			print("❌ Environmental lighting should be disabled after deactivation")
 	
 	# Check sprite modulation restored
 	var sprite_normal = test_player.animated_sprite.modulate == Color.WHITE

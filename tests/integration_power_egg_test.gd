@@ -81,7 +81,7 @@ func test_power_egg_collection_area():
 	print("✅ PowerEgg collection area test passed")
 
 func test_power_egg_visual_appearance():
-	print("\n🧪 Testing PowerEgg visual appearance...")
+	print("\n🧪 Testing PowerEgg advanced visual appearance...")
 	
 	var power_egg_scene = preload("res://scenes/entities/power_egg.tscn")
 	var power_egg = power_egg_scene.instantiate()
@@ -92,9 +92,15 @@ func test_power_egg_visual_appearance():
 	
 	var sprite = power_egg.get_node("AnimatedSprite2D")
 	var glow_effect = power_egg.get_node("GlowEffect")
+	var trail_effect = power_egg.get_node_or_null("TrailEffect")
+	var aura_effect = power_egg.get_node_or_null("AuraEffect")
+	var spawn_effect = power_egg.get_node("SpawnEffect")
 	
 	assert_not_null(sprite, "PowerEgg should have AnimatedSprite2D")
 	assert_not_null(glow_effect, "PowerEgg should have GlowEffect")
+	assert_not_null(trail_effect, "PowerEgg should have TrailEffect for advanced visuals")
+	assert_not_null(aura_effect, "PowerEgg should have AuraEffect for advanced visuals")
+	assert_not_null(spawn_effect, "PowerEgg should have enhanced SpawnEffect")
 	
 	# Test golden color for invincibility power
 	var expected_color = Color(1.0, 0.8, 0.3)
@@ -103,8 +109,22 @@ func test_power_egg_visual_appearance():
 	var expected_glow = Color(1.0, 0.9, 0.4, 0.8)
 	assert_true(glow_effect.modulate.is_equal_approx(expected_glow), "Glow effect should have golden glow color")
 	
+	# Test advanced particle effects
+	if trail_effect:
+		assert_true(trail_effect.emitting, "Trail effect should be emitting during power egg lifetime")
+		assert_eq(trail_effect.amount, 15, "Trail effect should have correct particle count")
+	
+	if aura_effect:
+		assert_true(aura_effect.emitting, "Aura effect should be emitting during power egg lifetime")
+		assert_eq(aura_effect.amount, 8, "Aura effect should have correct particle count")
+	
+	# Test enhanced spawn effect properties
+	assert_eq(spawn_effect.amount, 50, "Enhanced spawn effect should have more particles")
+	assert_eq(spawn_effect.lifetime, 3.0, "Enhanced spawn effect should have longer lifetime")
+	assert_true(spawn_effect.explosiveness > 0.5, "Enhanced spawn effect should be explosive")
+	
 	power_egg.queue_free()
-	print("✅ PowerEgg visual appearance test passed")
+	print("✅ PowerEgg advanced visual appearance test passed")
 
 func test_power_egg_timeout_system():
 	print("\n🧪 Testing PowerEgg timeout system...")
