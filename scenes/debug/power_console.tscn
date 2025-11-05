@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://bqxvhqxvhqxvh2"]
+[gd_scene load_steps=2 format=3 uid="uid://pk527w7fcim4"]
 
 [ext_resource type="Script" path="res://scripts/debug/power_console.gd" id="1_power_console"]
 

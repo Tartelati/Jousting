@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://bvn8k7x2qm8zd"
-path="res://.godot/imported/power_expiration.wav-d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9.sample"
+uid="uid://bvn8k7x2qm80d"
+path="res://.godot/imported/power_expiration.wav-b127166c3530edbb65b8490219a0ff67.sample"
 
 [deps]
 
 source_file="res://assets/sounds/sfx/power_expiration.wav"
-dest_files=["res://.godot/imported/power_expiration.wav-d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9.sample"]
+dest_files=["res://.godot/imported/power_expiration.wav-b127166c3530edbb65b8490219a0ff67.sample"]
 
 [params]
 

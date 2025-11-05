@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://bqm8k7x2qm8ys"]
+[gd_scene load_steps=2 format=3 uid="uid://cit2ll0x2cir4"]
 
 [ext_resource type="Script" path="res://tests/test_power_egg_runner.gd" id="1_power_egg_runner"]
 

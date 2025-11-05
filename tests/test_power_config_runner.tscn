@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://bqxvhqxvhqxvh3"]
+[gd_scene load_steps=2 format=3 uid="uid://pk527w7fcim5"]
 
 [ext_resource type="Script" path="res://tests/test_power_config_runner.gd" id="1_config_test"]
 

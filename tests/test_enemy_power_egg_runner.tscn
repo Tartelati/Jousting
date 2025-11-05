@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://bqxvn8ywqxqxq"]
+[gd_scene load_steps=2 format=3 uid="uid://ns4mbugr1df3"]
 
 [ext_resource type="Script" path="res://tests/test_enemy_power_egg_runner.gd" id="1_abc123"]
 

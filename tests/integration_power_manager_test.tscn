@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://cqxvhqxvhqxvh"]
+[gd_scene load_steps=2 format=3 uid="uid://caec70f3ec0q3"]
 
 [ext_resource type="Script" path="res://tests/integration_power_manager_test.gd" id="1"]
 
