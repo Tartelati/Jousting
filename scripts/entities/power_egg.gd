@@ -34,11 +34,23 @@ func _ready():
 	add_to_group("power_eggs")
 	spawn_time = Time.get_time_dict_from_system().unix
 	
-	_setup_visual_appearance()
-	_setup_physics_properties()
-	_setup_collection_detection()
-	_start_timeout_timer()
-	_play_spawn_effects()
+	# ERROR HANDLING: Safe initialization with error recovery
+	var initialization_success = true
+	
+	if not _setup_visual_appearance_safely():
+		initialization_success = false
+	if not _setup_physics_properties_safely():
+		initialization_success = false
+	if not _setup_collection_detection_safely():
+		initialization_success = false
+	if not _start_timeout_timer_safely():
+		initialization_success = false
+	if not _play_spawn_effects_safely():
+		initialization_success = false
+	
+	if not initialization_success:
+		push_error("[PowerEgg] Error during initialization, using fallback setup")
+		_fallback_initialization()
 
 func _setup_visual_appearance():
 	# Set power-specific visual properties
@@ -227,23 +239,37 @@ func _award_points(player_index: int):
 		ScoreManager.add_bonus_score(player_index, 100, "Power Air Catch", global_position)
 
 func _activate_power(player_index: int):
+	# ERROR HANDLING: Graceful fallback when PowerManager is not available
 	var power_manager = get_node_or_null("/root/PowerManager")
-	if power_manager and power_manager.has_method("activate_power"):
-		# Track collection for debug statistics
-		if power_manager.debug_ui and power_manager.debug_ui.has_method("track_power_collection"):
-			power_manager.debug_ui.track_power_collection(power_type)
-		
-		# Send collection notification before activation
-		if power_manager.has_method("_send_power_notification"):
-			power_manager._send_power_notification(player_index, power_type, "collected")
-		
-		var success = power_manager.activate_power(player_index, power_type)
-		if success:
-			print("[DEBUG POWER EGG] Power activated successfully for player %d" % player_index)
-		else:
-			print("[DEBUG POWER EGG] Failed to activate power for player %d" % player_index)
+	if not power_manager:
+		push_warning("[PowerEgg] PowerManager not found, power activation failed but continuing normal gameplay")
+		return
+	
+	# ERROR HANDLING: Validate PowerManager has required methods
+	if not power_manager.has_method("activate_power"):
+		push_error("[PowerEgg] PowerManager missing activate_power method")
+		return
+	
+	# ERROR HANDLING: Handle invalid player indices
+	if player_index < 1 or player_index > 4:
+		push_error("[PowerEgg] Invalid player index for power activation: %d" % player_index)
+		return
+	
+	# Track collection for debug statistics (with error protection)
+	if power_manager.debug_ui and is_instance_valid(power_manager.debug_ui) and power_manager.debug_ui.has_method("track_power_collection"):
+		power_manager.debug_ui.track_power_collection(power_type)
+	
+	# Send collection notification before activation (with error protection)
+	if power_manager.has_method("_send_power_notification"):
+		power_manager._send_power_notification(player_index, power_type, "collected")
+	
+	# ERROR HANDLING: Implement power activation failure recovery
+	var success = power_manager.activate_power(player_index, power_type)
+	if success:
+		print("[DEBUG POWER EGG] Power activated successfully for player %d" % player_index)
 	else:
-		print("[DEBUG POWER EGG] PowerManager not found or invalid")
+		push_warning("[DEBUG POWER EGG] Failed to activate power for player %d, but continuing normal gameplay" % player_index)
+		# Continue normal gameplay - power collection still awards points
 
 func _create_collection_flash():
 	"""Create a brief screen flash effect when power egg is collected"""
@@ -279,6 +305,73 @@ func _on_timeout():
 	if not is_collected:
 		print("[DEBUG POWER EGG] PowerEgg timed out after %d seconds" % timeout_duration)
 		_cleanup()
+
+# ERROR HANDLING: Safe wrapper methods for initialization
+
+func _setup_visual_appearance_safely() -> bool:
+	"""Safely setup visual appearance with error handling"""
+	if not sprite:
+		push_warning("[PowerEgg] Sprite node not found")
+		return false
+	
+	_setup_visual_appearance()
+	return true
+
+func _setup_physics_properties_safely() -> bool:
+	"""Safely setup physics properties with error handling"""
+	_setup_physics_properties()
+	return true
+
+func _setup_collection_detection_safely() -> bool:
+	"""Safely setup collection detection with error handling"""
+	if not collection_area:
+		push_warning("[PowerEgg] Collection area not found")
+		return false
+	
+	_setup_collection_detection()
+	return true
+
+func _start_timeout_timer_safely() -> bool:
+	"""Safely start timeout timer with error handling"""
+	if not timeout_timer:
+		push_warning("[PowerEgg] Timeout timer not found")
+		return false
+	
+	_start_timeout_timer()
+	return true
+
+func _play_spawn_effects_safely() -> bool:
+	"""Safely play spawn effects with error handling"""
+	_play_spawn_effects()
+	return true
+
+# ERROR HANDLING: Fallback initialization for when normal setup fails
+func _fallback_initialization():
+	"""Minimal initialization when normal setup fails"""
+	# Set basic visual properties
+	if sprite:
+		sprite.modulate = Color(1.0, 0.8, 0.3)  # Golden color
+		sprite.play("default")
+	
+	# Set basic physics
+	gravity_scale = 1.0
+	mass = 1.0
+	collision_layer = 16  # Layer 4 (egg)
+	collision_mask = 6    # Environment + player
+	
+	# Set basic timeout
+	if timeout_timer:
+		timeout_timer.wait_time = timeout_duration
+		timeout_timer.timeout.connect(_on_timeout)
+		timeout_timer.start()
+	
+	# Enable basic collection
+	if collection_area:
+		collection_area.monitoring = true
+		collection_area.monitorable = true
+		collection_area.connect("area_entered", _on_collection_area_entered)
+	
+	print("[PowerEgg] Fallback initialization complete")
 
 # Screen wrapping (same as normal eggs)
 func _integrate_forces(state):

@@ -55,7 +55,61 @@ func _ready():
 	_setup_debug_ui()
 	_load_configuration()
 	_setup_audio_streams()
+	
+	# ERROR HANDLING: Add memory leak prevention and proper cleanup on scene changes
+	_setup_scene_change_cleanup()
+	
 	print("[PowerManager] Power system initialized")
+
+func _setup_scene_change_cleanup():
+	"""Setup cleanup handlers for scene changes to prevent memory leaks"""
+	# Connect to scene tree signals for cleanup
+	var tree = get_tree()
+	if tree:
+		if not tree.tree_changed.is_connected(_on_scene_tree_changed):
+			tree.tree_changed.connect(_on_scene_tree_changed)
+		
+		# Also connect to node removal for cleanup
+		if not tree.node_removed.is_connected(_on_node_removed):
+			tree.node_removed.connect(_on_node_removed)
+
+func _on_scene_tree_changed():
+	"""Handle scene tree changes for cleanup"""
+	# Check if any players are no longer valid
+	var invalid_players = []
+	for player_index in active_powers.keys():
+		var player = _get_player_safely(player_index)
+		if not player:
+			invalid_players.append(player_index)
+	
+	# Clean up powers for invalid players
+	for player_index in invalid_players:
+		push_warning("[PowerManager] Player %d no longer valid, cleaning up power" % player_index)
+		_force_cleanup_power_state(player_index)
+
+func _on_node_removed(node: Node):
+	"""Handle node removal for cleanup"""
+	# Check if removed node is a player with active power
+	if node.is_in_group("players") and "player_index" in node:
+		var player_index = node.player_index
+		if is_power_active(player_index):
+			push_warning("[PowerManager] Player %d removed from scene, cleaning up power" % player_index)
+			_force_cleanup_power_state(player_index)
+
+func _exit_tree():
+	"""Clean up all resources when PowerManager is removed"""
+	print("[PowerManager] Cleaning up all resources...")
+	
+	# Clean up all active powers
+	var all_players = active_powers.keys()
+	for player_index in all_players:
+		_force_cleanup_power_state(player_index)
+	
+	# Clean up backup timers metadata
+	if has_meta("backup_timers"):
+		remove_meta("backup_timers")
+	
+	print("[PowerManager] Resource cleanup complete")
 
 func _process(delta):
 	# Only process if system is enabled
@@ -68,134 +122,245 @@ func _process(delta):
 
 func should_spawn_power_egg(enemy_class_name: String) -> bool:
 	"""Determine if a power egg should spawn based on enemy type and spawn rates"""
-	# Check if system is enabled
-	if not config_manager or not config_manager.is_system_enabled():
+	# ERROR HANDLING: Graceful fallback when PowerManager is not available
+	if not config_manager:
+		push_warning("[PowerManager] Configuration manager not available, falling back to normal eggs")
 		return false
 	
-	# Check if invincibility power is enabled
-	if not config_manager.is_power_enabled("invincibility"):
+	# ERROR HANDLING: Check if system is enabled
+	if not config_manager.is_system_enabled():
 		return false
 	
-	# Track spawn attempt for debug statistics
-	if debug_ui:
+	# ERROR HANDLING: Validate enemy class name
+	if enemy_class_name == null or enemy_class_name.strip_edges() == "":
+		push_warning("[PowerManager] Invalid enemy class name provided: '%s', using default spawn rate" % str(enemy_class_name))
+		enemy_class_name = "EnemyBase"  # Fallback to default
+	
+	# ERROR HANDLING: Check if invincibility power is enabled with fallback
+	var invincibility_enabled = false
+	if config_manager.has_method("is_power_enabled"):
+		invincibility_enabled = config_manager.is_power_enabled("invincibility")
+	else:
+		push_error("[PowerManager] Configuration manager missing is_power_enabled method")
+		return false
+	
+	if not invincibility_enabled:
+		return false
+	
+	# Track spawn attempt for debug statistics (with error protection)
+	if debug_ui and debug_ui.has_method("track_spawn_attempt"):
 		debug_ui.track_spawn_attempt()
 	
-	# Check for debug force spawn rate
-	var force_spawn_rate = config_manager.get_debug_setting("force_spawn_rate", -1.0)
+	# Check for debug force spawn rate (with error protection)
+	var force_spawn_rate = -1.0
+	if config_manager.has_method("get_debug_setting"):
+		force_spawn_rate = config_manager.get_debug_setting("force_spawn_rate", -1.0)
+	
 	if force_spawn_rate >= 0.0:
 		var debug_random_val = randf()
 		var debug_spawn_result = debug_random_val <= force_spawn_rate
-		if debug_spawn_result and debug_ui:
+		if debug_spawn_result and debug_ui and debug_ui.has_method("track_successful_spawn"):
 			debug_ui.track_successful_spawn()
 		return debug_spawn_result
 	
-	# Get spawn chance from configuration
-	var spawn_chance = config_manager.get_enemy_spawn_rate("invincibility", enemy_class_name)
+	# ERROR HANDLING: Get spawn chance from configuration with fallback
+	var spawn_chance = 0.15  # Default fallback spawn rate
+	if config_manager.has_method("get_enemy_spawn_rate"):
+		spawn_chance = config_manager.get_enemy_spawn_rate("invincibility", enemy_class_name)
+		# Validate spawn chance is within reasonable bounds
+		if spawn_chance < 0.0 or spawn_chance > 1.0:
+			push_warning("[PowerManager] Invalid spawn chance %.3f for %s, using default 0.15" % [spawn_chance, enemy_class_name])
+			spawn_chance = 0.15
+	else:
+		push_warning("[PowerManager] Configuration manager missing get_enemy_spawn_rate method, using default spawn rate")
 	
 	# Generate random number and check against spawn chance
 	var random_val = randf()
 	var spawn_result = random_val <= spawn_chance
 	
-	if spawn_result and debug_ui:
+	if spawn_result and debug_ui and debug_ui.has_method("track_successful_spawn"):
 		debug_ui.track_successful_spawn()
 	
 	return spawn_result
 
 func get_power_egg_scene() -> PackedScene:
-	"""Get the power egg scene for spawning"""
-	return preload("res://scenes/entities/power_egg.tscn")
+	"""Get the power egg scene for spawning with error handling"""
+	# ERROR HANDLING: Resource loading error handling with fallback assets
+	var power_egg_scene = null
+	
+	# Try to load the power egg scene
+	if ResourceLoader.exists("res://scenes/entities/power_egg.tscn"):
+		power_egg_scene = load("res://scenes/entities/power_egg.tscn")
+		if power_egg_scene == null:
+			push_error("[PowerManager] Failed to load power egg scene despite file existing")
+	else:
+		push_error("[PowerManager] Power egg scene file does not exist: res://scenes/entities/power_egg.tscn")
+	
+	# ERROR HANDLING: Validate the loaded scene
+	if power_egg_scene != null and not power_egg_scene is PackedScene:
+		push_error("[PowerManager] Loaded power egg resource is not a PackedScene")
+		power_egg_scene = null
+	
+	# ERROR HANDLING: Final validation - return null if loading failed
+	# The caller should handle null return and fall back to normal eggs
+	if power_egg_scene == null:
+		push_error("[PowerManager] Power egg scene unavailable, caller should fall back to normal eggs")
+	
+	return power_egg_scene
 
 func activate_power(player_index: int, power_type: PowerType) -> bool:
-	"""Activate a power for the specified player"""
-	# Check if system is enabled
-	if not config_manager or not config_manager.is_system_enabled():
+	"""Activate a power for the specified player with comprehensive error handling"""
+	# ERROR HANDLING: Graceful fallback when PowerManager is not available
+	if not config_manager:
+		push_error("[PowerManager] Configuration manager not available, power activation failed")
 		return false
 	
-	# Validate inputs
+	if not config_manager.is_system_enabled():
+		print("[PowerManager] Power system disabled, ignoring activation request")
+		return false
+	
+	# ERROR HANDLING: Handle invalid player indices and missing player references
 	if player_index < 1 or player_index > 4:
-		push_error("[PowerManager] Invalid player index: %d" % player_index)
+		push_error("[PowerManager] Invalid player index: %d (must be 1-4)" % player_index)
 		return false
 	
-	# Get power name for configuration lookup
+	# ERROR HANDLING: Validate player exists and is accessible
+	var player = _get_player_safely(player_index)
+	if not player:
+		push_error("[PowerManager] Player %d not found or not accessible" % player_index)
+		return false
+	
+	# ERROR HANDLING: Validate power type
 	var power_name = _get_power_name_from_type(power_type)
 	if power_name == "":
 		push_error("[PowerManager] Unknown power type: %d" % power_type)
 		return false
 	
-	# Check if power is enabled
-	if not config_manager.is_power_enabled(power_name):
+	# ERROR HANDLING: Check if power is enabled with method validation
+	var power_enabled = false
+	if config_manager.has_method("is_power_enabled"):
+		power_enabled = config_manager.is_power_enabled(power_name)
+	else:
+		push_error("[PowerManager] Configuration manager missing is_power_enabled method")
+		return false
+	
+	if not power_enabled:
 		print("[PowerManager] Power %s is disabled" % power_name)
 		return false
 	
-	# Get power configuration from config manager
-	var duration = config_manager.get_power_duration(power_name)
+	# ERROR HANDLING: Get power configuration with validation
+	var duration = 10.0  # Default fallback duration
+	if config_manager.has_method("get_power_duration"):
+		duration = config_manager.get_power_duration(power_name)
+		# Validate duration is reasonable
+		if duration <= 0.0 or duration > 300.0:  # Max 5 minutes
+			push_warning("[PowerManager] Invalid duration %.1f for %s, using default 10.0s" % [duration, power_name])
+			duration = 10.0
+	else:
+		push_warning("[PowerManager] Configuration manager missing get_power_duration method, using default duration")
 	
-	# Check for debug test mode duration
-	var test_duration = config_manager.get_debug_setting("test_mode_duration", -1.0)
-	if test_duration > 0.0:
-		duration = test_duration
+	# Check for debug test mode duration (with error protection)
+	if config_manager.has_method("get_debug_setting"):
+		var test_duration = config_manager.get_debug_setting("test_mode_duration", -1.0)
+		if test_duration > 0.0:
+			duration = test_duration
 	
+	# ERROR HANDLING: Implement power activation failure recovery
 	# Deactivate any existing power for this player
 	if is_power_active(player_index):
 		deactivate_power(player_index)
 	
-	# Create new power data
+	# Create new power data with error checking
 	var power_data = PowerData.new(power_type, player_index, duration)
+	if not power_data:
+		push_error("[PowerManager] Failed to create power data for player %d" % player_index)
+		return false
+	
 	active_powers[player_index] = power_data
 	
-	# Create timer for this power
-	var timer = Timer.new()
-	timer.wait_time = duration
-	timer.one_shot = true
-	timer.timeout.connect(_on_power_expired.bind(player_index))
-	add_child(timer)
-	timer.start()
+	# ERROR HANDLING: Create timer system failure protection
+	var timer = _create_power_timer_safely(player_index, duration)
+	if not timer:
+		# Clean up partial state
+		active_powers.erase(player_index)
+		push_error("[PowerManager] Failed to create power timer for player %d" % player_index)
+		return false
+	
 	power_timers[player_index] = timer
 	
-	# Play activation audio (only for this player's power)
-	play_power_activation_sound(power_type)
-	start_power_ambient_sound(power_type, player_index)
+	# ERROR HANDLING: Audio system error protection
+	_play_activation_audio_safely(power_type, player_index)
 	
-	# Emit activation signal
-	emit_signal("power_activated", player_index, power_type, duration)
+	# ERROR HANDLING: Signal emission with error protection
+	_emit_power_signal_safely("power_activated", [player_index, power_type, duration])
 	
-	# Send notification for power activation
-	_send_power_notification(player_index, power_type, "activated")
+	# ERROR HANDLING: Notification system with error protection
+	_send_power_notification_safely(player_index, power_type, "activated")
 	
-	# Track activation for debug statistics
-	if debug_ui:
-		debug_ui.track_power_activation(power_type)
+	# ERROR HANDLING: Debug tracking with error protection
+	_track_debug_activation_safely(power_type)
+	
+	# ERROR HANDLING: Player activation with error recovery
+	if not _activate_player_power_safely(player, power_type, duration):
+		# If player activation fails, clean up power manager state
+		deactivate_power(player_index)
+		push_error("[PowerManager] Player power activation failed for player %d, cleaned up state" % player_index)
+		return false
 	
 	print("[PowerManager] Power %d activated for player %d (duration: %.1fs)" % [power_type, player_index, duration])
 	return true
 
 func deactivate_power(player_index: int) -> void:
-	"""Deactivate the current power for the specified player"""
+	"""Deactivate the current power for the specified player with comprehensive error handling"""
+	# ERROR HANDLING: Validate player index
+	if player_index < 1 or player_index > 4:
+		push_warning("[PowerManager] Invalid player index for deactivation: %d" % player_index)
+		return
+	
 	if not active_powers.has(player_index):
 		return
 	
 	var power_data = active_powers[player_index]
+	if not power_data:
+		push_warning("[PowerManager] Null power data for player %d during deactivation" % player_index)
+		active_powers.erase(player_index)
+		return
+	
 	var power_type = power_data.type
 	
-	# Clean up timer
+	# ERROR HANDLING: Memory leak prevention and proper cleanup
+	# Clean up main timer
 	if power_timers.has(player_index):
 		var timer = power_timers[player_index]
 		if is_instance_valid(timer):
+			if timer.timeout.is_connected(_on_power_expired):
+				timer.timeout.disconnect(_on_power_expired)
 			timer.queue_free()
 		power_timers.erase(player_index)
+	
+	# Clean up backup timer
+	if has_meta("backup_timers"):
+		var backup_timers = get_meta("backup_timers")
+		if backup_timers.has(player_index):
+			var backup_timer = backup_timers[player_index]
+			if is_instance_valid(backup_timer):
+				backup_timer.queue_free()
+			backup_timers.erase(player_index)
 	
 	# Remove power data
 	active_powers.erase(player_index)
 	
-	# Play expiration audio and stop ambient sound for this player
-	play_power_expiration_sound(power_type)
-	stop_power_ambient_sound(player_index)
+	# ERROR HANDLING: Audio system error protection
+	_play_deactivation_audio_safely(power_type, player_index)
 	
-	# Emit expiration signal
-	emit_signal("power_expired", player_index, power_type)
+	# ERROR HANDLING: Signal emission with error protection
+	_emit_power_signal_safely("power_expired", [player_index, power_type])
 	
-	# Send notification for power expiration
-	_send_power_notification(player_index, power_type, "expired")
+	# ERROR HANDLING: Notification system with error protection
+	_send_power_notification_safely(player_index, power_type, "expired")
+	
+	# ERROR HANDLING: Player deactivation with error recovery
+	_deactivate_player_power_safely(player_index)
 	
 	print("[PowerManager] Power %d deactivated for player %d" % [power_type, player_index])
 
@@ -232,12 +397,35 @@ func get_remaining_duration(player_index: int) -> float:
 	return active_powers[player_index].get_remaining_time()
 
 func update_power_timers(_delta: float) -> void:
-	"""Update power timers and handle expiration warnings"""
+	"""Update power timers and handle expiration warnings with error handling"""
+	# ERROR HANDLING: Graceful fallback when system is not available
+	if not config_manager or not config_manager.is_system_enabled():
+		return
+	
 	var players_to_remove = []
 	
-	for player_index in active_powers.keys():
-		var power_data = active_powers[player_index]
+	# ERROR HANDLING: Protect against corrupted active_powers dictionary
+	var safe_player_indices = []
+	if active_powers != null and typeof(active_powers) == TYPE_DICTIONARY:
+		safe_player_indices = active_powers.keys()
+	else:
+		push_error("[PowerManager] Corrupted active_powers dictionary, clearing all powers")
+		active_powers = {}
+		power_timers = {}
+		return
+	
+	for player_index in safe_player_indices:
+		# ERROR HANDLING: Validate power data exists and is valid
+		if not active_powers.has(player_index):
+			continue
 		
+		var power_data = active_powers[player_index]
+		if not power_data:
+			push_warning("[PowerManager] Null power data for player %d, removing" % player_index)
+			players_to_remove.append(player_index)
+			continue
+		
+		# ERROR HANDLING: Protect against invalid power data
 		# Check if power has expired
 		if power_data.is_expired():
 			players_to_remove.append(player_index)
@@ -245,11 +433,24 @@ func update_power_timers(_delta: float) -> void:
 		
 		# Check for warning threshold (3 seconds remaining)
 		var remaining_time = power_data.get_remaining_time()
+		
+		# ERROR HANDLING: Validate remaining time is reasonable
+		if remaining_time < 0.0 or remaining_time > 300.0:  # Max 5 minutes
+			push_warning("[PowerManager] Invalid remaining time %.1f for player %d, forcing expiration" % [remaining_time, player_index])
+			players_to_remove.append(player_index)
+			continue
+		
 		if remaining_time <= 3.0 and remaining_time > 2.9:
-			play_power_warning_sound(power_data.type)
-			emit_signal("power_warning", player_index, power_data.type, remaining_time)
+			# ERROR HANDLING: Audio warning with error protection
+			if power_warning_audio and is_instance_valid(power_warning_audio):
+				play_power_warning_sound(power_data.type)
+			else:
+				push_warning("[PowerManager] Failed to play warning sound for player %d" % player_index)
+			
+			# ERROR HANDLING: Signal emission with error protection
+			_emit_power_signal_safely("power_warning", [player_index, power_data.type, remaining_time])
 	
-	# Clean up expired powers
+	# Clean up expired powers with error handling
 	for player_index in players_to_remove:
 		deactivate_power(player_index)
 
@@ -490,6 +691,227 @@ func reset_all_powers() -> void:
 func _on_power_expired(player_index: int):
 	"""Handle power expiration from timer"""
 	deactivate_power(player_index)
+
+# ERROR HANDLING: Helper methods for safe operations
+
+func _get_player_safely(player_index: int) -> Node:
+	"""Safely get player reference with error handling"""
+	var game_manager = get_node_or_null("/root/GameManager")
+	if not game_manager:
+		# Try alternative paths
+		var current_scene = get_tree().current_scene
+		if current_scene:
+			game_manager = current_scene.find_child("GameManager", true, false)
+	
+	if not game_manager:
+		push_warning("[PowerManager] GameManager not found, cannot validate player %d" % player_index)
+		return null
+	
+	if not "player_nodes" in game_manager:
+		push_warning("[PowerManager] GameManager missing player_nodes array")
+		return null
+	
+	var player_nodes = game_manager.player_nodes
+	if not player_nodes or player_nodes.size() < player_index:
+		push_warning("[PowerManager] Player %d not available in GameManager (size: %d)" % [player_index, player_nodes.size() if player_nodes else 0])
+		return null
+	
+	var player = player_nodes[player_index - 1]  # Convert to 0-based index
+	if not is_instance_valid(player):
+		push_warning("[PowerManager] Player %d reference is invalid" % player_index)
+		return null
+	
+	return player
+
+func _create_power_timer_safely(player_index: int, duration: float) -> Timer:
+	"""Create power timer with error handling and failure protection"""
+	var timer = Timer.new()
+	if not timer:
+		push_error("[PowerManager] Failed to create Timer instance")
+		return null
+	
+	# ERROR HANDLING: Timer system failure protection
+	timer.wait_time = duration
+	timer.one_shot = true
+	
+	# Connect with error handling
+	if timer.has_signal("timeout"):
+		var callable = _on_power_expired.bind(player_index)
+		if callable.is_valid():
+			timer.timeout.connect(callable)
+		else:
+			push_error("[PowerManager] Failed to create valid timeout callback")
+			timer.queue_free()
+			return null
+	else:
+		push_error("[PowerManager] Timer missing timeout signal")
+		timer.queue_free()
+		return null
+	
+	# Add to scene tree safely
+	if is_inside_tree():
+		add_child(timer)
+		timer.start()
+		
+		# Create backup expiration protection
+		_create_backup_expiration_timer(player_index, duration * 1.2)  # 20% longer as safety net
+	else:
+		push_error("[PowerManager] PowerManager not in scene tree, cannot add timer")
+		timer.queue_free()
+		return null
+	
+	return timer
+
+func _create_backup_expiration_timer(player_index: int, max_duration: float):
+	"""Create backup timer to force expiration after max duration"""
+	var backup_timer = Timer.new()
+	backup_timer.wait_time = max_duration
+	backup_timer.one_shot = true
+	backup_timer.timeout.connect(_force_power_expiration.bind(player_index))
+	add_child(backup_timer)
+	backup_timer.start()
+	
+	# Store reference for cleanup
+	if not has_meta("backup_timers"):
+		set_meta("backup_timers", {})
+	var backup_timers = get_meta("backup_timers")
+	backup_timers[player_index] = backup_timer
+
+func _force_power_expiration(player_index: int):
+	"""Force power expiration as safety measure"""
+	if is_power_active(player_index):
+		push_warning("[PowerManager] Force expiring power for player %d (safety timeout)" % player_index)
+		deactivate_power(player_index)
+	
+	# Clean up backup timer reference
+	if has_meta("backup_timers"):
+		var backup_timers = get_meta("backup_timers")
+		if backup_timers.has(player_index):
+			backup_timers.erase(player_index)
+
+func _play_activation_audio_safely(power_type: PowerType, player_index: int):
+	"""Play activation audio with error protection"""
+	if power_activation_audio and is_instance_valid(power_activation_audio):
+		play_power_activation_sound(power_type)
+	else:
+		push_warning("[PowerManager] Power activation audio not available")
+	
+	if power_ambient_audio and is_instance_valid(power_ambient_audio):
+		start_power_ambient_sound(power_type, player_index)
+	else:
+		push_warning("[PowerManager] Power ambient audio not available")
+
+func _emit_power_signal_safely(signal_name: String, args: Array):
+	"""Emit power signal with error protection"""
+	if has_signal(signal_name):
+		match args.size():
+			1:
+				emit_signal(signal_name, args[0])
+			2:
+				emit_signal(signal_name, args[0], args[1])
+			3:
+				emit_signal(signal_name, args[0], args[1], args[2])
+			_:
+				push_warning("[PowerManager] Unsupported signal argument count: %d" % args.size())
+	else:
+		push_warning("[PowerManager] Signal %s not found" % signal_name)
+
+func _send_power_notification_safely(player_index: int, power_type: PowerType, event_type: String):
+	"""Send power notification with error protection"""
+	if has_method("_send_power_notification"):
+		_send_power_notification(player_index, power_type, event_type)
+	else:
+		push_warning("[PowerManager] _send_power_notification method not available")
+
+func _track_debug_activation_safely(power_type: PowerType):
+	"""Track debug activation with error protection"""
+	if debug_ui and is_instance_valid(debug_ui) and debug_ui.has_method("track_power_activation"):
+		debug_ui.track_power_activation(power_type)
+	else:
+		# Debug tracking is optional, so just log at debug level
+		pass
+
+func _activate_player_power_safely(player: Node, power_type: PowerType, duration: float) -> bool:
+	"""Activate player power with error recovery"""
+	if not player or not is_instance_valid(player):
+		push_error("[PowerManager] Invalid player reference for power activation")
+		return false
+	
+	if not player.has_method("activate_power"):
+		push_error("[PowerManager] Player missing activate_power method")
+		return false
+	
+	player.activate_power(power_type, duration)
+	return true
+
+func _cleanup_failed_activation(player_index: int):
+	"""Clean up partial state from failed power activation"""
+	# Remove from active powers
+	if active_powers.has(player_index):
+		active_powers.erase(player_index)
+	
+	# Clean up timer
+	if power_timers.has(player_index):
+		var timer = power_timers[player_index]
+		if is_instance_valid(timer):
+			timer.queue_free()
+		power_timers.erase(player_index)
+	
+	# Clean up backup timer
+	if has_meta("backup_timers"):
+		var backup_timers = get_meta("backup_timers")
+		if backup_timers.has(player_index):
+			var backup_timer = backup_timers[player_index]
+			if is_instance_valid(backup_timer):
+				backup_timer.queue_free()
+			backup_timers.erase(player_index)
+
+func _play_deactivation_audio_safely(power_type: PowerType, player_index: int):
+	"""Play deactivation audio with error protection"""
+	if power_expiration_audio and is_instance_valid(power_expiration_audio):
+		play_power_expiration_sound(power_type)
+	else:
+		push_warning("[PowerManager] Power expiration audio not available")
+	
+	if power_ambient_audio and is_instance_valid(power_ambient_audio):
+		stop_power_ambient_sound(player_index)
+	else:
+		push_warning("[PowerManager] Power ambient audio not available for stopping")
+
+func _deactivate_player_power_safely(player_index: int):
+	"""Deactivate player power with error recovery"""
+	var player = _get_player_safely(player_index)
+	if not player:
+		push_warning("[PowerManager] Cannot deactivate player power - player %d not found" % player_index)
+		return
+	
+	if not player.has_method("deactivate_power"):
+		push_warning("[PowerManager] Player %d missing deactivate_power method" % player_index)
+		return
+	
+	player.deactivate_power()
+
+func _force_cleanup_power_state(player_index: int):
+	"""Force cleanup of all power-related state for a player"""
+	# Force remove from all tracking dictionaries
+	if active_powers.has(player_index):
+		active_powers.erase(player_index)
+	
+	if power_timers.has(player_index):
+		var timer = power_timers[player_index]
+		if is_instance_valid(timer):
+			timer.queue_free()
+		power_timers.erase(player_index)
+	
+	if has_meta("backup_timers"):
+		var backup_timers = get_meta("backup_timers")
+		if backup_timers.has(player_index):
+			var backup_timer = backup_timers[player_index]
+			if is_instance_valid(backup_timer):
+				backup_timer.queue_free()
+			backup_timers.erase(player_index)
+	
+	print("[PowerManager] Force cleaned power state for player %d" % player_index)
 
 # Audio Management Methods
 

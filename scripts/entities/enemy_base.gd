@@ -416,38 +416,76 @@ func _get_enemy_class_name() -> String:
 			return "EnemyBase"  # Default fallback
 
 func _spawn_power_egg(player_velocity: Vector2, player_index: int, award_score: bool):
-	"""Spawn a power egg instead of normal egg"""
+	"""Spawn a power egg instead of normal egg with comprehensive error handling"""
 	print("[DEBUG DEFEAT] Spawning power egg for %s" % name)
 	
-	# Get power egg scene from PowerManager
+	# ERROR HANDLING: Graceful fallback when PowerManager is not available
 	var power_manager = get_node_or_null("/root/PowerManager")
 	if not power_manager:
-		print("[ERROR] PowerManager not available for power egg spawn, falling back to normal egg")
+		push_warning("[EnemyBase] PowerManager not available for power egg spawn, falling back to normal egg")
 		_spawn_normal_egg(player_velocity, player_index, award_score)
 		return
 	
+	# ERROR HANDLING: Validate PowerManager has required methods
+	if not power_manager.has_method("get_power_egg_scene"):
+		push_error("[EnemyBase] PowerManager missing get_power_egg_scene method, falling back to normal egg")
+		_spawn_normal_egg(player_velocity, player_index, award_score)
+		return
+	
+	# ERROR HANDLING: Resource loading error handling with fallback assets
 	var power_egg_scene = power_manager.get_power_egg_scene()
 	if not power_egg_scene:
-		print("[ERROR] Power egg scene not available, falling back to normal egg")
+		push_warning("[EnemyBase] Power egg scene not available, falling back to normal egg")
 		_spawn_normal_egg(player_velocity, player_index, award_score)
 		return
 	
+	# ERROR HANDLING: Validate scene can be instantiated
 	var power_egg = power_egg_scene.instantiate()
 	if not power_egg:
-		print("[ERROR] Failed to instantiate power egg, falling back to normal egg")
+		push_error("[EnemyBase] Failed to instantiate power egg scene, falling back to normal egg")
 		_spawn_normal_egg(player_velocity, player_index, award_score)
 		return
 	
+	if not power_egg:
+		push_error("[EnemyBase] Failed to instantiate power egg, falling back to normal egg")
+		_spawn_normal_egg(player_velocity, player_index, award_score)
+		return
+	
+	# ERROR HANDLING: Validate power egg has required properties
+	if not "global_position" in power_egg or not "linear_velocity" in power_egg:
+		push_error("[EnemyBase] Power egg missing required physics properties, falling back to normal egg")
+		power_egg.queue_free()
+		_spawn_normal_egg(player_velocity, player_index, award_score)
+		return
+	
+	# ERROR HANDLING: Safe property assignment with validation
 	# Set position and physics properties same as normal egg
 	power_egg.global_position = global_position
-	power_egg.linear_velocity = _calculate_egg_velocity(player_velocity)
+	var calculated_velocity = _calculate_egg_velocity(player_velocity)
 	
-	# Add to scene
-	get_parent().add_child(power_egg)
+	# Validate calculated velocity is reasonable
+	if calculated_velocity.length() > 1000.0:  # Sanity check
+		push_warning("[EnemyBase] Calculated velocity too high (%.1f), clamping" % calculated_velocity.length())
+		calculated_velocity = calculated_velocity.normalized() * 500.0
 	
-	# Play spawn sound through PowerManager (PowerEgg will also play its own spawn sound)
-	# Note: PowerEgg will handle its own spawn sound in _play_spawn_effects()
+	power_egg.linear_velocity = calculated_velocity
 	
+	# ERROR HANDLING: Safe scene tree addition
+	var parent_node = get_parent()
+	if not parent_node or not is_instance_valid(parent_node):
+		push_error("[EnemyBase] Invalid parent node, cannot add power egg, falling back to normal egg")
+		power_egg.queue_free()
+		_spawn_normal_egg(player_velocity, player_index, award_score)
+		return
+	
+	parent_node.add_child(power_egg)
+	
+	# Validate power egg was added successfully
+	if not power_egg.is_inside_tree():
+		push_error("[EnemyBase] Power egg failed to join scene tree, falling back to normal egg")
+		power_egg.queue_free()
+		_spawn_normal_egg(player_velocity, player_index, award_score)
+		return
 	# Hide this enemy's egg components since we're using PowerEgg instead
 	if egg_sprite:
 		egg_sprite.visible = false

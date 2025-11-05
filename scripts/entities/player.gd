@@ -563,7 +563,17 @@ func transition_to_flying():
 # --- Power System Methods ---
 
 func activate_power(power_type: int, duration: float):
-	"""Activate a power for this player"""
+	"""Activate a power for this player with comprehensive error handling"""
+	# ERROR HANDLING: Validate inputs
+	if power_type < 0:
+		push_error("[Player%d] Invalid power type: %d" % [player_index, power_type])
+		return
+	
+	if duration <= 0.0 or duration > 300.0:  # Max 5 minutes
+		push_warning("[Player%d] Invalid duration %.1f, clamping to valid range" % [player_index, duration])
+		duration = clamp(duration, 1.0, 300.0)
+	
+	# ERROR HANDLING: Implement power activation failure recovery
 	# Deactivate any existing power
 	if is_power_active:
 		deactivate_power()
@@ -571,36 +581,50 @@ func activate_power(power_type: int, duration: float):
 	active_power_type = power_type
 	is_power_active = true
 	
-	# Apply power-specific effects
+	# Apply power-specific effects with error handling
+	var activation_success = false
 	match power_type:
 		0: # PowerManager.PowerType.INVINCIBILITY
-			_activate_invincibility()
+			activation_success = _activate_invincibility_safely()
+		_:
+			push_warning("[Player%d] Unknown power type: %d, using default behavior" % [player_index, power_type])
+			activation_success = true  # Allow unknown powers to continue
 	
-	# Start visual and audio effects
-	_start_power_effects(power_type)
+	if not activation_success:
+		# If power-specific activation failed, revert state
+		active_power_type = -1
+		is_power_active = false
+		push_error("[Player%d] Power activation failed, reverting to normal state" % player_index)
+		return
+	
+	# Start visual and audio effects with error protection
+	_start_power_effects_safely(power_type)
 	
 	print("[Player%d] Power activated: %d (duration: %.1fs)" % [player_index, power_type, duration])
 
 func deactivate_power():
-	"""Deactivate the current power"""
+	"""Deactivate the current power with error handling"""
 	if not is_power_active:
 		return
 
 	var previous_power_type = active_power_type
 	
-	# Apply power-specific cleanup
+	# ERROR HANDLING: Safe power deactivation with error recovery
+	# Apply power-specific cleanup with error handling
 	match previous_power_type:
 		0: # PowerManager.PowerType.INVINCIBILITY
-			_deactivate_invincibility()
+			_deactivate_invincibility_safely()
+		_:
+			push_warning("[Player%d] Unknown power type during deactivation: %d" % [player_index, previous_power_type])
 	
-	# Stop visual and audio effects
-	_stop_power_effects()
-	
-	# Reset power state
-	active_power_type = -1  # PowerManager.PowerType.NONE
-	is_power_active = false
+	# Stop visual and audio effects with error protection
+	_stop_power_effects_safely()
 	
 	print("[Player%d] Power deactivated: %d" % [player_index, previous_power_type])
+	
+	# Always reset power state regardless of errors
+	active_power_type = -1  # PowerManager.PowerType.NONE
+	is_power_active = false
 
 func _activate_invincibility():
 	"""Activate invincibility power effects"""
@@ -1165,3 +1189,49 @@ func find_safe_spawn_point():
 	else:
 		# If no safe spawn points, use any spawn point (better than fallback position)
 		return spawn_points[randi() % spawn_points.size()]
+
+# ERROR HANDLING: Safe helper methods for power system
+
+func _activate_invincibility_safely() -> bool:
+	"""Safely activate invincibility with error handling"""
+	# Modify collision behavior - don't collide with enemies for damage
+	set_collision_mask_value(3, false)  # Disable enemy collision layer
+	
+	# Enable enemy defeat on contact using available area
+	var contact_area = combat_area if combat_area else stomp_area
+	if contact_area and contact_area.has_signal("area_entered"):
+		if not contact_area.area_entered.is_connected(_on_invincibility_contact):
+			contact_area.area_entered.connect(_on_invincibility_contact)
+		contact_area.monitoring = true
+	else:
+		push_warning("[Player%d] No suitable contact area found for invincibility" % player_index)
+		return false
+	
+	print("[Player%d] Invincibility activated safely" % player_index)
+	return true
+
+func _deactivate_invincibility_safely():
+	"""Safely deactivate invincibility with error handling"""
+	# Restore normal collision behavior
+	set_collision_mask_value(3, true)  # Re-enable enemy collision layer
+	
+	# Disable invincibility contact detection
+	var contact_area = combat_area if combat_area else stomp_area
+	if contact_area and contact_area.area_entered.is_connected(_on_invincibility_contact):
+		contact_area.area_entered.disconnect(_on_invincibility_contact)
+	
+	print("[Player%d] Invincibility deactivated safely" % player_index)
+
+func _start_power_effects_safely(power_type: int):
+	"""Start power effects with error protection"""
+	if has_method("_start_power_effects"):
+		_start_power_effects(power_type)
+	else:
+		push_warning("[Player%d] _start_power_effects method not available" % player_index)
+
+func _stop_power_effects_safely():
+	"""Stop power effects with error protection"""
+	if has_method("_stop_power_effects"):
+		_stop_power_effects()
+	else:
+		push_warning("[Player%d] _stop_power_effects method not available" % player_index)
