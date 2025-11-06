@@ -55,6 +55,8 @@ var defeated_time := 0.0
 var is_respawning: bool = false
 var defeated_fly_direction : int = 1
 var defeated_fly_time : float = 0.0
+var defeated_base_x: float = 0.0  # Starting X position for horizontal oscillation
+var defeated_base_y: float = 0.0  # Starting Y position to maintain height
 var is_invincible := false
 var is_alive := true
 var brake_timer : float = 0.0
@@ -194,11 +196,24 @@ func _physics_process(delta):
 		if current_state == State.DEFEATED:
 			defeated_fly_time += delta
 			defeated_time += delta
-			# Sine wave: amplitude 30px, period 1.5s
-			var sine_offset = 30.0 * sin(defeated_fly_time * 4.0)
-			velocity.y += sine_offset * delta
+			
+			# Move horizontally towards screen edge with sine wave oscillation
+			var base_speed = 100.0  # Base horizontal speed towards edge
+			var oscillation_amplitude = 30.0  # Reduced amplitude for subtler oscillation
+			
+			# Calculate base movement towards screen edge (for reference)
+			# var base_movement = defeated_fly_direction * base_speed * delta
+			
+			# Add sine wave oscillation for visual effect
+			var sine_offset = oscillation_amplitude * sin(defeated_fly_time * 4.0)
+			
+			# Apply movement: base movement + oscillation
+			velocity.x = defeated_fly_direction * base_speed
+			velocity.y = sine_offset * delta * 60.0  # Convert to velocity for smooth movement
+			
 			move_and_slide()
-			# Check if player has left the screen horizontally
+			
+			# Check if player has left the screen horizontally or time limit reached
 			var viewport_rect = get_viewport_rect().size
 			if (defeated_fly_direction == 1 and global_position.x > viewport_rect.x + 50) or \
 				(defeated_fly_direction == -1 and global_position.x < -50) or defeated_time > 3.0:
@@ -1086,6 +1101,13 @@ func die():
 	
 	is_alive = false
 	set_state(State.DEFEATED)
+	
+	# Set up defeated animation parameters
+	defeated_base_x = global_position.x  # Store starting X position for oscillation
+	defeated_base_y = global_position.y  # Store starting Y position to maintain height
+	defeated_fly_direction = 1 if velocity.x >= 0 else -1  # Set direction based on current velocity
+	if defeated_fly_direction == 0:  # Ensure direction is never zero
+		defeated_fly_direction = 1
 	
 	# Play defeated animation
 	var defeated_anim_name = "P%d_defeated" % player_index

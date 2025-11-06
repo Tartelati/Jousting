@@ -642,6 +642,11 @@ func _on_vulnerable_area_area_entered(area):
 		var player = area.get_parent()
 		var player_index = player.player_index if player and player.has_method("player_index") else 1
 		
+		# Check if player is alive - defeated players cannot defeat enemies
+		if player and "is_alive" in player and not player.is_alive:
+			print("[DEBUG] Player%d is defeated - cannot stomp %s" % [player_index, name])
+			return
+		
 		# New position check: player must be higher to stomp enemy
 		var position_tolerance = 20.0  # Allow some tolerance for player position
 		if player.global_position.y > global_position.y + position_tolerance:

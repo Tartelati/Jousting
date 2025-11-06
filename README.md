@@ -15,6 +15,7 @@ Jousting is a 2D platformer game developed using GDScript, the scripting languag
 - Multiplayer support (up to 4 players)
 - Enhanced high score system with robust persistence, validation, and user feedback
 - Power-up system with collectible power eggs and temporary special abilities (✅ COMPLETE - All 14 tasks finished, fully integrated and production-ready)
+- Enhanced animation behavior with smooth defeated player movement and improved egg-to-bird mechanics (🔄 IN PROGRESS - Task 1 complete)
 - Dynamic player joining and controller support
 - Type-safe code with explicit type annotations for better Godot 4 compatibility
 
@@ -116,6 +117,24 @@ A comprehensive power-up system with all mechanics fully implemented, tested, an
 - **✅ Integration Plan**: Detailed plan for integrating with existing codebase
 - **✅ Implementation Tasks**: All 14 development tasks completed
 - **✅ Tasks 1-14 Complete**: Entire power-up system fully implemented and production-ready
+
+### Animation Behavior Fixes ✅ TASK 1 COMPLETE
+Specific animation and behavior fixes for player defeat mechanics and enemy-to-egg transformation system. See `.kiro/specs/animation-behavior-fixes/` for detailed requirements, design, and implementation documentation:
+
+**Completed Features:**
+- **✅ Player Defeated Animation Fix**: Replaced unpredictable vertical sine wave movement with pure horizontal cosine/sine oscillation
+- **✅ Horizontal Movement Pattern**: Implemented 60px amplitude horizontal oscillation using mathematical cosine functions
+- **✅ Screen Boundary Management**: Added proper screen clamping to prevent defeated players from moving off-screen
+- **✅ Direction-Based Movement**: Defeated players now move horizontally based on their velocity direction when defeated
+- **✅ Preserved Combat Ability**: Defeated players maintain ability to kill enemies during horizontal movement phase
+- **✅ Pure Horizontal Movement**: Eliminated all vertical movement components to ensure strict horizontal-only animation
+
+**Implementation Status:**
+- **✅ Task 1**: Player defeated animation horizontal movement - Complete with all acceptance criteria fully satisfied
+- **📋 Task 2**: Bird-egg communication system - Pending implementation
+- **📋 Task 3**: Bird screen traversal completion - Pending implementation
+
+**Technical Achievement**: Enhanced player defeat mechanics with predictable, smooth horizontal-only movement patterns while maintaining strategic gameplay elements and visual polish. The defeated animation now strictly adheres to horizontal movement requirements.
 
 ## Getting Started
 
