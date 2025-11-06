@@ -40,10 +40,12 @@ Advanced physics-based movement with multiple states:
 - **State Transitions**: Smooth transitions between movement states
 
 ### Multiplayer Features
-- Dynamic player joining during gameplay
-- Controller and keyboard support
+- Dynamic player joining during gameplay (up to 4 players)
+- Controller and keyboard support with automatic device assignment
 - Independent player state management
 - Collision and interaction systems between players
+- **Complete Player Scene Support**: All 4 player scenes (player1-4.tscn) properly configured and loading without errors
+- **Resource Loading Stability**: Resolved all preload issues for reliable debug mode launching
 
 ## Development Specifications
 
@@ -115,6 +117,12 @@ To run the game, follow these steps:
 
 **Note**: The project uses a built-in testing framework and does not require the GUT (Godot Unit Test) addon.
 
+### Recent Fixes
+- **✅ Resource Loading Resolution**: Systematically resolved all resource loading issues affecting debug mode
+- **✅ Player 3 Scene Fix**: Recreated corrupted player3.tscn with minimal working structure using safe file replacement
+- **✅ Full 4-Player Support**: All player scenes (player1-4.tscn) now load correctly with complete multiplayer functionality
+- **✅ Debug Mode Stability**: Eliminated parser errors preventing debug mode from launching
+
 ### Testing
 The project includes comprehensive testing with a built-in framework:
 - **Simple Framework**: Built-in `TestBase` class with all necessary assertion methods and proper lifecycle management
@@ -160,6 +168,13 @@ When contributing:
 3. Update documentation for any new features
 4. Test multiplayer functionality thoroughly
 5. Consider the impact on the high score system
+
+### Resource Loading Best Practices
+When working with scene files:
+- Use systematic testing (enable scenes one by one) to isolate loading issues
+- Prefer safe file replacement over cache manipulation for corrupted scenes
+- Maintain backup files during scene recreation
+- Verify all preload statements after scene modifications
 
 ## License
 

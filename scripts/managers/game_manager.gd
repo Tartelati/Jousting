@@ -3,7 +3,7 @@ extends Node
 var player_scenes = [
 	preload("res://scenes/entities/player1.tscn"),
 	preload("res://scenes/entities/player2.tscn"),
-	preload("res://scenes/entities/player3.tscn"), 
+	preload("res://scenes/entities/player3.tscn"),
 	preload("res://scenes/entities/player4.tscn")
 ]	
 var player_nodes = [] # Store references to player instances
