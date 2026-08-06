@@ -22,8 +22,7 @@ var sfx_paths = {
 	"egg_collect": "res://assets/sounds/sfx/egg_collect.wav",
 	"player_death": "res://assets/sounds/sfx/player_death.wav",
 	"wave_complete": "res://assets/sounds/sfx/wave_complete.wav",
-	"game_over": "res://assets/sounds/sfx/game_over.wav",
-	"pterodactyl": "res://assets/sounds/sfx/pterodactyl.wav"
+	"game_over": "res://assets/sounds/sfx/game_over.wav"
 }
 
 # Music paths
