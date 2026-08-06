@@ -1,16 +1,15 @@
 extends "res://scripts/entities/enemy_base.gd"
 
 var target = null
-# Update sprite_path to use shadow-lord placeholder if available
-var sprite_path = "res://assets/sprites/enemy_shadow-lord-placeholder.png"
 
 func _ready():
 	super._ready()
 	points_value = 200
 	move_speed = 130
-	
-	# Set sprite color to distinguish enemy type
-	enemy_animation.texture = load(sprite_path)  # Use the loaded texture on the existing sprite
+	# NOTE: visual differentiation comes from the shadowlord scene's own
+	# SpriteFrames (fly/walk/hatching sheets). AnimatedSprite2D has no
+	# `texture` property, so the old `enemy_animation.texture = load(...)`
+	# line was removed (it would have crashed on spawn).
 
 # Override the flying process for this specific enemy type
 func process_flying(delta):

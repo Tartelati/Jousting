@@ -11,4 +11,7 @@ func _on_body_entered(body):
 	if body.is_in_group("players"):
 		body.die()
 	elif body.is_in_group("enemies") and body.has_method("defeat"):
-		body.defeat()
+		# Hazard kill: convert to egg but don't award score. player_index is
+		# required by defeat() and is only used for scoring (lava is not a
+		# player kill).
+		body.defeat(1, false)
