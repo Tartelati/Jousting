@@ -49,6 +49,16 @@ func reset():
 	if !Input.joy_connection_changed.is_connected(_on_joy_connection_changed):
 		Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
+	# seed actions for joypads that are already connected
+	# (the connect signal above only fires for *future* connections,
+	# so without this, controllers plugged in before launch never get actions)
+	var connected_joypads = Input.get_connected_joypads()
+	# delete stale device actions first so this is idempotent across reset() calls
+	for device in device_actions.keys():
+		_delete_actions_for_device(device)
+	for device in connected_joypads:
+		_create_actions_for_device(device)
+
 func _on_joy_connection_changed(device: int, connected: bool):
 	if connected:
 		_create_actions_for_device(device)
