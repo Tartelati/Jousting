@@ -59,9 +59,9 @@ func _on_defeat_all_pressed():
 				if can_collect and enemy_ref.has_method("collect_egg"):
 					enemy_ref.collect_egg(player_index)
 			# else: # Optional debug
-				# print("DEBUG: Enemy %s was freed or not in EGG state before collect_egg could be called." % enemy_ref.name)
+				# Logger.debug("DEBUG: Enemy %s was freed or not in EGG state before collect_egg could be called." % enemy_ref.name)
 
-	print("DEBUG: Defeat All Enemies button processed.")
+	Logger.debug("DEBUG: Defeat All Enemies button processed.")
 
 
 func _on_next_wave_pressed():
@@ -82,7 +82,7 @@ func _on_next_wave_pressed():
 			if "current_wave" in wave_manager:
 				wave_manager.current_wave += 1
 				wave_manager.start_wave(wave_manager.current_wave)
-				print("DEBUG: Advanced to wave " + str(wave_manager.current_wave) + "!")
+				Logger.debug("DEBUG: Advanced to wave " + str(wave_manager.current_wave) + "!")
 			else:
 				printerr("DEBUG: WaveManager missing 'current_wave' variable!")
 		else:
@@ -90,11 +90,11 @@ func _on_next_wave_pressed():
 			wave_manager.start_wave()
 			# Check if variable exists before printing
 			if "current_wave" in wave_manager:
-				print("DEBUG: Started wave " + str(wave_manager.current_wave) + "!")
+				Logger.debug("DEBUG: Started wave " + str(wave_manager.current_wave) + "!")
 			else:
 				printerr("DEBUG: WaveManager missing 'current_wave' variable!")
 	else:
-		print("DEBUG: Couldn't find wave manager or start_wave method!")
+		Logger.debug("DEBUG: Couldn't find wave manager or start_wave method!")
 
 # Helper function to find the wave manager in the scene
 # Note: This might need adjustment based on actual scene structure

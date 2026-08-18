@@ -127,7 +127,7 @@ func lose_life(player_index: int):
 	
 	# Only trigger game over if ALL active players have no lives left
 	if lives[player_index] <= 0:
-		print("[DEBUG] ScoreManager: Player %d has no lives left" % player_index)
+		Logger.debug("[DEBUG] ScoreManager: Player %d has no lives left" % player_index)
 		
 		# Get all active players from GameManager instead of just lives.keys()
 		var game_manager = get_node_or_null("/root/GameManager")
@@ -142,11 +142,11 @@ func lose_life(player_index: int):
 					var other_player_lives = get_lives(other_player_index)
 					if other_player_lives > 0:
 						any_players_alive = true
-						print("[DEBUG] ScoreManager: Player %d still has %d lives" % [other_player_index, other_player_lives])
+						Logger.debug("[DEBUG] ScoreManager: Player %d still has %d lives" % [other_player_index, other_player_lives])
 						break
 
 		if not any_players_alive:
-			print("[DEBUG] ScoreManager: All players are out of lives, triggering game over")
+			Logger.debug("[DEBUG] ScoreManager: All players are out of lives, triggering game over")
 			game_manager.game_over()
 
 func gain_life(player_index: int):
@@ -172,7 +172,7 @@ func add_bonus_score(player_index: int, bonus_amount: int, bonus_type: String = 
 	scores[player_index] += bonus_amount
 	emit_signal("score_changed", player_index, scores[player_index])
 	emit_signal("bonus_awarded", player_index, bonus_amount, bonus_type, world_position)
-	print("[ScoreManager] Player %d awarded %d bonus points (%s) at %s" % [player_index, bonus_amount, bonus_type, world_position])
+	Logger.info("[ScoreManager] Player %d awarded %d bonus points (%s) at %s" % [player_index, bonus_amount, bonus_type, world_position])
 
 func reset_all_players():
 	# Reset all existing player data
@@ -188,4 +188,4 @@ func reset_all_players():
 	lives.clear()
 	last_life_score.clear()
 	
-	print("[DEBUG] ScoreManager: All players reset")
+	Logger.debug("[DEBUG] ScoreManager: All players reset")

@@ -106,7 +106,7 @@ func _physics_process(delta):
 	screen_wrapping()
 	
 	if previous_state != current_state:
-		#print("Enemy %s state changed: %s -> %s" % [name, str(previous_state), str(current_state)])
+		#Logger.debug("Enemy %s state changed: %s -> %s" % [name, str(previous_state), str(current_state)])
 		previous_state = current_state
 
 	if is_spawning:
@@ -123,7 +123,7 @@ func _physics_process(delta):
 		State.WALKING:
 			process_walking(delta)
 			if enemy_animation and enemy_animation.animation != "walk":
-				#print("Enemy %s: Switching to walk animation" % name)
+				#Logger.debug("Enemy %s: Switching to walk animation" % name)
 				enemy_animation.play("walk")
 			# Ensure egg area is disabled in walking state
 			if egg_area: egg_area.monitoring = false
@@ -148,7 +148,7 @@ func _physics_process(delta):
 	var death_y_threshold = viewport_height + 50 # Kill if 50 pixels below screen bottom
 	
 	if global_position.y > death_y_threshold and current_state != State.DEAD:
-		print("Enemy %s fell off screen. Removing." % name) # Optional debug
+		Logger.debug("Enemy %s fell off screen. Removing." % name) # Optional debug
 		queue_free() # Remove the enemy
 
 
@@ -279,7 +279,7 @@ func process_egg(delta):
 	if is_on_floor():
 		if not egg_has_touched_ground:
 			egg_has_touched_ground = true
-			print("[DEBUG] Egg %s touched ground for first time" % name)
+			Logger.debug("[DEBUG] Egg %s touched ground for first time" % name)
 		
 		# Check if we should bounce
 		if abs(velocity.y) > egg_min_bounce_velocity and egg_bounce_count < 5:  # Limit bounces
@@ -288,24 +288,24 @@ func process_egg(delta):
 			velocity.x *= egg_horizontal_damping  # Reduce horizontal velocity on bounce
 			egg_is_bouncing = true
 			egg_bounce_count += 1
-			print("[DEBUG] Egg %s bounce #%d, new velocity: %s" % [name, egg_bounce_count, velocity])
+			Logger.debug("[DEBUG] Egg %s bounce #%d, new velocity: %s" % [name, egg_bounce_count, velocity])
 		else:
 			# Stop bouncing - egg has settled
 			if egg_is_bouncing:
 				egg_is_bouncing = false
 				velocity = Vector2.ZERO
-				print("[DEBUG] Egg %s settled after %d bounces" % [name, egg_bounce_count])
+				Logger.debug("[DEBUG] Egg %s settled after %d bounces" % [name, egg_bounce_count])
 			
 			# NEW: Always try to start hatching timer when settled (with debug)
 			if hatch_timer:
 				if hatch_timer.is_stopped():
 					current_state = State.HATCHING
 					hatch_timer.start()
-					print("[DEBUG] Egg %s started hatching timer (%.1fs)" % [name, hatch_timer.wait_time])
+					Logger.debug("[DEBUG] Egg %s started hatching timer (%.1fs)" % [name, hatch_timer.wait_time])
 				else:
-					print("[DEBUG] Egg %s hatch timer already running (%.1fs remaining)" % [name, hatch_timer.time_left])
+					Logger.debug("[DEBUG] Egg %s hatch timer already running (%.1fs remaining)" % [name, hatch_timer.time_left])
 			else:
-				print("[ERROR] Egg %s has no hatch timer!" % name)
+				printerr("[ERROR] Egg %s has no hatch timer!" % name)
 	
 	# Enable Egg Collection when in Egg state
 	if egg_area:
@@ -320,7 +320,7 @@ func _on_egg_area_area_entered(area):
 	var player = area.get_parent()
 	var player_index = player.player_index if player and player.has_method("player_index") else 1
 	if (current_state == State.EGG or current_state == State.HATCHING) and area.is_in_group("player_collectors"):
-		print("Egg collected by player's collection area!")
+		Logger.info("Egg collected by player's collection area!")
 		collect_egg(player_index)
 
 func defeat(player_index: int, award_score := true, player_velocity: Vector2 = Vector2.ZERO):
@@ -354,7 +354,7 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 		velocity.x = randf_range(-50, 50)  # Small random horizontal velocity
 		velocity.y = 0  # No initial vertical velocity for spawned eggs
 	
-	print("[DEBUG] Egg defeated with player velocity: %s, speed factor: %.2f, egg velocity: %s" % [player_velocity, player_speed_factor, velocity])
+	Logger.debug("[DEBUG] Egg defeated with player velocity: %s, speed factor: %.2f, egg velocity: %s" % [player_velocity, player_speed_factor, velocity])
 	
 	if enemy_animation: enemy_animation.visible = false
 	if egg_sprite: egg_sprite.visible = true
@@ -380,7 +380,7 @@ func defeat(player_index: int, award_score := true, player_velocity: Vector2 = V
 	if award_score:
 		ScoreManager.add_score(player_index, points_value)
 	
-	print("Enemy %s defeated" % name)
+	Logger.info("Enemy %s defeated" % name)
 
 func collect_egg(player_index):
 	if current_state == State.DEAD: return
@@ -414,28 +414,28 @@ func collect_egg(player_index):
 	queue_free()
 
 func _on_vulnerable_area_area_entered(area):
-	print("[DEBUG] %s vulnerable area entered by: %s" % [name, area.name])
+	Logger.debug("[DEBUG] %s vulnerable area entered by: %s" % [name, area.name])
 	
 	if is_spawning:
-		print("[DEBUG] %s is spawning, ignoring stomp" % name)
+		Logger.debug("[DEBUG] %s is spawning, ignoring stomp" % name)
 		return # Don't allow stomping while spawn
 
 	if area.is_in_group("player_stomp_areas"):
 		var player = area.get_parent()
 		var player_index = player.player_index if player and player.has_method("player_index") else 1
-		print("[DEBUG] %s being stomped by Player%d" % [name, player_index])
-		print("STOMP!!")
+		Logger.debug("[DEBUG] %s being stomped by Player%d" % [name, player_index])
+		Logger.debug("STOMP!!")
 		if player and player.is_in_group("players"):
 			# NEW: Pass player's velocity to defeat function
 			defeat(player_index, true, player.velocity)
 			player.velocity.y = player.joust_bounce_velocity
 	else:
-		print("[DEBUG] %s vulnerable area entered by non-player-stomp area: %s (groups: %s)" % [name, area.name, area.get_groups()])
+		Logger.debug("[DEBUG] %s vulnerable area entered by non-player-stomp area: %s (groups: %s)" % [name, area.name, area.get_groups()])
 
 func _on_hatch_timer_timeout():
-	print("[DEBUG] Hatch timer timeout for %s (current state: %s)" % [name, current_state])
+	Logger.debug("[DEBUG] Hatch timer timeout for %s (current state: %s)" % [name, current_state])
 	if current_state != State.HATCHING: 
-		print("[WARNING] Hatch timer fired but egg %s is not in HATCHING state!" % name)
+		Logger.warn("[WARNING] Hatch timer fired but egg %s is not in HATCHING state!" % name)
 		return # Only hatch if in hatching state
 
 	if enemy_animation:
@@ -449,12 +449,12 @@ func _on_hatch_timer_timeout():
 	
 	# Spawn rescue bird
 	spawn_rescue_bird()
-	print("[DEBUG] Egg %s started hatching process" % name)
+	Logger.debug("[DEBUG] Egg %s started hatching process" % name)
 
 func spawn_rescue_bird():
 	var rescue_bird_scene = preload("res://scenes/entities/rescue_bird.tscn")
 	var rescue_bird = rescue_bird_scene.instantiate()
-	print("[DEBUG] Rescue bird instantiated: ", rescue_bird)
+	Logger.debug("[DEBUG] Rescue bird instantiated:  %s" % [rescue_bird])
 
 	# Determine which side to spawn from (left or right)
 	var viewport_size = get_viewport_rect().size
@@ -466,19 +466,19 @@ func spawn_rescue_bird():
 		# Spawn from left
 		spawn_x = -50
 		rescue_bird.direction = 1
-		print("[DEBUG] Rescue bird direction set to 1 (left to right)")
+		Logger.debug("[DEBUG] Rescue bird direction set to 1 (left to right)")
 
 	else:
 		# Spawn from right
 		spawn_x = viewport_size.x + 50
 		rescue_bird.direction = -1
-		print("[DEBUG] Rescue bird direction set to -1 (right to left)")
+		Logger.debug("[DEBUG] Rescue bird direction set to -1 (right to left)")
 
 
 	rescue_bird.global_position = Vector2(spawn_x, spawn_y)
 	rescue_bird.target_x = target_x
 	rescue_bird.target_enemy = self
-	print("[DEBUG] Rescue bird position: ", rescue_bird.global_position, " target_x: ", target_x)
+	Logger.debug("[DEBUG] Rescue bird position:  %s  target_x:  %s" % [rescue_bird.global_position, target_x])
 
 
 	get_tree().current_scene.add_child(rescue_bird)

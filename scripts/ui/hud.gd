@@ -86,7 +86,7 @@ func show_bonus_text(player_index: int, bonus_amount: int, world_position: Vecto
 	tween.parallel().tween_property(bonus_label, "position:y", bonus_label.position.y - 50, 2.0)
 	tween.tween_callback(bonus_label.queue_free)
 
-	print("[HUD] Showing bonus text for Player %d: +%d points at world pos %s" % [player_index, bonus_amount, world_position])
+	Logger.debug("[HUD] Showing bonus text for Player %d: +%d points at world pos %s" % [player_index, bonus_amount, world_position])
 
 
 # Example signal handlers for per-player updates

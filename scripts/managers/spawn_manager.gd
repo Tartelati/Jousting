@@ -34,24 +34,24 @@ func _find_spawn_points_recursive(node):
 
 # Add a spawn request to the queue
 func queue_spawn(scene: PackedScene, data: Dictionary = {}, is_player: bool = false, callback: Callable = Callable()):
-	print("[SpawnManager] queue_spawn called. Scene:", scene, "is_player:", is_player, "data:", data)
+	Logger.debug("[SpawnManager] queue_spawn called. Scene: %s is_player: %s data: %s" % [scene, is_player, data])
 	spawn_queue.append({
 		"scene": scene,
 		"data": data,
 		"is_player": is_player,
 		"callback": callback
 	})
-	print("[SpawnManager] Current queue size:", spawn_queue.size())
+	Logger.debug("[SpawnManager] Current queue size: %s" % [spawn_queue.size()])
 	# If this is the only item, start processing
 	if spawn_queue.size() == 1:
-		print("[SpawnManager] Starting process_next_spawn() from queue_spawn")
+		Logger.debug("[SpawnManager] Starting process_next_spawn() from queue_spawn")
 		process_next_spawn()
 
 # For wave manager: queue a batch of enemies
 func queue_spawn_batch(spawn_list: Array):
-	print("[SpawnManager] queue_spawn_batch called. List size:", spawn_list.size())
+	Logger.debug("[SpawnManager] queue_spawn_batch called. List size: %s" % [spawn_list.size()])
 	for entry in spawn_list:
-		print("[SpawnManager] queue_spawn_batch entry:", entry)
+		Logger.debug("[SpawnManager] queue_spawn_batch entry: %s" % [entry])
 		queue_spawn(entry.scene, entry.data, false, entry.callback if "callback" in entry else Callable())
 
 # For player respawn
@@ -62,18 +62,18 @@ func queue_player_spawn(scene: PackedScene, data: Dictionary = {}, callback: Cal
 func process_next_spawn():
 	# Only print when queue is not empty and we are about to try spawning
 	if spawn_queue.is_empty():
-		print("[SpawnManager] All spawns completed. Emitting signal.")
+		Logger.debug("[SpawnManager] All spawns completed. Emitting signal.")
 		emit_signal("all_spawns_completed")
 		return
 	# Only print when we actually have a change in free spawn points
 	var free_points = spawn_points.filter(func(p): return not busy_spawn_points.has(p))
 	if _last_free_points_count != free_points.size():
-		print("[SpawnManager] Free spawn points:", free_points.size())
+		Logger.debug("[SpawnManager] Free spawn points: %s" % [free_points.size()])
 		_last_free_points_count = free_points.size()
 	if free_points.is_empty():
 		# Only print once per block of waiting
 		if not _waiting_for_spawn_points:
-			print("[SpawnManager] No free spawn points. Waiting...")
+			Logger.debug("[SpawnManager] No free spawn points. Waiting...")
 			_waiting_for_spawn_points = true
 		await get_tree().process_frame
 		process_next_spawn()
@@ -82,25 +82,25 @@ func process_next_spawn():
 	# Find a free spawn point
 	var spawn_data = spawn_queue[0]
 	var spawn_point = free_points.pick_random()
-	print("[SpawnManager] Spawning entity at point:", spawn_point)
+	Logger.debug("[SpawnManager] Spawning entity at point: %s" % [spawn_point])
 	busy_spawn_points.append(spawn_point)
 	# Instance the entity
 	var entity = spawn_data.scene.instantiate()
 	entity.global_position = spawn_point.global_position
-	print("[SpawnManager] Instantiated entity:", entity)
+	Logger.debug("[SpawnManager] Instantiated entity: %s" % [entity])
 	# Pass custom data (e.g. player_index) if needed
 	for k in spawn_data.data:
 		entity.set(k, spawn_data.data[k])
 	# Add to scene
 	get_parent().add_child(entity)
-	print("[SpawnManager] Entity added to scene.")
+	Logger.debug("[SpawnManager] Entity added to scene.")
 	emit_signal("entity_spawned", entity)
 	# Connect to animation finished (assume entity has 'spawn_animation_finished' signal or similar)
 	if entity.has_signal("spawn_animation_finished"):
 		entity.connect("spawn_animation_finished", Callable(self, "_on_spawn_animation_finished").bind(spawn_point, entity, spawn_data.callback))
 	else:
 		# Fallback: use a timer if no signal
-		print("[SpawnManager] No spawn_animation_finished signal. Using fallback timer.")
+		Logger.debug("[SpawnManager] No spawn_animation_finished signal. Using fallback timer.")
 		await get_tree().create_timer(1.0).timeout
 		_on_spawn_animation_finished(spawn_point, entity, spawn_data.callback)
 

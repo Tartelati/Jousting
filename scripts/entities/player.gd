@@ -81,32 +81,32 @@ func _ready():
 		vulnerable_area.add_to_group("player_vulnerable_areas")
 		vulnerable_area.connect("area_entered", _on_vulnerable_area_area_entered)
 
-	print("[DEBUG] Player", player_index, "assigned device:", device)
+	Logger.debug("[DEBUG] Player %s assigned device: %s" % [player_index, device])
 
 func setup_device(device_id: int):
 	device = device_id
 	var device_type = "Keyboard" if device == -1 else "Controller%d" % device
 	var actions = get_input_actions()
-	print("[DEBUG] Player%d assigned %s (device=%d): left='%s', right='%s', flap='%s'" % [player_index, device_type, device, actions["left"], actions["right"], actions["flap"]])
+	Logger.debug("[DEBUG] Player%d assigned %s (device=%d): left='%s', right='%s', flap='%s'" % [player_index, device_type, device, actions["left"], actions["right"], actions["flap"]])
 	
 	# Validate MultiplayerInput is available
 	if not MultiplayerInput:
-		print("[ERROR] MultiplayerInput not found! Enable the multiplayer_input plugin in Project Settings.")
+		printerr("[ERROR] MultiplayerInput not found! Enable the multiplayer_input plugin in Project Settings.")
 
 # Helper function to validate input system health
 func validate_input_system() -> bool:
 	if not MultiplayerInput:
-		print("[ERROR] Player%d: MultiplayerInput plugin not available" % player_index)
+		printerr("[ERROR] Player%d: MultiplayerInput plugin not available" % player_index)
 		return false
 	
 	var actions = get_input_actions()
 	for action_key in actions:
 		var action_name = actions[action_key]
 		if not InputMap.has_action(action_name):
-			print("[ERROR] Player%d: Input action '%s' not found in InputMap" % [player_index, action_name])
+			printerr("[ERROR] Player%d: Input action '%s' not found in InputMap" % [player_index, action_name])
 			return false
 	
-	print("[INFO] Player%d: Input system validation passed" % player_index)
+	Logger.info("[INFO] Player%d: Input system validation passed" % player_index)
 	return true
 
 # --- State Management Helper ---
@@ -115,7 +115,7 @@ func set_state(new_state: State):
 
 	previous_state = current_state
 	current_state = new_state
-	print("Player entering state: ", State.keys()[current_state]) # Debugging
+	Logger.debug("Player entering state:  %s" % [State.keys()[current_state]]) # Debugging
 
 	# Logic executed ONLY on entering a state
 	match new_state:
@@ -158,7 +158,7 @@ func get_input_this_frame() -> Dictionary:
 	
 	# Debug output (enable debug_input in inspector for testing)
 	if debug_input and (input_data["direction"] != 0 or input_data["flap_just_pressed"]):
-		print("[DEBUG] Player%d input: dir=%s, flap_press=%s (device=%d)" % [player_index, input_data["direction"], input_data["flap_just_pressed"], device])
+		Logger.debug("[DEBUG] Player%d input: dir=%s, flap_press=%s (device=%d)" % [player_index, input_data["direction"], input_data["flap_just_pressed"], device])
 	
 	return input_data
 
@@ -225,7 +225,7 @@ func _physics_process(delta):
 	screen_wrapping()
 
 func _start_respawn_timer():
-	print("[DEBUG] _start_respawn_timer called")
+	Logger.debug("[DEBUG] _start_respawn_timer called")
 	await get_tree().create_timer(2.0).timeout
 	respawn()
 
@@ -287,7 +287,7 @@ func handle_walking_state(delta, direction_input, flap_input_just_pressed):
 				if hold_change_timer <= 0:
 					current_speed_level = min(current_speed_level + 1, 3)
 					hold_change_timer = hold_change_interval # Reset timer
-					print("[DEBUG] Walk Accel (Hold): New Level: ", current_speed_level) # DEBUG
+					Logger.debug("[DEBUG] Walk Accel (Hold): New Level:  %s" % [current_speed_level]) # DEBUG
 			# Note: Holding opposite direction is handled by BRAKING state logic
 
 		# Update sprite flip based on input (always happens if input != 0)
@@ -363,17 +363,17 @@ func handle_flying_state(delta, direction_input, flap_input_just_pressed, flap_i
 			if input_is_opposite: # Decelerate
 				current_speed_level = max(current_speed_level - 1, 0)
 				velocity.x = original_move_direction * speed_values[current_speed_level]
-				print("[DEBUG] Flying Decel (Press): New Level: ", current_speed_level) # DEBUG
+				Logger.debug("[DEBUG] Flying Decel (Press): New Level:  %s" % [current_speed_level]) # DEBUG
 			else: # Accelerate
 				current_speed_level = min(current_speed_level + 1, 3)
 				var current_facing_direction = 1.0 if not animated_sprite.flip_h else -1.0
 				velocity.x = current_facing_direction * speed_values[current_speed_level]
-				print("[DEBUG] Flying Accel (Press): New Level: ", current_speed_level) # DEBUG
+				Logger.debug("[DEBUG] Flying Accel (Press): New Level:  %s" % [current_speed_level]) # DEBUG
 
 			hold_change_timer = hold_change_interval # Reset timer after initial press change
 		else:
 			# Flap only (no direction input) - Maintain current horizontal velocity
-			print("[DEBUG] Applying Flying Vel (Flap Only): Maintaining VelX=", velocity.x) # DEBUG
+			Logger.debug("[DEBUG] Applying Flying Vel (Flap Only): Maintaining VelX= %s" % [velocity.x]) # DEBUG
 			hold_change_timer = hold_change_interval # Reset timer
 
 	# 3. Handle Hold Logic (Only if Flapping AND Holding Direction)
@@ -392,12 +392,12 @@ func handle_flying_state(delta, direction_input, flap_input_just_pressed, flap_i
 			if input_is_opposite: # Decelerate
 				current_speed_level = max(current_speed_level - 1, 0)
 				velocity.x = current_original_move_direction * speed_values[current_speed_level]
-				print("[DEBUG] Flying Decel (Hold): New Level: ", current_speed_level) # DEBUG
+				Logger.debug("[DEBUG] Flying Decel (Hold): New Level:  %s" % [current_speed_level]) # DEBUG
 			else: # Accelerate
 				current_speed_level = min(current_speed_level + 1, 3)
 				var current_facing_direction = 1.0 if not animated_sprite.flip_h else -1.0
 				velocity.x = current_facing_direction * speed_values[current_speed_level]
-				print("[DEBUG] Flying Accel (Hold): New Level: ", current_speed_level) # DEBUG
+				Logger.debug("[DEBUG] Flying Accel (Hold): New Level:  %s" % [current_speed_level]) # DEBUG
 
 			hold_change_timer = hold_change_interval # Reset timer after hold change
 
@@ -438,7 +438,7 @@ func handle_braking_state(delta, direction_input):
 				# --- Continue Braking (Loop) ---
 				current_speed_level = max(current_speed_level - 1, 0)
 				brake_timer = brake_duration_per_level # Reset timer for next level
-				print("[DEBUG] Brake Loop: New Level: ", current_speed_level) # DEBUG
+				Logger.debug("[DEBUG] Brake Loop: New Level:  %s" % [current_speed_level]) # DEBUG
 				# Velocity for next frame will be calculated at the start of the next handle_braking_state call
 			else:
 				# Braked to Speed 0, start walking in the new direction
@@ -484,7 +484,7 @@ func handle_collisions():
 		# Check for wall bumps while walking
 		if current_state == State.WALKING and (collider.is_in_group("Platform") or collider.is_in_group("players") or collider.is_in_group("enemies")):
 			if abs(collision.get_normal().x) > 0.7: # Hit a vertical wall
-				print("Player hit wall while walking")
+				Logger.debug("Player hit wall while walking")
 				animated_sprite.flip_h = !animated_sprite.flip_h # Change direction
 				velocity.x = 0 # Stop horizontal movement against wall
 				current_speed_level = max(current_speed_level - 1, 0)
@@ -504,7 +504,7 @@ func check_automatic_transitions():
 	# Check for landing while in Flying state
 	# If we are flying and detect being on the floor, transition to walking.
 	if current_state == State.FLYING and is_on_floor():
-			# print("Landing detected: Transitioning to WALKING") # Debug print
+			# Logger.debug("Landing detected: Transitioning to WALKING") # Debug print
 		transition_to_walking()
 
 # --- State Transition Functions ---
@@ -625,18 +625,18 @@ func _on_combat_area_area_entered(area):
 						is_stomping = true
 						break
 			if not is_stomping:
-				print("Player lost joust")
+				Logger.debug("Player lost joust")
 				die()
 			# else: Stomp success handled by _on_stomp_area_area_entered
 
 		elif relative_velocity_y < -collision_y_threshold: # Player moving up relative to enemy
 			# Player wins joust - bounce handled by _on_stomp_area_area_entered
-			print("Player won joust (velocity check)")
+			Logger.debug("Player won joust (velocity check)")
 			# velocity.y = joust_bounce_velocity # Bounce is applied in stomp handler
 
 		else:
 			# --- Side Collision / Bounce ---
-			print("Side collision player vs enemy")
+			Logger.debug("Side collision player vs enemy")
 			var direction_to_enemy = sign(global_position.x - enemy.global_position.x)
 			if direction_to_enemy == 0: direction_to_enemy = 1
 
@@ -677,7 +677,7 @@ func _on_stomp_area_area_entered(area):
 			(enemy.current_state == enemy.State.EGG or enemy.current_state == enemy.State.HATCHING or enemy.current_state == enemy.State.DEAD):
 			return
 
-		print("Player stomp successful (signal)")
+		Logger.debug("Player stomp successful (signal)")
 		velocity.y = joust_bounce_velocity # Apply bounce on successful stomp
 		# Enemy handles its own defeat via its _on_vulnerable_area_area_entered signal
 
@@ -689,7 +689,7 @@ func _on_vulnerable_area_area_entered(area):
 		var enemy = area.get_parent()
 		if not enemy or not enemy.is_in_group("enemies"): return
 
-		print("Player was stomped by enemy!")
+		Logger.debug("Player was stomped by enemy!")
 		die() # Or lose_life(player_index)
 
 	# Check for player stomp areas (player vs player) 
@@ -698,18 +698,18 @@ func _on_vulnerable_area_area_entered(area):
 		if not other_player or not other_player.is_in_group("players"): return
 		if other_player == self: return # Don't stomp yourself
 
-		print("Player stomped another player!")
+		Logger.debug("Player stomped another player!")
 		die()
 
 func debug_groups():
-	print("[DEBUG] Player%d Groups:" % player_index)
-	print("  - Self in 'players': ", is_in_group("players"))
+	Logger.debug("[DEBUG] Player%d Groups:" % player_index)
+	Logger.debug("  - Self in 'players':  %s" % [is_in_group("players")])
 	if stomp_area:
-		print("  - StompArea in 'player_stomp_areas': ", stomp_area.is_in_group("player_stomp_areas"))
+		Logger.debug("  - StompArea in 'player_stomp_areas':  %s" % [stomp_area.is_in_group("player_stomp_areas")])
 	if vulnerable_area:
-		print("  - VulnerableArea in 'vulnerable_areas': ", vulnerable_area.is_in_group("player_vulnerable_areas"))
+		Logger.debug("  - VulnerableArea in 'vulnerable_areas':  %s" % [vulnerable_area.is_in_group("player_vulnerable_areas")])
 	if collection_area:
-		print("  - CollectionArea in 'player_collectors': ", collection_area.is_in_group("player_collectors"))
+		Logger.debug("  - CollectionArea in 'player_collectors':  %s" % [collection_area.is_in_group("player_collectors")])
 
 func _on_collection_area_area_entered(area):
 	if not is_alive: return
@@ -719,7 +719,7 @@ func _on_collection_area_area_entered(area):
 		var parent = area.get_parent()
 		if parent and parent.is_in_group("enemies") and "current_state" in parent and "State" in parent and parent.has_method("collect_egg"):
 			if parent.current_state == parent.State.EGG or parent.current_state == parent.State.HATCHING:
-				print("Player collected egg")
+				Logger.debug("Player collected egg")
 				parent.collect_egg(player_index)
 
 	# Add logic for other collectibles here
@@ -728,7 +728,7 @@ func _on_collection_area_area_entered(area):
 # --- Death and Respawn ---
 
 func die():
-	print("[DEBUG] Player%d die() called" % player_index)
+	Logger.debug("[DEBUG] Player%d die() called" % player_index)
 	
 	if not is_alive:
 		return # Already dead
@@ -741,22 +741,22 @@ func die():
 	
 	# Check if this player has any lives left
 	var remaining_lives = ScoreManager.get_lives(player_index)
-	print("[DEBUG] Player%d has %d lives remaining" % [player_index, remaining_lives])
+	Logger.debug("[DEBUG] Player%d has %d lives remaining" % [player_index, remaining_lives])
 	
 	if remaining_lives > 0:
 		# Player has lives left - respawn after delay
-		print("[DEBUG] Player%d will respawn (has lives left)" % player_index)
+		Logger.debug("[DEBUG] Player%d will respawn (has lives left)" % player_index)
 		# Wait a moment before respawning
 		await get_tree().create_timer(2.0).timeout
 		respawn()
 	else:
 		# Player is permanently dead - no more respawns
-		print("[DEBUG] Player%d is permanently dead (no lives left)" % player_index)
+		Logger.debug("[DEBUG] Player%d is permanently dead (no lives left)" % player_index)
 		set_permanently_dead()
 
 # NEW: Function to handle permanent death
 func set_permanently_dead():
-	print("[DEBUG] Player%d set to permanently dead" % player_index)
+	Logger.debug("[DEBUG] Player%d set to permanently dead" % player_index)
 	is_alive = false
 	set_state(State.DEFEATED)
 	
@@ -780,17 +780,17 @@ func set_permanently_dead():
 	set_physics_process(false)
 	set_process_input(false)
 	
-	print("[DEBUG] Player%d permanently disabled" % player_index)
+	Logger.debug("[DEBUG] Player%d permanently disabled" % player_index)
 
 func respawn():
 	# Check if player has lives before respawning
 	var remaining_lives = ScoreManager.get_lives(player_index)
 	if remaining_lives <= 0:
-		print("[DEBUG] Player%d cannot respawn - no lives left" % player_index)
+		Logger.debug("[DEBUG] Player%d cannot respawn - no lives left" % player_index)
 		set_permanently_dead()
 		return
 	
-	print("[DEBUG] Player%d respawn called (lives: %d)" % [player_index, remaining_lives])
+	Logger.debug("[DEBUG] Player%d respawn called (lives: %d)" % [player_index, remaining_lives])
 	is_alive = true
 	is_invincible = true
 	is_respawning = true
@@ -807,11 +807,11 @@ func respawn():
 	var spawn_point = find_safe_spawn_point()
 	if spawn_point:
 		global_position = spawn_point.global_position
-		print("[DEBUG] Player%d respawned at safe spawn point: %s" % [player_index, spawn_point.name])
+		Logger.debug("[DEBUG] Player%d respawned at safe spawn point: %s" % [player_index, spawn_point.name])
 	else:
 		# Fallback to center-bottom if no safe spawn points
 		global_position = Vector2(get_viewport_rect().size.x / 2, get_viewport_rect().size.y - 100)
-		print("[DEBUG] Player%d respawned at fallback position (no safe spawn points)" % player_index)
+		Logger.debug("[DEBUG] Player%d respawned at fallback position (no safe spawn points)" % player_index)
    
 	velocity = Vector2.ZERO
 	
@@ -834,7 +834,7 @@ func respawn():
 	var respawn_anim_name = "P%d_Respawn" % player_index  # Use player-specific animation name
 	if animated_sprite.sprite_frames.has_animation(respawn_anim_name):
 		animated_sprite.play(respawn_anim_name)
-		print("[DEBUG] Playing respawn animation: %s" % respawn_anim_name)
+		Logger.debug("[DEBUG] Playing respawn animation: %s" % respawn_anim_name)
 		
 		# Connect to animation_finished signal if not already connected
 		if not animated_sprite.is_connected("animation_finished", Callable(self, "_on_respawn_animation_finished")):
@@ -843,16 +843,16 @@ func respawn():
 		# Wait for the animation to finish (it will call _on_respawn_animation_finished)
 	else:
 		# No respawn animation, finish respawn immediately
-		print("[DEBUG] No respawn animation found ('%s'), finishing respawn immediately" % respawn_anim_name)
+		Logger.debug("[DEBUG] No respawn animation found ('%s'), finishing respawn immediately" % respawn_anim_name)
 		_finish_respawn()
 
 func _on_respawn_animation_finished(anim_name: String):
-	print("[DEBUG] Animation '%s' finished for Player%d" % [anim_name, player_index])
+	Logger.debug("[DEBUG] Animation '%s' finished for Player%d" % [anim_name, player_index])
 	if anim_name == ("P%d_Respawn" % player_index) and is_respawning:
 		_finish_respawn()
 
 func _finish_respawn():
-	print("[DEBUG] Player%d respawn finished" % player_index)
+	Logger.debug("[DEBUG] Player%d respawn finished" % player_index)
 	is_respawning = false
 	is_invincible = false
 	set_state(State.IDLE)
@@ -875,5 +875,5 @@ func find_safe_spawn_point():
 		# Return a random spawn point
 		return spawn_points[randi() % spawn_points.size()]
 	
-	print("[DEBUG] No spawn points found for Player%d" % player_index)
+	Logger.debug("[DEBUG] No spawn points found for Player%d" % player_index)
 	return null

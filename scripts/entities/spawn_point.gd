@@ -30,14 +30,14 @@ func _check_initial_overlap():
 		# Check if the overlapping body is the player (assuming player is in "players" group)
 		if body.is_in_group("players"):
 			is_player_nearby = true
-			# print("SpawnPoint %s initially blocked by player body." % name) # Optional debug
+			# Logger.debug("SpawnPoint %s initially blocked by player body." % name) # Optional debug
 			return # Found player
 
 func _on_detection_zone_body_entered(body: Node2D):
 	# Check if the body entering is the player
 	if body.is_in_group("players"):
 		is_player_nearby = true
-		# print("SpawnPoint %s blocked by player body entering." % name) # Optional debug
+		# Logger.debug("SpawnPoint %s blocked by player body entering." % name) # Optional debug
 
 func _on_detection_zone_body_exited(body: Node2D):
 	# Check if the body exiting is the player
@@ -58,7 +58,7 @@ func _check_remaining_overlap(exited_body: Node2D):
 			
 	if not still_overlapping:
 		is_player_nearby = false
-		# print("SpawnPoint %s unblocked by player body exiting." % name) # Optional debug
+		# Logger.debug("SpawnPoint %s unblocked by player body exiting." % name) # Optional debug
 
 # Helper function for the WaveManager
 func can_spawn() -> bool:

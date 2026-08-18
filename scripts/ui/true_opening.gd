@@ -44,7 +44,7 @@ func _unhandled_input(event):
 		
 	# Check for the skip action (default: Escape key)
 	if event.is_action_pressed("ui_cancel") and not _is_skipping:
-		print("Skipping cinematic...")
+		Logger.info("Skipping cinematic...")
 		_skip_cinematic()
 		# Removed set_input_as_handled() as it seems to cause errors during transition
 
@@ -72,7 +72,7 @@ func _on_animation_finished(anim_name: StringName):
 func _go_to_main_menu():
 	# Ensure we only transition once
 	if get_tree().current_scene.scene_file_path == scene_file_path: 
-		print("Transitioning to Main Menu...")
+		Logger.info("Transitioning to Main Menu...")
 	# Change the scene to the main menu
 	var error = get_tree().change_scene_to_file(MAIN_MENU_SCENE_PATH)
 	if error != OK:

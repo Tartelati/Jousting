@@ -48,14 +48,14 @@ func _process(delta):
 		var enemies_in_scene = get_tree().get_nodes_in_group("enemies").size()
 		if is_egg_wave:
 			# FIX 2: Egg wave ends when no enemies are left in the scene (they get removed when collected)
-			print("[DEBUG] Egg wave check - enemies in scene: %d" % enemies_in_scene)
+			Logger.debug("[DEBUG] Egg wave check - enemies in scene: %d" % enemies_in_scene)
 			if enemies_in_scene == 0:
-				print("Egg wave complete - all eggs collected or hatched!")
+				Logger.info("Egg wave complete - all eggs collected or hatched!")
 				wave_finished()
 		else:
 			# Normal wave ends when enemies_remaining is 0 AND no enemies are left in the scene
 			if enemies_remaining == 0 and enemies_in_scene == 0:
-				print("Normal wave complete condition met.")
+				Logger.info("Normal wave complete condition met.")
 				wave_finished()
 
 
@@ -66,7 +66,7 @@ func start_wave(wave_number = -1):
 	else:
 		current_wave += 1
 	
-	print("Starting Wave %d" % current_wave) # DEBUG
+	Logger.debug("Starting Wave %d" % current_wave) # DEBUG
 	
 	# --- Platform Management FIRST ---
 	_update_platform_states(current_wave)
@@ -118,7 +118,7 @@ func _update_platform_states(wave_num):
 	if not parent_node:
 		printerr("WaveManager: Cannot update platforms, parent is null!")
 		return
-	print("[DEBUG Platform Update] WaveManager parent: %s" % parent_node.name)
+	Logger.debug("[DEBUG Platform Update] WaveManager parent: %s" % parent_node.name)
 	# ---------------------------
 
 	var platforms_node = parent_node.get_node_or_null("Platforms")
@@ -203,10 +203,10 @@ func _update_platform_spawn_points(platform_node: StaticBody2D, enabled: bool):
 		# Disable/enable the spawn point by setting its process mode
 		if enabled:
 			spawn_point.process_mode = Node.PROCESS_MODE_INHERIT
-			print("[DEBUG] Enabled spawn point: %s on platform: %s" % [spawn_point_name, platform_node.name])
+			Logger.debug("[DEBUG] Enabled spawn point: %s on platform: %s" % [spawn_point_name, platform_node.name])
 		else:
 			spawn_point.process_mode = Node.PROCESS_MODE_DISABLED
-			print("[DEBUG] Disabled spawn point: %s on platform: %s" % [spawn_point_name, platform_node.name])
+			Logger.debug("[DEBUG] Disabled spawn point: %s on platform: %s" % [spawn_point_name, platform_node.name])
 
 func spawn_enemy():
 	if enemies_remaining <= 0 or spawn_points.size() == 0:
@@ -243,7 +243,7 @@ func spawn_enemy():
 
 	# 2. Check if any spawn points are available
 	if available_spawn_points.size() == 0:
-		print("[DEBUG] No available spawn points (all disabled or blocked)")
+		Logger.debug("[DEBUG] No available spawn points (all disabled or blocked)")
 		return # Skip spawning this cycle
 
 	# 3. Choose a random spawn point from the *available* ones
@@ -258,7 +258,7 @@ func spawn_enemy():
 	enemies_remaining -= 1
 
 func _start_egg_wave():
-	print("Starting Egg Wave: %d" % current_wave)
+	Logger.debug("Starting Egg Wave: %d" % current_wave)
 	wave_in_progress = true
 	enemies_remaining = 0 # No enemies to spawn directly
 
@@ -273,7 +273,7 @@ func _start_egg_wave():
 		return
 
 	var num_eggs_to_spawn = randi_range(15, 25)
-	print("[DEBUG] Number of eggs to spawn: %d" % num_eggs_to_spawn)
+	Logger.debug("[DEBUG] Number of eggs to spawn: %d" % num_eggs_to_spawn)
 
 	for i in range(num_eggs_to_spawn):
 		var random_marker = egg_spawn_markers.pick_random()
@@ -289,11 +289,11 @@ func _start_egg_wave():
 			# FIX 1: Properly call defeat with a valid player_index and no score award
 			enemy_body.call_deferred("defeat", 1, false, Vector2.ZERO)
 			
-			print("[DEBUG] Set enemy state to EGG for: %s" % enemy_body.name)
+			Logger.debug("[DEBUG] Set enemy state to EGG for: %s" % enemy_body.name)
 		else:
-			print("[ERROR] Could not create enemy body")
+			printerr("[ERROR] Could not create enemy body")
 
-	print("[DEBUG WaveManager _start_egg_wave] Spawned %d eggs for wave %d" % [num_eggs_to_spawn, current_wave])
+	Logger.debug("[DEBUG WaveManager _start_egg_wave] Spawned %d eggs for wave %d" % [num_eggs_to_spawn, current_wave])
 
 func wave_finished():
 	wave_in_progress = false

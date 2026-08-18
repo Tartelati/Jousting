@@ -34,30 +34,30 @@ func assign_player_inputs(num_players: int) -> Array:
 	var joypads = Input.get_connected_joypads()
 	var devices = []
 	
-	print("[DEBUG] GameManager: Assigning inputs for %d players, %d controllers available" % [num_players, joypads.size()])
-	print("[DEBUG] GameManager: Connected joypads: ", joypads)
+	Logger.debug("[DEBUG] GameManager: Assigning inputs for %d players, %d controllers available" % [num_players, joypads.size()])
+	Logger.debug("[DEBUG] GameManager: Connected joypads:  %s" % [joypads])
 	
 	# Assign devices: -1 for keyboard, 0+ for controllers
 	if num_players == 1:
 		# Single player: prefer first controller if available, fallback to keyboard
 		if joypads.size() > 0:
 			devices.append(0)  # First controller (device ID 0)
-			print("[DEBUG] GameManager: Single player - assigned controller 0")
+			Logger.debug("[DEBUG] GameManager: Single player - assigned controller 0")
 		else:
 			devices.append(-1)  # Keyboard
-			print("[DEBUG] GameManager: Single player - assigned keyboard")
+			Logger.debug("[DEBUG] GameManager: Single player - assigned keyboard")
 	else:
 		# Multi-player: assign controllers sequentially, keyboard as fallback
 		for i in range(num_players):
-			print("[DEBUG] GameManager: Processing player %d" % [i + 1])
+			Logger.debug("[DEBUG] GameManager: Processing player %d" % [i + 1])
 			if i < joypads.size():
 				devices.append(i)  # Player 1 gets controller 0, Player 2 gets controller 1, etc.
-				print("[DEBUG] GameManager: Player %d assigned controller %d" % [i + 1, i])
+				Logger.debug("[DEBUG] GameManager: Player %d assigned controller %d" % [i + 1, i])
 			else:
 				devices.append(-1)  # Fallback to keyboard if no more controllers
-				print("[DEBUG] GameManager: Player %d assigned keyboard (fallback)" % [i + 1])
+				Logger.debug("[DEBUG] GameManager: Player %d assigned keyboard (fallback)" % [i + 1])
 	
-	print("[DEBUG] GameManager: Final device assignments: ", devices)
+	Logger.debug("[DEBUG] GameManager: Final device assignments:  %s" % [devices])
 	return devices
 
 # Get list of devices currently assigned to players
@@ -79,46 +79,32 @@ func _process(_delta):
 	if current_state == GameState.PLAYING and player_nodes.size() < 4:
 		# Check all connected controllers for START button press
 		var joypads = Input.get_connected_joypads()
-		
-		# Add periodic debug output every 2 seconds to show system status
-		if Engine.get_process_frames() % 120 == 0:  # Every 2 seconds at 60fps
-			var assigned_devices = get_assigned_devices()
-			print("[DEBUG] GameManager: Active players: %d, Connected joypads: %s" % [player_nodes.size(), joypads])
-			print("[DEBUG] GameManager: Game state: %s, Can join: %s" % [GameState.keys()[current_state], current_state == GameState.PLAYING and player_nodes.size() < 4])
-			print("[DEBUG] GameManager: Player details:")
-			for i in range(player_nodes.size()):
-				var p = player_nodes[i]
-				if p and is_instance_valid(p):
-					print("  - Player%d: device=%d, position=%s" % [p.player_index, p.device, p.global_position])
-				else:
-					print("  - Player slot %d: invalid/null" % [i + 1])
-			print("[DEBUG] GameManager: Assigned devices: ", assigned_devices)
-		
+
 		for controller_id in joypads:
 			# Additional debug: Check if MultiplayerInput detects the button press
 			if MultiplayerInput and MultiplayerInput.is_action_just_pressed(controller_id, "start_game"):
 				var assigned_devices = get_assigned_devices()
 				var new_player_index = player_nodes.size() + 1
-				print("[DEBUG] GameManager: Controller %d pressed START. Currently assigned devices: " % controller_id, assigned_devices)
-				print("[DEBUG] GameManager: Current player_nodes.size()=%d, calculated new_player_index=%d" % [player_nodes.size(), new_player_index])
+				Logger.debug("%s %s" % ["[DEBUG] GameManager: Controller %d pressed START. Currently assigned devices: " % controller_id, assigned_devices])
+				Logger.debug("[DEBUG] GameManager: Current player_nodes.size()=%d, calculated new_player_index=%d" % [player_nodes.size(), new_player_index])
 				
 				# Only allow joining if this controller isn't already assigned
 				if not controller_id in assigned_devices:
-					print("[DEBUG] GameManager: Adding new player %d with controller %d" % [new_player_index, controller_id])
+					Logger.debug("[DEBUG] GameManager: Adding new player %d with controller %d" % [new_player_index, controller_id])
 					spawn_single_player_with_device(new_player_index, controller_id)
 				else:
-					print("[DEBUG] GameManager: Controller %d already assigned to a player" % controller_id)
+					Logger.debug("[DEBUG] GameManager: Controller %d already assigned to a player" % controller_id)
 			
 			# Additional debug: Test if regular Input detects the button press
 			if Input.is_action_just_pressed("start_game"):
-				print("[DEBUG] GameManager: Regular Input detected START press (could be any device)")
+				Logger.debug("[DEBUG] GameManager: Regular Input detected START press (could be any device)")
 				
 				# Try to determine which controller it was by checking device-specific actions
 				var device_action_name = ""
 				if MultiplayerInput:
 					device_action_name = MultiplayerInput.get_action_name(controller_id, "start_game")
 				if device_action_name != "" and Input.is_action_just_pressed(device_action_name):
-					print("[DEBUG] GameManager: Device-specific action '%s' confirmed for controller %d" % [device_action_name, controller_id])
+					Logger.debug("[DEBUG] GameManager: Device-specific action '%s' confirmed for controller %d" % [device_action_name, controller_id])
 
 func show_main_menu():
 	# Clear any existing UI
@@ -193,7 +179,7 @@ func spawn_players(num_players: int, spawn_positions: Array = []):
 		if hud_instance:
 			hud_instance.show_player_hud(player_index)
 		
-		print("[DEBUG] GameManager: Spawned Player%d at %s with device %d" % [player_index, positions[i], input_devices[i]])
+		Logger.debug("[DEBUG] GameManager: Spawned Player%d at %s with device %d" % [player_index, positions[i], input_devices[i]])
 
 # Helper function to spawn a single additional player (for dynamic player joining)
 func spawn_single_player(player_index: int, position: Vector2 = Vector2.ZERO):
@@ -204,7 +190,7 @@ func spawn_single_player(player_index: int, position: Vector2 = Vector2.ZERO):
 	# Check if player already exists
 	for p in player_nodes:
 		if p.player_index == player_index:
-			print("[DEBUG] GameManager: Player%d already exists, skipping spawn" % player_index)
+			Logger.debug("[DEBUG] GameManager: Player%d already exists, skipping spawn" % player_index)
 			return
 	
 	# Calculate total players after adding this one
@@ -216,7 +202,7 @@ func spawn_single_player(player_index: int, position: Vector2 = Vector2.ZERO):
 		if i < input_devices.size():
 			var existing_player = player_nodes[i]
 			var new_device = input_devices[i]
-			print("[DEBUG] GameManager: Updating Player%d device from %d to %d" % [existing_player.player_index, existing_player.device, new_device])
+			Logger.debug("[DEBUG] GameManager: Updating Player%d device from %d to %d" % [existing_player.player_index, existing_player.device, new_device])
 			existing_player.setup_device(new_device)
 	
 	# Use default position if none provided
@@ -235,7 +221,7 @@ func spawn_single_player(player_index: int, position: Vector2 = Vector2.ZERO):
 	if hud_instance:
 		hud_instance.show_player_hud(player_index)
 	
-	print("[DEBUG] GameManager: Spawned Player%d at %s with device %d" % [player_index, spawn_position, input_devices[player_index - 1]])
+	Logger.debug("[DEBUG] GameManager: Spawned Player%d at %s with device %d" % [player_index, spawn_position, input_devices[player_index - 1]])
 
 # Helper function to spawn a player with a specific device (controller-initiated joining)
 func spawn_single_player_with_device(player_index: int, device_id: int, position: Vector2 = Vector2.ZERO):
@@ -246,13 +232,13 @@ func spawn_single_player_with_device(player_index: int, device_id: int, position
 	# Check if player already exists
 	for p in player_nodes:
 		if p.player_index == player_index:
-			print("[DEBUG] GameManager: Player%d already exists, skipping spawn" % player_index)
+			Logger.debug("[DEBUG] GameManager: Player%d already exists, skipping spawn" % player_index)
 			return
 	
 	# Check if device is already assigned
 	var assigned_devices = get_assigned_devices()
 	if device_id in assigned_devices:
-		print("[DEBUG] GameManager: Device %d already assigned, cannot spawn player" % device_id)
+		Logger.debug("[DEBUG] GameManager: Device %d already assigned, cannot spawn player" % device_id)
 		return
 	
 	# Use default position if none provided
@@ -271,7 +257,7 @@ func spawn_single_player_with_device(player_index: int, device_id: int, position
 	if hud_instance:
 		hud_instance.show_player_hud(player_index)
 	
-	print("[DEBUG] GameManager: Spawned Player%d at %s with device %d (controller-initiated)" % [player_index, spawn_position, device_id])
+	Logger.debug("[DEBUG] GameManager: Spawned Player%d at %s with device %d (controller-initiated)" % [player_index, spawn_position, device_id])
 
 func setup_new_gameplay_scene(player_index: int, main_game_node):
 	# This function is called by the main_game scene itself once it's ready.
@@ -280,7 +266,7 @@ func setup_new_gameplay_scene(player_index: int, main_game_node):
 		printerr("setup_new_gameplay_scene called with null node!")
 		return
 
-	print("Main Game Scene reported ready, proceeding with setup.")
+	Logger.info("Main Game Scene reported ready, proceeding with setup.")
 
 	# Reset ALL players' scores and lives
 	ScoreManager.reset_all_players()
@@ -335,7 +321,7 @@ func setup_new_gameplay_scene(player_index: int, main_game_node):
 	SoundManager.play_music("gameplay") # Use autoload directly
 	
 	current_state = GameState.PLAYING
-	print("Setup complete: Game Started Successfully") # Debug print
+	Logger.info("Setup complete: Game Started Successfully") # Debug print
 	
 	# Note: Do NOT clear player_nodes here - we need to track the spawned players for dynamic joining
 	# player_nodes already contains the correctly spawned players from spawn_players(1)
@@ -403,27 +389,27 @@ func game_over():
 
 # Debug function to test MultiplayerInput system
 func debug_multiplayer_input():
-	print("[DEBUG] === MultiplayerInput System Test ===")
-	print("[DEBUG] MultiplayerInput available: ", MultiplayerInput != null)
+	Logger.debug("[DEBUG] === MultiplayerInput System Test ===")
+	Logger.debug("[DEBUG] MultiplayerInput available:  %s" % [MultiplayerInput != null])
 	
 	if MultiplayerInput:
-		print("[DEBUG] Core actions: ", MultiplayerInput.core_actions)
+		Logger.debug("[DEBUG] Core actions:  %s" % [MultiplayerInput.core_actions])
 		var joypads = Input.get_connected_joypads()
-		print("[DEBUG] Connected joypads: ", joypads)
+		Logger.debug("[DEBUG] Connected joypads:  %s" % [joypads])
 		
 		for controller_id in joypads:
-			print("[DEBUG] Controller %d device actions: " % controller_id)
+			Logger.debug("[DEBUG] Controller %d device actions: " % controller_id)
 			if MultiplayerInput.device_actions.has(controller_id):
 				var actions = MultiplayerInput.device_actions[controller_id]
 				for action_name in actions:
-					print("  - %s -> %s" % [action_name, actions[action_name]])
+					Logger.debug("  - %s -> %s" % [action_name, actions[action_name]])
 			else:
-				print("  - No actions found for controller %d" % controller_id)
+				Logger.debug("  - No actions found for controller %d" % controller_id)
 		
 		# Test if start_game action exists
 		if "start_game" in MultiplayerInput.core_actions:
-			print("[DEBUG] start_game is a core action")
+			Logger.debug("[DEBUG] start_game is a core action")
 		else:
-			print("[DEBUG] WARNING: start_game is NOT a core action")
+			Logger.debug("[DEBUG] WARNING: start_game is NOT a core action")
 	
-	print("[DEBUG] === End Test ===")
+	Logger.debug("[DEBUG] === End Test ===")
