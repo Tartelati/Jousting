@@ -16,7 +16,7 @@ jobs:
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
         with:
-          version: 4.4
+          version: 4.4.1
           use-dotnet: false
 
       # .godot/ is gitignored — CI must import assets (incl. audio) before running.
