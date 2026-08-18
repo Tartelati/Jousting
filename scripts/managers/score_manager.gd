@@ -167,6 +167,8 @@ func get_lives(player_index: int) -> int:
 	return lives.get(player_index, 3)
 
 func add_bonus_score(player_index: int, bonus_amount: int, bonus_type: String = "", world_position: Vector2 = Vector2.ZERO):
+	if not scores.has(player_index):
+		scores[player_index] = 0
 	scores[player_index] += bonus_amount
 	emit_signal("score_changed", player_index, scores[player_index])
 	emit_signal("bonus_awarded", player_index, bonus_amount, bonus_type, world_position)

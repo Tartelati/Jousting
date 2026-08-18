@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit-tests:
+    name: GUT unit tests (Godot 4.4)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4
+          use-dotnet: false
+
+      # .godot/ is gitignored — CI must import assets (incl. audio) before running.
+      - name: Import project resources
+        run: godot --headless --import --path .
+
+      - name: Run GUT test suite
+        run: godot --headless --path . -s res://addons/gut/gut_cmdln.gd
