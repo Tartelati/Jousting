@@ -36,7 +36,9 @@ func process_flying(delta):
 			direction = -1
 		elif target.position.x > position.x + 20:
 			direction = 1
-			enemy_animation.flip_h = (direction < 0)
+
+		# Keep the sprite facing its actual travel direction after either branch.
+		enemy_animation.flip_h = (direction < 0)
 	else:
 		# Random flapping if no target
 		if randf() < 0.03:
